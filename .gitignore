@@ -1,0 +1,21 @@
+# Node
+node_modules
+npm-debug.log*
+.yarn*
+.pnpm*
+package-lock.json
+
+# Env
+.env
+.env.*
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Devcontainer
+.devcontainer/*.local*
