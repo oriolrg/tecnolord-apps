@@ -20,6 +20,7 @@ const pool = new Pool(pgConfig);
 
 // middlewares
 // --- protecció per clau ---
+// --- protecció per clau d’ingesta ---
 function checkApiKey(req, res, next) {
   const key = req.get('x-api-key') || req.query.key;
   const serverKey = process.env.INGEST_API_KEY || '';
@@ -28,10 +29,11 @@ function checkApiKey(req, res, next) {
   next();
 }
 
-// --- ingesta ---
+// --- endpoint d’ingesta ---
 app.post('/api/v1/measurements', checkApiKey, async (req, res) => {
   const { station_id, at, temp_c, humidity, pressure_hpa, rain_mm, wind_speed_ms, wind_dir_deg } = req.body || {};
   if (!station_id) return res.status(400).json({ ok: false, error: 'station_id required' });
+
   const ts = at ? new Date(at) : new Date();
   if (Number.isNaN(ts.getTime())) return res.status(400).json({ ok: false, error: 'invalid at' });
 
@@ -46,6 +48,7 @@ app.post('/api/v1/measurements', checkApiKey, async (req, res) => {
     return res.status(500).json({ ok: false, error: 'db insert error' });
   }
 });
+
 
 app.use(morgan('tiny'));
 app.use(cors());
