@@ -96,4 +96,60 @@ app.post('/api/v1/measurements', checkApiKey, async (req, res) => {
   }
 });
 
+// --- helper unitats ---
+const kmhToMs = v => (v == null ? null : Number(v) / 3.6);
+
+// --- construeix URL Ecowitt ---
+function ecowittURL() {
+  const params = new URLSearchParams({
+    application_key: process.env.ECW_APPLICATION_KEY,
+    api_key: process.env.ECW_API_KEY,
+    mac: process.env.ECW_MAC,
+    call_back: 'all',
+    temp_unitid: process.env.ECW_TEMP_UNITID || '1',
+    wind_speed_unitid: process.env.ECW_WIND_SPEED_UNITID || '8',
+    rainfall_unitid: process.env.ECW_RAINFALL_UNITID || '12',
+    pressure_unitid: process.env.ECW_PRESSURE_UNITID || '3',
+  });
+  return `https://api.ecowitt.net/api/v3/device/real_time?${params.toString()}`;
+}
+
+// --- ruta protegida per fer el pull i guardar ---
+app.post('/tasks/pull-ecowitt', checkApiKey, async (req, res) => {
+  try {
+    const url = ecowittURL();
+    const r = await fetch(url);
+    if (!r.ok) {
+      return res.status(502).json({ ok: false, error: 'ecowitt bad status', status: r.status });
+    }
+    const payload = await r.json(); // estructura similar a la del teu PHP
+    const d = payload?.data;
+
+    // extreu valors (amb opcional chaining i defaults)
+    const stationId = process.env.STATION_ID || process.env.ECW_MAC || 'default';
+    const at = new Date().toISOString(); // si Ecowitt dona timestamp i el vols, substitueix-lo aquí
+
+    const temp_c        = d?.outdoor?.temperature?.value ?? null;
+    const humidity      = d?.outdoor?.humidity?.value ?? null;
+    const pressure_hpa  = d?.pressure?.relative?.value ?? null; // podries triar 'absolute'
+    const rain_mm       = d?.rainfall?.daily?.value ?? null;     // triem 'daily' com a total bàsic
+    const wind_kmh      = d?.wind?.wind_speed?.value ?? null;
+    const wind_speed_ms = kmhToMs(wind_kmh);
+    const wind_dir_deg  = d?.wind?.wind_direction?.value ?? null;
+
+    const sql = `INSERT INTO measurement
+      (station_id, at, temp_c, humidity, pressure_hpa, rain_mm, wind_speed_ms, wind_dir_deg)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING id`;
+    const params = [stationId, at, temp_c, humidity, pressure_hpa, rain_mm, wind_speed_ms, wind_dir_deg];
+
+    const { rows } = await pool.query(sql, params);
+    return res.status(201).json({ ok: true, id: rows[0]?.id, station_id: stationId });
+  } catch (e) {
+    console.error('pull-ecowitt error:', e);
+    return res.status(500).json({ ok: false, error: 'pull failed' });
+  }
+});
+
+
 app.listen(PORT, () => console.log(`Backend escoltant a :${PORT}`));
