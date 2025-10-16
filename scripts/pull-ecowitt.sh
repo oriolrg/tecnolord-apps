@@ -13,8 +13,8 @@ DOCKER="$(command -v docker)"
 COMPOSE="$DOCKER compose -f \"$COMPOSE_FILE\""
 
 # Executa dins del contenidor backend amb Node (fetch)
-OUT=$($DOCKER compose -f "$COMPOSE_FILE" exec -T backend node -e '
-const url = "http://localhost:3000/tasks/pull-ecowitt";
+OUT=$(/usr/bin/docker compose -f "$COMPOSE_FILE" exec -T backend node -e '
+const url = "http://localhost:3000/api/tasks/pull-ecowitt";
 const key = process.env.INGEST_API_KEY || "";
 if (!key) { console.error("INGEST_API_KEY missing"); process.exit(1); }
 fetch(url, { method: "POST", headers: { "x-api-key": key } })
