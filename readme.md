@@ -32,7 +32,7 @@ Objectiu: **Fase 1 mínima** amb backend JS (Express) i frontend HTML+JS senzill
    git clone <URL_REPO> tecnolord
    cd tecnolord
    docker compose up -d --build
-   curl http://IP_DEL_SERVIDOR/health
+   curl http://165.232.83.103/health
    ```
 2. Caddy servirà `frontend/` i farà proxy a `backend` per a `/api/*`.
 

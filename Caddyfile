@@ -1,7 +1,7 @@
 :80 {
   encode zstd gzip
 
-  @api path /api/* /health
+  @api path /api/* /health /tasks/*  
   handle @api {
     reverse_proxy backend:3000
   }
