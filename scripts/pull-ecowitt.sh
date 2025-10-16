@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_DIR="/home/deploy/tecnolord-apps/tecnolord"
+REPO_DIR="/home/deploy/tecnolord-apps"
 LOG_DIR="$REPO_DIR/logs"
 mkdir -p "$LOG_DIR"
 cd "$REPO_DIR"
