@@ -115,7 +115,7 @@ function ecowittURL() {
 }
 
 // --- ruta protegida per fer el pull i guardar ---
-app.post('/tasks/pull-ecowitt', checkApiKey, async (req, res) => {
+app.post(['/tasks/pull-ecowitt','/api/tasks/pull-ecowitt'], checkApiKey, async (req,res) => {
   try {
     const url = ecowittURL();
     const r = await fetch(url);
