@@ -132,17 +132,31 @@ app.get('/api/v1/mesures/darreres', async (req, res) => {
 app.get('/api/v1/hidro/darreres', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 1000);
   const codi = req.query.codi || null;
+
   try {
     const params = [];
     let where = '';
-    if (codi) { where = 'WHERE h.estacio_id = (SELECT id FROM estacions_hidro WHERE codi = $1)'; params.push(codi); }
-    const sql = `SELECT h.* FROM lectures_hidro h ${where} ORDER BY instant DESC LIMIT ${limit}`;
+    if (codi) { where = 'WHERE e.codi = $1'; params.push(codi); }
+
+    const sql = `
+      SELECT
+        h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
+        e.codi, e.nom, e.tipus, e.id AS estacio_id
+      FROM lectures_hidro h
+      JOIN estacions_hidro e ON e.id = h.estacio_id
+      ${where}
+      ORDER BY h.instant DESC
+      LIMIT ${limit}
+    `;
+
     const { rows } = await pool.query(sql, params);
     res.json({ ok: true, items: rows });
   } catch (e) {
-    console.error(e); res.status(500).json({ ok:false, error:'db query error' });
+    console.error(e);
+    res.status(500).json({ ok:false, error:'db query error' });
   }
 });
+
 
 // ──────────────────────────────────────────────────────────
 // Auth simple per tasques internes
