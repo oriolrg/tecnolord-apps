@@ -3,138 +3,269 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tecnolord — Lectures Meteo</title>
+    <title>Tecnolord — Dades Meteo & Hidrologia</title>
     <style>
-      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:2rem;line-height:1.4}
-      .row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:2rem;line-height:1.45}
+      h1{margin-bottom:.25rem}
+      h2{margin-top:2rem}
+      .row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin:.5rem 0 1rem}
       input,select,button{padding:.5rem .7rem;border:1px solid #ccc;border-radius:.5rem}
+      input[type="number"]{width:6rem}
       button{cursor:pointer}
       table{border-collapse:collapse;width:100%;margin-top:.5rem}
-      th,td{border:1px solid #e5e7eb;padding:.5rem;text-align:left;font-size:.95rem}
+      th,td{border:1px solid #e5e7eb;padding:.4rem .5rem;text-align:left;font-size:.92rem;vertical-align:top}
       th{background:#f5f5f5}
       .muted{color:#666;font-size:.9rem}
-      .err{color:#b00020}
+      .err{color:#b00020;margin-top:.25rem}
+      .section{border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem;margin-top:1rem}
+      .controls{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+      .hdr{display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
+      .nowrap{white-space:nowrap}
+      .small{font-size:.85rem}
     </style>
   </head>
   <body>
-    <h1>Lectures Meteo</h1>
-    <div class="row">
-      <label>Estació <input id="estacio" value="home" /></label>
-      <label>Límit <input id="limit" type="number" min="1" max="1000" value="20" style="width:6rem" /></label>
-      <label><input id="auto" type="checkbox" /> Auto (30s)</label>
-      <button id="btn">Refresca</button>
-      <span id="status" class="muted"></span>
-    </div>
-    <div id="error" class="err"></div>
+    <h1>Dades Meteo & Hidrologia</h1>
+    <p class="muted small">Passa paràmetres per URL si vols: <code>?estacio=home&limit=50&codi_hidro=251116-005</code></p>
 
-    <table id="tbl">
-      <thead>
-        <tr>
-          <th>Hora</th>
-          <th>Temp (°C)</th>
-          <th>Sensació (°C)</th>
-          <th>Hum (%)</th>
-          <th>Pressió rel (hPa)</th>
-          <th>Pluja dia (mm)</th>
-          <th>Vent (m/s)</th>
-          <th>Ràfega (m/s)</th>
-          <th>Direcció (°)</th>
-          <th>UVI</th>
-          <th>Solar (W/m²)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <!-- ───────────── METEO ───────────── -->
+    <div class="section" id="meteo-sec">
+      <div class="hdr">
+        <h2>Meteo</h2>
+        <span id="status-meteo" class="muted"></span>
+      </div>
+
+      <div class="controls">
+        <label>Estació <input id="estacio" value="home" /></label>
+        <label>Límit <input id="limit-meteo" type="number" min="1" max="1000" value="20" /></label>
+        <label><input id="auto-meteo" type="checkbox" /> Auto (30s)</label>
+        <button id="btn-meteo">Refresca</button>
+      </div>
+      <div id="error-meteo" class="err"></div>
+
+      <table id="tbl-meteo">
+        <thead>
+          <tr>
+            <th class="nowrap">Hora</th>
+            <th>Temp (°C)</th>
+            <th>Sensació (°C)</th>
+            <th>Punt rosada (°C)</th>
+            <th>Hum (%)</th>
+            <th>Pressió rel (hPa)</th>
+            <th>Pressió abs (hPa)</th>
+            <th>UVI</th>
+            <th>Solar (W/m²)</th>
+            <th>Taxa pluja (mm/h)</th>
+            <th>Pluja dia</th>
+            <th>Pluja event</th>
+            <th>Pluja 1h</th>
+            <th>Pluja setmana</th>
+            <th>Pluja mes</th>
+            <th>Pluja any</th>
+            <th>Vent (m/s)</th>
+            <th>Ràfega (m/s)</th>
+            <th>Direcció (°)</th>
+            <th>Bateria (%)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- ───────────── HIDRO ───────────── -->
+    <div class="section" id="hidro-sec">
+      <div class="hdr">
+        <h2>Hidrologia</h2>
+        <span id="status-hidro" class="muted"></span>
+      </div>
+
+      <div class="controls">
+        <label>Codi estació (opcional) <input id="codi-hidro" placeholder="p.ex. 251116-005" /></label>
+        <label>Límit <input id="limit-hidro" type="number" min="1" max="1000" value="20" /></label>
+        <label><input id="auto-hidro" type="checkbox" /> Auto (30s)</label>
+        <button id="btn-hidro">Refresca</button>
+      </div>
+      <div id="error-hidro" class="err"></div>
+
+      <table id="tbl-hidro">
+        <thead>
+          <tr>
+            <th class="nowrap">Hora</th>
+            <th>Codi</th>
+            <th>Nom</th>
+            <th>Tipus</th>
+            <th>Cabal (m³/s)</th>
+            <th>Capacitat (%)</th>
+            <th>Nivell (m)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
     <script>
-      const $ = sel => document.querySelector(sel);
-      const estacioEl = $('#estacio');
-      const limitEl   = $('#limit');
-      const autoEl    = $('#auto');
-      const btn       = $('#btn');
-      const statusEl  = $('#status');
-      const errEl     = $('#error');
-      const tbody     = $('#tbl tbody');
-      let timer = null;
+      // Helpers
+      const $ = s => document.querySelector(s);
+      const fmtTime = iso => { try { return new Date(iso).toLocaleString(); } catch { return iso || ''; } };
+      const cell = v => (v == null || v === '' ? '' : v);
 
-      // Accepta ?estacio= i també (compat) ?station_id=
+      // ───────────── METEO ─────────────
+      const estacioEl = $('#estacio');
+      const limitMeteoEl = $('#limit-meteo');
+      const autoMeteoEl = $('#auto-meteo');
+      const btnMeteo = $('#btn-meteo');
+      const statusMeteoEl = $('#status-meteo');
+      const errMeteoEl = $('#error-meteo');
+      const tbodyMeteo = $('#tbl-meteo tbody');
+      let timerMeteo = null;
+
+      // ───────────── HIDRO ─────────────
+      const codiHidroEl = $('#codi-hidro');
+      const limitHidroEl = $('#limit-hidro');
+      const autoHidroEl = $('#auto-hidro');
+      const btnHidro = $('#btn-hidro');
+      const statusHidroEl = $('#status-hidro');
+      const errHidroEl = $('#error-hidro');
+      const tbodyHidro = $('#tbl-hidro tbody');
+      let timerHidro = null;
+
+      // Params d'URL
       const url = new URL(location.href);
       const estFromUrl = url.searchParams.get('estacio') || url.searchParams.get('station_id');
+      const limFromUrl = url.searchParams.get('limit');
+      const codiFromUrl = url.searchParams.get('codi_hidro') || url.searchParams.get('codi');
+
       if (estFromUrl) estacioEl.value = estFromUrl;
-      if (url.searchParams.get('limit')) limitEl.value = url.searchParams.get('limit');
+      if (limFromUrl)  { limitMeteoEl.value = limFromUrl; limitHidroEl.value = limFromUrl; }
+      if (codiFromUrl) codiHidroEl.value = codiFromUrl;
 
-      function fmtTime(iso) {
-        try { return new Date(iso).toLocaleString(); } catch { return iso || ''; }
-      }
-      function setStatus(msg){ statusEl.textContent = msg; }
-      function setError(msg){ errEl.textContent = msg || ''; }
-
-      function cell(v){ return v == null ? '' : v; }
-
-      async function load() {
-        setError('');
-        setStatus('Carregant…');
+      async function loadMeteo() {
+        errMeteoEl.textContent = ''; statusMeteoEl.textContent = 'Carregant…';
         const estacio = estacioEl.value.trim();
-        const limit = Math.max(1, Math.min(1000, parseInt(limitEl.value || '20', 10)));
+        const limit = Math.max(1, Math.min(1000, parseInt(limitMeteoEl.value || '20', 10)));
         const qs = new URLSearchParams({ limit: String(limit) });
         if (estacio) qs.set('estacio', estacio);
 
         try {
-          // Nou endpoint en català
           const res = await fetch('/api/v1/mesures/darreres?' + qs.toString());
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const { ok, items, error } = await res.json();
           if (!ok) throw new Error(error || 'error');
 
-          // Dibuixa files (amb compatibilitat de camps antics)
-          tbody.innerHTML = (items || []).map(row => {
+          tbodyMeteo.innerHTML = (items || []).map(row => {
             const instant           = row.instant ?? row.at;
             const temp_c            = row.temp_c ?? row.temperature;
             const sensacio_c        = row.sensacio_c ?? row.feels_like ?? row.feels_like_c;
+            const punt_rosada_c     = row.punt_rosada_c ?? row.dew_point ?? row.dew_point_c;
             const humitat_pct       = row.humitat_pct ?? row.humidity;
             const pressio_rel_hpa   = row.pressio_rel_hpa ?? row.pressure_hpa ?? row.pressure_rel_hpa;
-            const pluja_diaria_mm   = row.pluja_diaria_mm ?? row.rain_mm ?? row.rain_daily_mm;
+            const pressio_abs_hpa   = row.pressio_abs_hpa ?? row.pressure_abs_hpa;
+            const uvi               = row.uvi;
+            const solar_wm2         = row.solar_wm2;
+            const taxa_pluja_mm_h   = row.taxa_pluja_mm_h ?? row.rain_rate_mmph;
+            const pluja_diaria_mm   = row.pluja_diaria_mm ?? row.rain_daily_mm ?? row.rain_mm;
+            const pluja_event_mm    = row.pluja_event_mm;
+            const pluja_hora_mm     = row.pluja_hora_mm ?? row.rain_hour_mm;
+            const pluja_setmana_mm  = row.pluja_setmana_mm ?? row.rain_week_mm;
+            const pluja_mes_mm      = row.pluja_mes_mm ?? row.rain_month_mm;
+            const pluja_any_mm      = row.pluja_any_mm ?? row.rain_year_mm;
             const vent_ms           = row.vent_ms ?? row.wind_speed_ms;
             const vent_rafega_ms    = row.vent_rafega_ms ?? row.wind_gust_ms;
             const vent_dir_graus    = row.vent_direccio_graus ?? row.wind_dir_deg;
-            const uvi               = row.uvi;
-            const solar_wm2         = row.solar_wm2;
+            const bateria_pct       = row.bateria_pct;
 
             return `
               <tr>
-                <td>${fmtTime(instant)}</td>
+                <td class="nowrap">${fmtTime(instant)}</td>
                 <td>${cell(temp_c)}</td>
                 <td>${cell(sensacio_c)}</td>
+                <td>${cell(punt_rosada_c)}</td>
                 <td>${cell(humitat_pct)}</td>
                 <td>${cell(pressio_rel_hpa)}</td>
+                <td>${cell(pressio_abs_hpa)}</td>
+                <td>${cell(uvi)}</td>
+                <td>${cell(solar_wm2)}</td>
+                <td>${cell(taxa_pluja_mm_h)}</td>
                 <td>${cell(pluja_diaria_mm)}</td>
+                <td>${cell(pluja_event_mm)}</td>
+                <td>${cell(pluja_hora_mm)}</td>
+                <td>${cell(pluja_setmana_mm)}</td>
+                <td>${cell(pluja_mes_mm)}</td>
+                <td>${cell(pluja_any_mm)}</td>
                 <td>${cell(vent_ms)}</td>
                 <td>${cell(vent_rafega_ms)}</td>
                 <td>${cell(vent_dir_graus)}</td>
-                <td>${cell(uvi)}</td>
-                <td>${cell(solar_wm2)}</td>
+                <td>${cell(bateria_pct)}</td>
               </tr>`;
           }).join('');
 
-          setStatus(`Mostrant ${items?.length ?? 0} registres${estacio ? ' — estació: ' + estacio : ''}`);
+          statusMeteoEl.textContent = `Mostrant ${items?.length ?? 0} registres${estacio ? ' — estació: ' + estacio : ''}`;
         } catch (e) {
-          setError('Error carregant dades: ' + (e.message || e));
-          setStatus('');
+          errMeteoEl.textContent = 'Error carregant meteo: ' + (e.message || e);
+          statusMeteoEl.textContent = '';
         }
       }
 
-      btn.addEventListener('click', load);
-      autoEl.addEventListener('change', () => {
-        if (autoEl.checked) {
-          if (timer) clearInterval(timer);
-          timer = setInterval(load, 30000);
-          load();
-        } else {
-          if (timer) clearInterval(timer);
+      async function loadHidro() {
+        errHidroEl.textContent = ''; statusHidroEl.textContent = 'Carregant…';
+        const codi = codiHidroEl.value.trim();
+        const limit = Math.max(1, Math.min(1000, parseInt(limitHidroEl.value || '20', 10)));
+        const qs = new URLSearchParams({ limit: String(limit) });
+        if (codi) qs.set('codi', codi);
+
+        try {
+          const res = await fetch('/api/v1/hidro/darreres?' + qs.toString());
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const { ok, items, error } = await res.json();
+          if (!ok) throw new Error(error || 'error');
+
+          tbodyHidro.innerHTML = (items || []).map(row => {
+            const instant   = row.instant;
+            // si no has aplicat el retoc backend, 'codi','nom','tipus' poden no existir
+            const codi      = row.codi ?? '';
+            const nom       = row.nom ?? '';
+            const tipus     = row.tipus ?? '';
+            const cabal     = row.cabal_m3s ?? '';
+            const capacitat = row.capacitat_pct ?? '';
+            const nivell    = row.nivell_m ?? '';
+            const fallbackId= row.estacio_id ?? '';
+
+            return `
+              <tr>
+                <td class="nowrap">${fmtTime(instant)}</td>
+                <td>${cell(codi || ('#'+fallbackId))}</td>
+                <td>${cell(nom)}</td>
+                <td>${cell(tipus)}</td>
+                <td>${cell(cabal)}</td>
+                <td>${cell(capacitat)}</td>
+                <td>${cell(nivell)}</td>
+              </tr>`;
+          }).join('');
+
+          statusHidroEl.textContent = `Mostrant ${items?.length ?? 0} registres${codi ? ' — codi: ' + codi : ''}`;
+        } catch (e) {
+          errHidroEl.textContent = 'Error carregant hidrologia: ' + (e.message || e);
+          statusHidroEl.textContent = '';
         }
+      }
+
+      // Botons i Auto
+      btnMeteo.addEventListener('click', loadMeteo);
+      btnHidro.addEventListener('click', loadHidro);
+
+      autoMeteoEl.addEventListener('change', () => {
+        if (autoMeteoEl.checked) { if (timerMeteo) clearInterval(timerMeteo); timerMeteo = setInterval(loadMeteo, 30000); loadMeteo(); }
+        else { if (timerMeteo) clearInterval(timerMeteo); }
       });
 
-      load();
+      autoHidroEl.addEventListener('change', () => {
+        if (autoHidroEl.checked) { if (timerHidro) clearInterval(timerHidro); timerHidro = setInterval(loadHidro, 30000); loadHidro(); }
+        else { if (timerHidro) clearInterval(timerHidro); }
+      });
+
+      // Primera càrrega
+      loadMeteo();
+      loadHidro();
     </script>
   </body>
 </html>
