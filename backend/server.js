@@ -243,7 +243,6 @@ async function pullEcowittAndSave() {
 // Pull ACA → meteo.lectures_hidro (Cardener, Valls, Llosa)
 // Pull ACA → combina cabal (rius) i capacitat (pantans) per cada codi
 async function pullACAAndSave() {
-  // 1) Llegeix APIs
   const [riversRes, reservoirsRes] = await Promise.all([
     fetch(ACA_RIVER_URL),
     fetch(ACA_RESERVOIR_URL),
@@ -251,53 +250,104 @@ async function pullACAAndSave() {
   if (!riversRes.ok) throw new Error('aca rivers status ' + riversRes.status);
   if (!reservoirsRes.ok) throw new Error('aca reservoirs status ' + reservoirsRes.status);
 
-  const rivers = await riversRes.json();       // river_flow_6min
-  const reservoirs = await reservoirsRes.json(); // capacity_6min
+  const rivers = await riversRes.json();        // river_flow_6min
+  const reservoirs = await reservoirsRes.json();// capacity_6min
 
-  // 2) Config dels codis
-  const cfg = [
-    { code: process.env.ACA_CODI_CARDENER, name: process.env.ACA_NOM_CARDENER || 'Cardener', tipusPreferit: 'riu' },
-    { code: process.env.ACA_CODI_VALLS,    name: process.env.ACA_NOM_VALLS    || 'Valls',    tipusPreferit: 'riu' },
-    // La Llosa volem cabal i capacitat. Fem servir el mateix codi per a tots dos si existeixen.
-    { code: process.env.ACA_CODI_LLOSA,    name: process.env.ACA_NOM_LLOSA    || 'La Llosa del Cavall', tipusPreferit: 'panta' },
-  ].filter(x => x.code);
+  // Helpers per navegar claus “sorolloses”
+  const getPath = (obj, tokens) => {
+    try {
+      return tokens.reduce((a, k) => (a && a[k] !== undefined && a[k] !== null) ? a[k] : undefined, obj);
+    } catch { return undefined; }
+  };
+  const firstOf = (obj, listOfPaths) => {
+    for (const p of listOfPaths) {
+      const v = getPath(obj, p);
+      if (v !== undefined && v !== null) return v;
+    }
+    return null;
+  };
+  const toNum = v => (v === null || v === '' || v === undefined ? null : Number(v));
 
-  // 3) Agrupa per codi: extreu cabal i/o capacitat si hi són
-  const byCode = new Map();
-  for (const { code, name, tipusPreferit } of cfg) {
-    const rObj = rivers?.[code];
-    const zObj = reservoirs?.[code];
+  // Codis de .env (permet codis separats per cabal/capacitat a la Llosa)
+  const CODE_CARD   = process.env.ACA_CODI_CARDENER;
+  const CODE_VALLS  = process.env.ACA_CODI_VALLS;
+  const CODE_LLOSA  = process.env.ACA_CODI_LLOSA;
 
-    const cabal = rObj?.popup?.river_flow?.value;
-    const capacitat = zObj?.popup?.capacity?.value;
+  const CODE_LLOSA_FLOW = process.env.ACA_CODI_LLOSA_CABAL      || CODE_LLOSA;
+  const CODE_LLOSA_CAP  = process.env.ACA_CODI_LLOSA_CAPACITAT  || CODE_LLOSA;
 
-    if (cabal == null && capacitat == null) continue; // no hi ha res per aquest codi
+  const SITES = [
+    { siteCode: CODE_CARD,  name: process.env.ACA_NOM_CARDENER || 'Cardener', tipusPreferit: 'riu',   flowKey: CODE_CARD,       capKey: null },
+    { siteCode: CODE_VALLS, name: process.env.ACA_NOM_VALLS    || 'Valls',    tipusPreferit: 'riu',   flowKey: CODE_VALLS,      capKey: null },
+    { siteCode: CODE_LLOSA, name: process.env.ACA_NOM_LLOSA    || 'La Llosa del Cavall', tipusPreferit: 'panta',
+      flowKey: CODE_LLOSA_FLOW, capKey: CODE_LLOSA_CAP },
+  ].filter(s => s.siteCode);
 
-    byCode.set(code, {
-      code,
-      name,
-      tipusPreferit,                            // només informatiu
-      cabal_m3s: cabal != null ? Number(cabal) : null,
-      capacitat_pct: capacitat != null ? Number(capacitat) : null,
-      raw_river: rObj ?? null,
-      raw_reservoir: zObj ?? null,
-    });
-  }
+  const nowIso = new Date().toISOString();
+  const results = [];
 
-  // 4) Inserta (o actualitza) site i una sola lectura per codi i instant
-  const instant = new Date().toISOString();
-  const inserts = [];
+  for (const s of SITES) {
+    const rObj = s.flowKey ? rivers?.[s.flowKey] : null;
+    const zObj = s.capKey  ? reservoirs?.[s.capKey] : null;
 
-  for (const entry of byCode.values()) {
-    const { code, name, tipusPreferit, cabal_m3s, capacitat_pct, raw_river, raw_reservoir } = entry;
+    // Cabal (variants)
+    const flowVal = toNum(firstOf(rObj, [
+      ['popup','river_flow','value'],
+      ['popup','flux_riu','value'],
+      ['popup','cabal_riu','value'],
+      ['finestra emergent','river_flow','valor'],
+      ['finestra emergent','flux_riu','valor'],
+      ['finestra emergent','cabal_riu','valor'],
+      ['emergent','river_flow','valor'],
+      ['emergent','flux_riu','valor'],
+      ['emergent','cabal_riu','valor'],
+      ['finestra','flux_riu','valor'],
+      ['finestra','cabal_riu','valor'],
+    ]));
 
-    // Site (únic per codi) — mantenim 'tipus' segons preferència (informatiu)
-    const estacioId = await assegurarHidro(code, (cabal_m3s != null && capacitat_pct == null) ? 'riu'
-                                              : (capacitat_pct != null && cabal_m3s == null) ? 'panta'
-                                              : (tipusPreferit || 'panta'),
-                                              name);
+    // Capacitat (variants)
+    const capVal = toNum(firstOf(zObj, [
+      ['popup','capacity','value'],
+      ['popup','capacitat','valor'],
+      ['finestra emergent','capacitat','valor'],
+      ['emergent','capacitat','valor'],
+      ['element emergent','capacitat','valor'],
+    ]));
 
-    // Upsert a lectures: si ja existia la mateixa (estacio_id, instant), fusiona camps
+    // Nivell (si ve, també el desarem)
+    const levelVal = toNum(firstOf(zObj, [
+      ['popup','level','value'],
+      ['finestra emergent','nivell','valor'],
+      ['emergent','nivell','valor'],
+    ]));
+
+    // Timestamps reals si existeixen (sinó now)
+    const flowTs = firstOf(rObj, [
+      ['popup','river_flow','time'], ['popup','flux_riu','time'], ['popup','cabal_riu','time'],
+      ['finestra emergent','river_flow','hora'], ['finestra emergent','flux_riu','hora'], ['finestra emergent','cabal_riu','hora'],
+      ['emergent','river_flow','hora'], ['emergent','flux_riu','hora'], ['emergent','cabal_riu','hora'],
+    ]);
+    const capTs = firstOf(zObj, [
+      ['popup','capacity','time'], ['popup','capacitat','hora'],
+      ['finestra emergent','capacitat','hora'],
+      ['emergent','capacitat','hora'],
+      ['element emergent','capacitat','hora'],
+    ]);
+    const instant = (flowTs || capTs || nowIso);
+
+    if (flowVal === null && capVal === null && levelVal === null) {
+      console.warn('[ACA] sense valors per', s.siteCode, { flowKey: s.flowKey, capKey: s.capKey });
+      continue;
+    }
+
+    // Dona d’alta/actualitza el “site”
+    const tipusCalc =
+      (flowVal !== null && capVal === null) ? 'riu' :
+      (capVal  !== null && flowVal === null) ? 'panta' : (s.tipusPreferit || 'panta');
+
+    const estacioId = await assegurarHidro(s.siteCode, tipusCalc, s.name);
+
+    // Inserció fusionant si ja existeix la mateixa (estacio_id, instant)
     const sql = `
       INSERT INTO lectures_hidro (estacio_id, instant, cabal_m3s, capacitat_pct, nivell_m, extres)
       VALUES ($1,$2,$3,$4,$5,$6)
@@ -308,17 +358,17 @@ async function pullACAAndSave() {
           extres        = COALESCE(lectures_hidro.extres, EXCLUDED.extres)
       RETURNING id
     `;
-    const extres = { river_raw: raw_river, reservoir_raw: raw_reservoir };
+    const extres = { river_raw: rObj ?? null, reservoir_raw: zObj ?? null };
     const { rows } = await pool.query(sql, [
-      estacioId, instant,
-      cabal_m3s, capacitat_pct, null,
+      estacioId, new Date(instant).toISOString(),
+      flowVal, capVal, levelVal,
       JSON.stringify(extres),
     ]);
 
-    inserts.push({ codi: code, id: rows[0]?.id || null, cabal_m3s, capacitat_pct });
+    results.push({ codi: s.siteCode, id: rows[0]?.id || null, cabal_m3s: flowVal, capacitat_pct: capVal, nivell_m: levelVal, ts: instant });
   }
 
-  return { ok: true, inserts };
+  return { ok: true, inserts: results };
 }
 
 
