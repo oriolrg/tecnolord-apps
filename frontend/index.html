@@ -1,3 +1,4 @@
+<!doctype html>
 <html lang="ca">
   <head>
     <meta charset="utf-8" />
@@ -18,18 +19,28 @@
   <body>
     <h1>Lectures Meteo</h1>
     <div class="row">
-      <label>Estació <input id="station" value="home" /></label>
+      <label>Estació <input id="estacio" value="home" /></label>
       <label>Límit <input id="limit" type="number" min="1" max="1000" value="20" style="width:6rem" /></label>
       <label><input id="auto" type="checkbox" /> Auto (30s)</label>
       <button id="btn">Refresca</button>
       <span id="status" class="muted"></span>
     </div>
     <div id="error" class="err"></div>
+
     <table id="tbl">
       <thead>
         <tr>
-          <th>Hora</th><th>Temp (°C)</th><th>Hum (%)</th><th>Pressió (hPa)</th>
-          <th>Pluja (mm)</th><th>Vent (m/s)</th><th>Direcció (°)</th>
+          <th>Hora</th>
+          <th>Temp (°C)</th>
+          <th>Sensació (°C)</th>
+          <th>Hum (%)</th>
+          <th>Pressió rel (hPa)</th>
+          <th>Pluja dia (mm)</th>
+          <th>Vent (m/s)</th>
+          <th>Ràfega (m/s)</th>
+          <th>Direcció (°)</th>
+          <th>UVI</th>
+          <th>Solar (W/m²)</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -37,7 +48,7 @@
 
     <script>
       const $ = sel => document.querySelector(sel);
-      const stationEl = $('#station');
+      const estacioEl = $('#estacio');
       const limitEl   = $('#limit');
       const autoEl    = $('#auto');
       const btn       = $('#btn');
@@ -46,10 +57,11 @@
       const tbody     = $('#tbl tbody');
       let timer = null;
 
-      // Llegeix paràmetres d’URL (?station_id=...&limit=...)
+      // Accepta ?estacio= i també (compat) ?station_id=
       const url = new URL(location.href);
-      if (url.searchParams.get('station_id')) stationEl.value = url.searchParams.get('station_id');
-      if (url.searchParams.get('limit'))      limitEl.value   = url.searchParams.get('limit');
+      const estFromUrl = url.searchParams.get('estacio') || url.searchParams.get('station_id');
+      if (estFromUrl) estacioEl.value = estFromUrl;
+      if (url.searchParams.get('limit')) limitEl.value = url.searchParams.get('limit');
 
       function fmtTime(iso) {
         try { return new Date(iso).toLocaleString(); } catch { return iso || ''; }
@@ -57,32 +69,54 @@
       function setStatus(msg){ statusEl.textContent = msg; }
       function setError(msg){ errEl.textContent = msg || ''; }
 
+      function cell(v){ return v == null ? '' : v; }
+
       async function load() {
         setError('');
         setStatus('Carregant…');
-        const station = stationEl.value.trim();
+        const estacio = estacioEl.value.trim();
         const limit = Math.max(1, Math.min(1000, parseInt(limitEl.value || '20', 10)));
         const qs = new URLSearchParams({ limit: String(limit) });
-        if (station) qs.set('station_id', station);
+        if (estacio) qs.set('estacio', estacio);
 
         try {
-          const res = await fetch('/api/v1/measurements/latest?' + qs.toString());
+          // Nou endpoint en català
+          const res = await fetch('/api/v1/mesures/darreres?' + qs.toString());
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const { ok, items, error } = await res.json();
           if (!ok) throw new Error(error || 'error');
 
-          tbody.innerHTML = (items || []).map(row => `
-            <tr>
-              <td>${fmtTime(row.at)}</td>
-              <td>${row.temp_c ?? ''}</td>
-              <td>${row.humidity ?? ''}</td>
-              <td>${row.pressure_hpa ?? ''}</td>
-              <td>${row.rain_mm ?? ''}</td>
-              <td>${row.wind_speed_ms ?? ''}</td>
-              <td>${row.wind_dir_deg ?? ''}</td>
-            </tr>
-          `).join('');
-          setStatus(`Mostrant ${items.length} registres${station ? ' — estació: ' + station : ''}`);
+          // Dibuixa files (amb compatibilitat de camps antics)
+          tbody.innerHTML = (items || []).map(row => {
+            const instant           = row.instant ?? row.at;
+            const temp_c            = row.temp_c ?? row.temperature;
+            const sensacio_c        = row.sensacio_c ?? row.feels_like ?? row.feels_like_c;
+            const humitat_pct       = row.humitat_pct ?? row.humidity;
+            const pressio_rel_hpa   = row.pressio_rel_hpa ?? row.pressure_hpa ?? row.pressure_rel_hpa;
+            const pluja_diaria_mm   = row.pluja_diaria_mm ?? row.rain_mm ?? row.rain_daily_mm;
+            const vent_ms           = row.vent_ms ?? row.wind_speed_ms;
+            const vent_rafega_ms    = row.vent_rafega_ms ?? row.wind_gust_ms;
+            const vent_dir_graus    = row.vent_direccio_graus ?? row.wind_dir_deg;
+            const uvi               = row.uvi;
+            const solar_wm2         = row.solar_wm2;
+
+            return `
+              <tr>
+                <td>${fmtTime(instant)}</td>
+                <td>${cell(temp_c)}</td>
+                <td>${cell(sensacio_c)}</td>
+                <td>${cell(humitat_pct)}</td>
+                <td>${cell(pressio_rel_hpa)}</td>
+                <td>${cell(pluja_diaria_mm)}</td>
+                <td>${cell(vent_ms)}</td>
+                <td>${cell(vent_rafega_ms)}</td>
+                <td>${cell(vent_dir_graus)}</td>
+                <td>${cell(uvi)}</td>
+                <td>${cell(solar_wm2)}</td>
+              </tr>`;
+          }).join('');
+
+          setStatus(`Mostrant ${items?.length ?? 0} registres${estacio ? ' — estació: ' + estacio : ''}`);
         } catch (e) {
           setError('Error carregant dades: ' + (e.message || e));
           setStatus('');
@@ -100,7 +134,6 @@
         }
       });
 
-      // primera càrrega
       load();
     </script>
   </body>
