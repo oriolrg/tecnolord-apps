@@ -148,7 +148,6 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       ORDER BY h.instant DESC
       LIMIT ${limit}
     `;
-
     const { rows } = await pool.query(sql, params);
     res.json({ ok: true, items: rows });
   } catch (e) {
@@ -156,6 +155,7 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
     res.status(500).json({ ok:false, error:'db query error' });
   }
 });
+
 
 
 // ──────────────────────────────────────────────────────────
@@ -241,60 +241,86 @@ async function pullEcowittAndSave() {
 }
 
 // Pull ACA → meteo.lectures_hidro (Cardener, Valls, Llosa)
+// Pull ACA → combina cabal (rius) i capacitat (pantans) per cada codi
 async function pullACAAndSave() {
-  const nowIso = new Date().toISOString();
-
-  // Llegeix dades
-  const [riversRes, reservoirsRes] = await Promise.all([ fetch(ACA_RIVER_URL), fetch(ACA_RESERVOIR_URL) ]);
+  // 1) Llegeix APIs
+  const [riversRes, reservoirsRes] = await Promise.all([
+    fetch(ACA_RIVER_URL),
+    fetch(ACA_RESERVOIR_URL),
+  ]);
   if (!riversRes.ok) throw new Error('aca rivers status ' + riversRes.status);
   if (!reservoirsRes.ok) throw new Error('aca reservoirs status ' + reservoirsRes.status);
-  const rivers = await riversRes.json();
-  const reservoirs = await reservoirsRes.json();
 
-  // Map codis → { tipus, nom, camins... }
+  const rivers = await riversRes.json();       // river_flow_6min
+  const reservoirs = await reservoirsRes.json(); // capacity_6min
+
+  // 2) Config dels codis
   const cfg = [
-    { envCode: 'ACA_CODI_CARDENER', envName: 'ACA_NOM_CARDENER', tipus: 'riu',   path: ['popup','river_flow','value'] },
-    { envCode: 'ACA_CODI_VALLS',    envName: 'ACA_NOM_VALLS',    tipus: 'riu',   path: ['popup','river_flow','value'] },
-    { envCode: 'ACA_CODI_LLOSA',    envName: 'ACA_NOM_LLOSA',    tipus: 'panta', path: ['popup','capacity','value']  },
-  ];
+    { code: process.env.ACA_CODI_CARDENER, name: process.env.ACA_NOM_CARDENER || 'Cardener', tipusPreferit: 'riu' },
+    { code: process.env.ACA_CODI_VALLS,    name: process.env.ACA_NOM_VALLS    || 'Valls',    tipusPreferit: 'riu' },
+    // La Llosa volem cabal i capacitat. Fem servir el mateix codi per a tots dos si existeixen.
+    { code: process.env.ACA_CODI_LLOSA,    name: process.env.ACA_NOM_LLOSA    || 'La Llosa del Cavall', tipusPreferit: 'panta' },
+  ].filter(x => x.code);
 
+  // 3) Agrupa per codi: extreu cabal i/o capacitat si hi són
+  const byCode = new Map();
+  for (const { code, name, tipusPreferit } of cfg) {
+    const rObj = rivers?.[code];
+    const zObj = reservoirs?.[code];
+
+    const cabal = rObj?.popup?.river_flow?.value;
+    const capacitat = zObj?.popup?.capacity?.value;
+
+    if (cabal == null && capacitat == null) continue; // no hi ha res per aquest codi
+
+    byCode.set(code, {
+      code,
+      name,
+      tipusPreferit,                            // només informatiu
+      cabal_m3s: cabal != null ? Number(cabal) : null,
+      capacitat_pct: capacitat != null ? Number(capacitat) : null,
+      raw_river: rObj ?? null,
+      raw_reservoir: zObj ?? null,
+    });
+  }
+
+  // 4) Inserta (o actualitza) site i una sola lectura per codi i instant
+  const instant = new Date().toISOString();
   const inserts = [];
-  for (const c of cfg) {
-    const codi = process.env[c.envCode];
-    if (!codi) continue;
-    const nom = process.env[c.envName] || null;
-    const tipus = c.tipus;
 
-    // extreu valor amb guarda
-    const src = tipus === 'panta' ? reservoirs : rivers;
-    const obj = src?.[codi];
-    let valor = null;
-    try {
-      valor = c.path.reduce((acc, k) => acc && acc[k] != null ? acc[k] : null, obj);
-    } catch { valor = null; }
+  for (const entry of byCode.values()) {
+    const { code, name, tipusPreferit, cabal_m3s, capacitat_pct, raw_river, raw_reservoir } = entry;
 
-    const estacioId = await assegurarHidro(codi, tipus, nom);
+    // Site (únic per codi) — mantenim 'tipus' segons preferència (informatiu)
+    const estacioId = await assegurarHidro(code, (cabal_m3s != null && capacitat_pct == null) ? 'riu'
+                                              : (capacitat_pct != null && cabal_m3s == null) ? 'panta'
+                                              : (tipusPreferit || 'panta'),
+                                              name);
 
-    // decideix camps segons tipus
-    const cabal_m3s     = (tipus === 'riu'   ? (valor != null ? Number(valor) : null) : null);
-    const capacitat_pct = (tipus === 'panta' ? (valor != null ? Number(valor) : null) : null);
-
-    // inserta (usa nowIso; si un dia trobem timestamp a la resposta, el mapejem)
+    // Upsert a lectures: si ja existia la mateixa (estacio_id, instant), fusiona camps
     const sql = `
       INSERT INTO lectures_hidro (estacio_id, instant, cabal_m3s, capacitat_pct, nivell_m, extres)
       VALUES ($1,$2,$3,$4,$5,$6)
-      ON CONFLICT (estacio_id, instant) DO NOTHING
+      ON CONFLICT (estacio_id, instant) DO UPDATE
+      SET cabal_m3s     = COALESCE(lectures_hidro.cabal_m3s, EXCLUDED.cabal_m3s),
+          capacitat_pct = COALESCE(lectures_hidro.capacitat_pct, EXCLUDED.capacitat_pct),
+          nivell_m      = COALESCE(lectures_hidro.nivell_m, EXCLUDED.nivell_m),
+          extres        = COALESCE(lectures_hidro.extres, EXCLUDED.extres)
       RETURNING id
     `;
+    const extres = { river_raw: raw_river, reservoir_raw: raw_reservoir };
     const { rows } = await pool.query(sql, [
-      estacioId, nowIso, cabal_m3s, capacitat_pct, null,
-      JSON.stringify({ raw: obj ?? null })
+      estacioId, instant,
+      cabal_m3s, capacitat_pct, null,
+      JSON.stringify(extres),
     ]);
-    inserts.push({ codi, id: rows[0]?.id || null, tipus });
+
+    inserts.push({ codi: code, id: rows[0]?.id || null, cabal_m3s, capacitat_pct });
   }
 
   return { ok: true, inserts };
 }
+
 
 // ──────────────────────────────────────────────────────────
 // Rutes de “tasca”: ara el pull d’Ecowitt TAMBÉ fa ACA
