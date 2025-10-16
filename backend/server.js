@@ -169,5 +169,23 @@ app.post(['/tasks/pull-ecowitt','/api/tasks/pull-ecowitt'], checkApiKey, async (
   }
 });
 
+// GET /api/v1/measurements/latest?limit=50&station_id=home
+app.get('/api/v1/measurements/latest', async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 1000);
+  const station = req.query.station_id || null;
+
+  try {
+    const params = [];
+    let sql = 'SELECT * FROM measurement';
+    if (station) { sql += ' WHERE station_id = $1'; params.push(station); }
+    sql += ' ORDER BY at DESC LIMIT ' + limit;
+    const { rows } = await pool.query(sql, params);
+    res.json({ ok: true, items: rows });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: 'db query error' });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Backend escoltant a :${PORT}`));
