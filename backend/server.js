@@ -203,7 +203,7 @@ async function pullEcowittAndSave() {
     +d?.rainfall?.['1_hour']?.value || null,          // pluja_hora_mm
     +d?.rainfall?.weekly?.value || null,              // pluja_setmana_mm
     +d?.rainfall?.monthly?.value || null,             // pluja_mes_mm
-    +d?.rainfall?.yearly?.value || null,              // pluja_any_mm
+    null,                                             // pluja_any_mm
 
     kmhToMs(+d?.wind?.wind_speed?.value || null),     // vent_ms
     kmhToMs(+d?.wind?.wind_gust?.value || null),      // vent_rafega_ms
