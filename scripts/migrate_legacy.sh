@@ -1,6 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Llegeix variables de la DB des del contenidor (amb fallback a .env si cal)
+DB_USER="$(docker compose exec -T db printenv POSTGRES_USER 2>/dev/null | tr -d '\r' || true)"
+DB_NAME="$(docker compose exec -T db printenv POSTGRES_DB   2>/dev/null | tr -d '\r' || true)"
+
+if [[ -z "$DB_USER" || -z "$DB_NAME" ]]; then
+  # intenta llegir-les de .env del repo
+  if [[ -f .env ]]; then
+    # shellcheck disable=SC2046
+    export $(grep -E '^(POSTGRES_USER|POSTGRES_DB)=' .env | xargs)
+    DB_USER="${POSTGRES_USER:-postgres}"
+    DB_NAME="${POSTGRES_DB:-postgres}"
+  else
+    echo "ERROR: no puc obtenir POSTGRES_USER/POSTGRES_DB ni del contenidor ni de .env" >&2
+    exit 1
+  fi
+fi
+
+
 # ---------------------------------------------
 # Migració de dades legacy.meteo (MySQL dump) a Postgres (meteo.*)
 # Ús: scripts/migrate_legacy.sh migration/legacy_meteo.sql
@@ -29,7 +47,7 @@ WORKDIR="$(pwd)"
 OUT_PG="migration/legacy_meteo_pg.sql"
 
 echo ">> Creant esquema 'legacy' a Postgres (si no existeix)..."
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" \
   -c "CREATE SCHEMA IF NOT EXISTS legacy;"
 
 echo ">> Convertint dump MySQL -> Postgres-friendly: $OUT_PG"
@@ -53,10 +71,10 @@ sed -E \
 
 echo ">> Copiant i important legacy_meteo_pg.sql al Postgres..."
 docker cp "$OUT_PG" "$DB_CID":/tmp/legacy_meteo_pg.sql
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/legacy_meteo_pg.sql
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -f /tmp/legacy_meteo_pg.sql
 
 echo ">> Garantint claus i columnes a l’esquema nou (idempotent)..."
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<SQL
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" <<SQL
 -- Estació meteo 'home'
 INSERT INTO meteo.estacions_meteo (codi, nom)
 VALUES ('home','Estació principal')
@@ -105,7 +123,7 @@ CREATE TABLE IF NOT EXISTS meteo.pluja_diaria (
 SQL
 
 echo ">> Carregant METEO (legacy.meteo -> meteo.lectures_meteo) ..."
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<SQL
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" <<SQL
 WITH src AS (
   SELECT
     -- interpreta created_at com a hora local $TZ_LOCAL
@@ -148,7 +166,7 @@ SET temp_c          = COALESCE(meteo.lectures_meteo.temp_c,          EXCLUDED.te
 SQL
 
 echo ">> Carregant HIDRO (Cardener, Valls, Llosa) ..."
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<SQL
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" <<SQL
 -- Cardener (cabal)
 INSERT INTO meteo.lectures_hidro (estacio_id, instant, cabal_m3s)
 SELECT e.id, (m.created_at AT TIME ZONE '$TZ_LOCAL')::timestamptz,
@@ -191,7 +209,7 @@ SET capacitat_pct = COALESCE(meteo.lectures_hidro.capacitat_pct, EXCLUDED.capaci
 SQL
 
 echo ">> Recalculant agregat de pluja diària ..."
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<SQL
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" <<SQL
 INSERT INTO meteo.pluja_diaria (estacio_id, data, total_mm)
 SELECT
   lm.estacio_id,
@@ -206,13 +224,13 @@ SET total_mm  = GREATEST(EXCLUDED.total_mm, meteo.pluja_diaria.total_mm),
 SQL
 
 echo ">> Validació ràpida:"
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
 "SELECT instant,temp_c,humidity,pressure_hpa FROM meteo.lectures_meteo ORDER BY instant DESC LIMIT 3;"
 
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
 "SELECT * FROM meteo.lectures_hidro ORDER BY instant DESC LIMIT 3;"
 
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
 "SELECT * FROM meteo.pluja_diaria ORDER BY data DESC LIMIT 5;"
 
 echo "✅ Migració completada."
