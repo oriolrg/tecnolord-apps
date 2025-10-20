@@ -21,7 +21,7 @@ fi
 
 # ---------------------------------------------
 # Migració de dades legacy.meteo (MySQL dump) a Postgres (meteo.*)
-# Ús: scripts/migrate_legacy.sh migration/legacy_meteo.sql
+# Ús: scripts/migrate_legacy.sh meteo.sql
 # Requisits:
 #   - docker compose amb servei "db" (Postgres)
 #   - variables POSTGRES_USER/POSTGRES_DB (ja presents al contenidor "db")
@@ -32,7 +32,7 @@ DUMP_FILE="${1:-}"
 TZ_LOCAL="${TZ_LOCAL:-Europe/Madrid}"   # pots canviar via export TZ_LOCAL=...
 
 if [[ -z "$DUMP_FILE" || ! -f "$DUMP_FILE" ]]; then
-  echo "ERROR: cal passar el camí al dump MySQL (p.ex.: migration/legacy_meteo.sql)" >&2
+  echo "ERROR: cal passar el camí al dump MySQL (p.ex.: meteo.sql)" >&2
   exit 1
 fi
 
@@ -44,7 +44,8 @@ if [[ -z "$DB_CID" ]]; then
 fi
 
 WORKDIR="$(pwd)"
-OUT_PG="migration/legacy_meteo_pg.sql"
+OUT_PG="meteo.sql"
+mkdir -p "$(dirname "$OUT_PG")"
 
 echo ">> Creant esquema 'legacy' a Postgres (si no existeix)..."
 docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" \
