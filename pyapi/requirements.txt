@@ -1,3 +1,4 @@
+# pyapi/requirements.txt
 fastapi
 uvicorn[standard]
 sqlalchemy
