@@ -68,6 +68,23 @@ services:
       - ./site:/srv
       - caddy_data:/data
       - caddy_config:/config
+  end actual:
+  services:
+    pyapi:
+      build:
+        context: .
+        dockerfile: pyapi/Dockerfile
+      container_name: tecnolord-pyapi
+      environment:
+        DATABASE_URL: >-
+          postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+        APP_TZ: "Europe/Madrid"
+      depends_on:
+        - db
+      ports:
+        - "8001:8000"
+      restart: unless-stopped
+      profiles: ["pyapi"]
 volumes:
   caddy_data: {}
   caddy_config: {}
