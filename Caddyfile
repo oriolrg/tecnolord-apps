@@ -1,7 +1,8 @@
+cat > Caddyfile.pyapi <<'EOF'
 :80 {
   encode zstd gzip
 
-  # 1) PYTHON (més específiques)
+  # 1) PYTHON (més específiques) — mantenim el path complet
   @py_kpis path /api/v1/kpis*
   handle @py_kpis {
     header { X-Served-By api_py }
@@ -34,3 +35,4 @@
     file_server
   }
 }
+EOF
