@@ -1,4 +1,28 @@
 services:
+  api_py:
+    build: ./pyapi
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      SCHEMA: ml
+    depends_on: [db]
+    expose: ["8000"]
+  worker:
+    image: prefecthq/prefect:2-latest   # o apache/airflow si prefereixes
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [db]
+    volumes:
+      - ./flows:/opt/flows
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.1
+    restart: unless-stopped
+    command: mlflow server --host 0.0.0.0 --port 5000 \
+      --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlartifacts
+    volumes:
+      - ./mlruns:/mlartifacts
+    expose: ["5000"]
   db:
     image: postgres:16
     restart: unless-stopped
@@ -14,7 +38,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
   backend:
     build:
       context: ./backend
@@ -33,7 +56,6 @@ services:
       - db
     expose:
       - "3000"
-
   caddy:
     image: caddy:2
     restart: unless-stopped
@@ -44,6 +66,5 @@ services:
       - ./frontend:/srv:ro
     ports:
       - "80:80"
-
 volumes:
   pgdata:

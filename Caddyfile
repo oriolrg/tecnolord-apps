@@ -11,4 +11,12 @@
     try_files {path} /index.html
     file_server
   }
+  
+  handle_path /api/v1/forecast* {
+    reverse_proxy api_py:8000
+  }
+  handle_path /api/v1/kpis* {
+    reverse_proxy api_py:8000
+  }
+
 }
