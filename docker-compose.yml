@@ -59,15 +59,16 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
-    depends_on:
-      - backend
+    ports:
+      - "80:80"
+      - "2019:2019"           # (admin API, útil per reloads)
+    depends_on: [backend, api_py]
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./frontend:/srv:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro   # << EL TEU FITXER AL HOST
       - ./site:/srv
       - caddy_data:/data
       - caddy_config:/config
-    ports:
-      - "80:80"
 volumes:
+  caddy_data: {}
+  caddy_config: {}
   pgdata:
