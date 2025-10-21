@@ -68,9 +68,7 @@ services:
       - ./site:/srv
       - caddy_data:/data
       - caddy_config:/config
-  end actual:
-  services:
-    pyapi:
+  pyapi:
       build:
         context: .
         dockerfile: pyapi/Dockerfile
@@ -85,6 +83,7 @@ services:
         - "8001:8000"
       restart: unless-stopped
       profiles: ["pyapi"]
+  
 volumes:
   caddy_data: {}
   caddy_config: {}
