@@ -1,20 +1,29 @@
 :80 {
   encode zstd gzip
 
-  # 1) RUTES PYTHON (més específiques) — mantenim el path complet
-  @api_py path /api/v1/forecast* /api/v1/kpis*
-  handle @api_py {
+  # 1) PYTHON (més específiques)
+  @py_kpis path /api/v1/kpis*
+  handle @py_kpis {
+    header { X-Served-By api_py }
     reverse_proxy api_py:8000
   }
 
-  # 2) API “legacy” (Node/Express) — catch-all restant
+  @py_forecast path /api/v1/forecast*
+  handle @py_forecast {
+    header { X-Served-By api_py }
+    reverse_proxy api_py:8000
+  }
+
+  # 2) LEGACY Node/Express (catch-all)
   @api_legacy path /api/* /tasks/*
   handle @api_legacy {
+    header { X-Served-By backend }
     reverse_proxy backend:3000
   }
 
-  # 3) Health (tria backend o python; aquí ho deixo en backend)
-  handle /health {
+  # 3) Health (si el vols al backend)
+  @health path /health
+  handle @health {
     reverse_proxy backend:3000
   }
 
