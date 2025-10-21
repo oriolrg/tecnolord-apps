@@ -1,22 +1,27 @@
 :80 {
   encode zstd gzip
 
-  @api path /api/* /health /tasks/*  
-  handle @api {
+  # 1) RUTES PYTHON (més específiques) — mantenim el path complet
+  @api_py path /api/v1/forecast* /api/v1/kpis*
+  handle @api_py {
+    reverse_proxy api_py:8000
+  }
+
+  # 2) API “legacy” (Node/Express) — catch-all restant
+  @api_legacy path /api/* /tasks/*
+  handle @api_legacy {
     reverse_proxy backend:3000
   }
 
+  # 3) Health (tria backend o python; aquí ho deixo en backend)
+  handle /health {
+    reverse_proxy backend:3000
+  }
+
+  # 4) Estàtics
   handle {
     root * /srv
     try_files {path} /index.html
     file_server
   }
-  
-  handle_path /api/v1/forecast* {
-    reverse_proxy api_py:8000
-  }
-  handle_path /api/v1/kpis* {
-    reverse_proxy api_py:8000
-  }
-
 }
