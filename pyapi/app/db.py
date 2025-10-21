@@ -1,13 +1,28 @@
-# pyapi/app/db.py
 import os
-import sqlalchemy as sa
+import psycopg2
+from psycopg2 import pool
 
-url = os.environ["DATABASE_URL"]
-if url.startswith("postgresql://"):
-    # Força driver modern psycopg v3 si t'arriba sense sufix
-    url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+DB_URL = os.getenv("DATABASE_URL")
+SEARCH_PATH = os.getenv("DB_SEARCH_PATH", "meteo,auth,public")
 
-engine = sa.create_engine(url, pool_pre_ping=True)
+_pool = None
 
-def session():
-    return engine.connect()
+def init_pool():
+    global _pool
+    if _pool is None:
+        _pool = psycopg2.pool.SimpleConnectionPool(
+            minconn=1, maxconn=5, dsn=DB_URL
+        )
+
+def get_conn():
+    if _pool is None:
+        init_pool()
+    conn = _pool.getconn()
+    # assegura search_path a cada connexió
+    with conn.cursor() as cur:
+        cur.execute("SET search_path TO " + SEARCH_PATH)
+    return conn
+
+def put_conn(conn):
+    if _pool:
+        _pool.putconn(conn)
