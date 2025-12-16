@@ -48,6 +48,7 @@ export async function refreshMeteo(ui, store) {
     const deg = (wdir == null || Number.isNaN(wdir))
     ? null
     : ((wdir % 360) + 360) % 360;
+    const arrowDeg = deg;
 
 
 
@@ -74,14 +75,14 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
         title: "Vent",
-        value: deg == null ? "Sense dades" : `${Math.round(deg)}°`,
+        value: "",       // 👈 important: evitem duplicat
         unit: "",
         badge: "Direcció",
         subHtml: `
-          <div class="wind-wrap">
-            <div class="wind-main">
-              <div class="wind-dir">${deg == null ? "—" : `${Math.round(deg)}°`}</div>
-              <div class="wind-sub">
+          <div class="wind-card">
+            <div class="wind-left">
+              <div class="wind-deg">${deg == null ? "Sense dades" : `${Math.round(deg)}°`}</div>
+              <div class="wind-meta">
                 ${wind != null ? `Velocitat: <strong>${fmt1(wind)} m/s</strong>` : "Sense dades de vent"}
                 ${gust != null ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}
               </div>
@@ -89,28 +90,26 @@ export async function refreshMeteo(ui, store) {
 
             ${deg == null ? "" : `
             <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Direcció del vent" role="img">
-              <!-- cercle exterior -->
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(96,165,250,.55)" stroke-width="2"/>
 
-              <!-- ticks -->
-              ${Array.from({length: 36}).map((_,i)=>{
-                const a = i*10 * Math.PI/180;
-                const r1 = 42, r2 = (i%3===0?36:39);
+              <!-- ticks (12 principals) -->
+              ${Array.from({length: 12}).map((_,i)=>{
+                const a = i*30 * Math.PI/180;
+                const r1 = 42, r2 = 34;
                 const x1 = 50 + Math.cos(a)*r1;
                 const y1 = 50 + Math.sin(a)*r1;
                 const x2 = 50 + Math.cos(a)*r2;
                 const y2 = 50 + Math.sin(a)*r2;
-                return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="rgba(96,165,250,.35)" stroke-width="${i%3===0?1.5:1}"/>`;
+                return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="rgba(96,165,250,.35)" stroke-width="2" stroke-linecap="round"/>`;
               }).join("")}
 
-              <!-- fletxa (apunta cap on va el vent) -->
-              <g transform="rotate(${deg} 50 50)">
-                <polygon points="50,8 44,20 56,20" fill="rgba(96,165,250,.95)"/>
-                <line x1="50" y1="20" x2="50" y2="50" stroke="rgba(96,165,250,.95)" stroke-width="3" stroke-linecap="round"/>
+              <!-- fletxa -->
+              <g transform="rotate(${arrowDeg} 50 50)">
+                <polygon points="50,8 43,22 57,22" fill="rgba(96,165,250,.95)"/>
+                <line x1="50" y1="22" x2="50" y2="52" stroke="rgba(96,165,250,.95)" stroke-width="4" stroke-linecap="round"/>
               </g>
 
-              <!-- centre -->
-              <circle cx="50" cy="50" r="3.2" fill="rgba(96,165,250,.95)"/>
+              <circle cx="50" cy="50" r="3.4" fill="rgba(96,165,250,.95)"/>
             </svg>
             `}
           </div>
