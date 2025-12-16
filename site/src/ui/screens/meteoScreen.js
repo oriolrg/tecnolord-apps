@@ -45,13 +45,8 @@ export async function refreshMeteo(ui, store) {
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
     const dirTxt = degToCompass(wdir);
     const dirArrow = degToArrow(wdir);
-    const deg = (wdir == null || Number.isNaN(wdir))
-    ? null
-    : ((wdir % 360) + 360) % 360;
-    const arrowDeg = deg ;
-
-
-
+    const deg = (wdir == null || Number.isNaN(wdir)) ? null : ((wdir % 360) + 360) % 360;
+    const arrowDeg = deg; // cap on va
 
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
     const ageTxt =
@@ -126,10 +121,12 @@ export async function refreshMeteo(ui, store) {
                 <circle cx="0" cy="0" r="4" fill="rgba(96,165,250,.95)"/>
 
                 <!-- agulla direcció (gira segons arrowDeg) -->
-                <g transform="rotate(${arrowDeg})">
-                  <polygon points="0,-50 -7,-30 0,-36 7,-30" fill="rgba(96,165,250,.95)"/>
-                  <line x1="0" y1="-30" x2="0" y2="0" stroke="rgba(96,165,250,.95)" stroke-width="4" stroke-linecap="round"/>
+                <g transform="rotate(${arrowDeg} 70 70)">
+                  <!-- punta vermella (sense pal) -->
+                  <polygon points="70,14 64,32 70,28 76,32" fill="rgba(239,68,68,.95)"/>
+
                 </g>
+
               </g>
 
               <!-- lletres principals -->
