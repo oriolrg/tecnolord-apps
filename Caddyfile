@@ -1,13 +1,13 @@
 :80 {
   encode gzip zstd
 
-  # PYTHON API
-  handle_path /api/v1/* {
+  # PYTHON API (manté el path complet)
+  handle /api/v1/* {
     reverse_proxy api_py:8000
   }
 
   # NODE legacy (si cal)
-  handle_path /api/* {
+  handle /api/* {
     reverse_proxy backend:3000
   }
 
