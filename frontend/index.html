@@ -35,6 +35,12 @@
       .tl-hdr{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap}
     </style>
   </head>
+<script>
+  window.addEventListener('load', () => {
+    const p = document.querySelector('.preloader');
+    if (p) p.style.display = 'none';
+  });
+</script>
 
   <body>
     <div id="app">
