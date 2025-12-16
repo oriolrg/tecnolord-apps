@@ -138,15 +138,7 @@ export async function refreshMeteo(ui, store) {
               <text x="70" y="136" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">S</text>
               <text x="14" y="74" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">W</text>
 
-              <!-- (Opcional) noms catalans petits -->
-              <text x="70" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">tramuntana</text>
-              <text x="112" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">gregal</text>
-              <text x="122" y="74" text-anchor="start" font-size="9" font-weight="700" fill="currentColor" opacity=".75">llevant</text>
-              <text x="112" y="120" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">xaloc</text>
-              <text x="70" y="128" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">migjorn</text>
-              <text x="28" y="120" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">garbí</text>
-              <text x="18" y="74" text-anchor="end" font-size="9" font-weight="700" fill="currentColor" opacity=".75">ponent</text>
-              <text x="28" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">mestral</text>
+              
             </svg>
             `}
 
