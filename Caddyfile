@@ -1,38 +1,17 @@
-cat > Caddyfile.pyapi <<'EOF'
 :80 {
-  encode zstd gzip
+  encode gzip zstd
 
-  # 1) PYTHON (més específiques) — mantenim el path complet
-  @py_kpis path /api/v1/kpis*
-  handle @py_kpis {
-    header { X-Served-By api_py }
+  # PYTHON API
+  handle_path /api/v1/* {
     reverse_proxy api_py:8000
   }
 
-  @py_forecast path /api/v1/forecast*
-  handle @py_forecast {
-    header { X-Served-By api_py }
-    reverse_proxy api_py:8000
-  }
-
-  # 2) LEGACY Node/Express (catch-all)
-  @api_legacy path /api/* /tasks/*
-  handle @api_legacy {
-    header { X-Served-By backend }
+  # NODE legacy (si cal)
+  handle_path /api/* {
     reverse_proxy backend:3000
   }
 
-  # 3) Health (si el vols al backend)
-  @health path /health
-  handle @health {
-    reverse_proxy backend:3000
-  }
-
-  # 4) Estàtics
-  handle {
-    root * /srv
-    try_files {path} /index.html
-    file_server
-  }
+  # STATIC
+  root * /srv
+  file_server
 }
-EOF
