@@ -28,7 +28,7 @@ function buildUI(root, store) {
           <p class="subtitle">Lectures en temps real </p>
         </div>
 
-        <div class="panel controls" aria-label="Controls principals">
+        <div id="hidro-controls" class="panel controls" style="justify-content:flex-start; margin-bottom:12px">
           <label>
             Estació
             <input id="estacio" type="text" value="${store.get().estacio}" autocomplete="off" />
@@ -164,6 +164,7 @@ function buildUI(root, store) {
     hidroCards: $("#hidro-cards", root),
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
+    hidroControls: $("#hidro-controls", root),
   };
 
   return ui;
@@ -185,6 +186,10 @@ export function initApp(root) {
   readUrlParams(store);
 
   const ui = buildUI(root, store);
+  // UX: amagar filtre d'hidro si no s'utilitza
+  if (!CONFIG.showHidroFilter) {
+    ui.hidroControls.style.display = "none";
+  }
   if (!CONFIG.stations || CONFIG.stations.length <= 1) {
     ui.header.style.display = "none";
   }

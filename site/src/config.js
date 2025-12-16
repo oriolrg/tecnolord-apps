@@ -5,5 +5,8 @@ export const CONFIG = {
   defaultLimit: 48,
   maxLimit: 500,
   defaultEstacio: "home",
-  stations: ["home"], 
+  stations: ["home"],
+
+  // ⬇️ nou
+  showHidroFilter: false,
 };
