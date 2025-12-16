@@ -15,7 +15,7 @@
       --muted: rgba(255,255,255,.70);
       --muted2: rgba(255,255,255,.55);
       --line: rgba(255,255,255,.12);
-      --ok: #4ade80;
+      --ok: #22c55e;
       --warn: #fbbf24;
       --bad: #fb7185;
       --accent: #60a5fa;
@@ -55,8 +55,6 @@
                   var(--bg);
       color: var(--text);
     }
-
-    a{ color: inherit; }
 
     .wrap{
       max-width: 1180px;
@@ -181,10 +179,7 @@
       margin: 12px 0 14px;
     }
 
-    .err{
-      color: var(--bad);
-      font-weight: 650;
-    }
+    .err{ color: var(--bad); font-weight: 700; }
 
     .grid{
       display:grid;
@@ -201,7 +196,7 @@
       box-shadow: var(--shadow);
       position: relative;
       overflow:hidden;
-      min-height: 102px;
+      min-height: 110px;
     }
 
     @media (min-width: 700px){
@@ -222,7 +217,7 @@
       margin:0;
       font-size: var(--fs-1);
       color: var(--muted);
-      font-weight: 700;
+      font-weight: 750;
     }
     .badge{
       font-size: 12px;
@@ -236,7 +231,7 @@
 
     .v{
       font-size: var(--fs-4);
-      font-weight: 800;
+      font-weight: 850;
       letter-spacing: -0.03em;
       margin: 0;
       display:flex;
@@ -258,7 +253,21 @@
       display:flex;
       gap:10px;
       flex-wrap:wrap;
+      align-items:center;
     }
+
+    .sep{
+      width: 100%;
+      height: 1px;
+      background: var(--line);
+      margin: 6px 0;
+    }
+
+    .delta{
+      font-weight: 800;
+    }
+    .delta.ok{ color: var(--ok); }
+    .delta.bad{ color: var(--bad); }
 
     .dot{
       width: 10px; height: 10px; border-radius: 999px;
@@ -296,7 +305,7 @@
     summary{
       cursor:pointer;
       padding: 14px;
-      font-weight: 750;
+      font-weight: 800;
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -330,7 +339,7 @@
       top: 0;
       background: rgba(0,0,0,.12);
       color: var(--muted);
-      font-weight: 800;
+      font-weight: 850;
       z-index: 2;
     }
     @media (prefers-color-scheme: light){
@@ -340,10 +349,6 @@
     .smallnote{
       color: var(--muted2);
       margin-top: 10px;
-    }
-
-    .sr-only{
-      position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;
     }
   </style>
 </head>
@@ -389,9 +394,7 @@
       <p id="meteo-summary">—</p>
     </div>
 
-    <div class="grid" id="meteo-cards">
-      <!-- Cards s’omplen per JS -->
-    </div>
+    <div class="grid" id="meteo-cards"></div>
 
     <details>
       <summary>
@@ -426,7 +429,7 @@
             <tbody></tbody>
           </table>
         </div>
-        <p class="smallnote">Consell: a mòbil, fes scroll horitzontal dins la taula.</p>
+        <p class="smallnote">A mòbil, fes scroll horitzontal dins la taula.</p>
       </div>
     </details>
 
@@ -468,7 +471,6 @@
             <tbody></tbody>
           </table>
         </div>
-        <p class="smallnote">Aquesta secció és opcional: si no hi ha dades, quedarà buida.</p>
       </div>
     </details>
 
@@ -491,9 +493,9 @@
     if (limFromUrl) $('#limit').value = String(clamp(parseInt(limFromUrl, 10) || 48, 1, 500));
     if (codiFromUrl) $('#codi-hidro').value = codiFromUrl;
 
-    let t = null;
+    let timer = null;
 
-    function card({ title, value, unit, badge, sub1, sub2 }) {
+    function card({ title, value, unit, badge, subHtml }) {
       const el = document.createElement('div');
       el.className = 'card';
       el.innerHTML = `
@@ -502,20 +504,13 @@
           <span class="badge">${badge || ''}</span>
         </div>
         <p class="v">${value} <span class="unit">${unit || ''}</span></p>
-        <div class="sub">
-          ${sub1 ? `<span>${sub1}</span>` : ''}
-          ${sub2 ? `<span>${sub2}</span>` : ''}
-        </div>
+        <div class="sub">${subHtml || ''}</div>
       `;
       return el;
     }
 
-    function setErr(msg){
-      $('#err').textContent = msg || '';
-    }
-    function setErrH(msg){
-      $('#err-h').textContent = msg || '';
-    }
+    function setErr(msg){ $('#err').textContent = msg || ''; }
+    function setErrH(msg){ $('#err-h').textContent = msg || ''; }
 
     async function loadMeteo(){
       setErr('');
@@ -542,7 +537,6 @@
           return;
         }
 
-        // agafem l'últim registre (assumim que el primer és el més recent; si no, invertim)
         const r0 = rows[0];
 
         const instant = r0.instant ?? r0.at;
@@ -567,19 +561,68 @@
         $('#last').textContent = 'Actualitzat: ' + fmtTime(instant);
         $('#meteo-summary').textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
 
-        // Cards
         const cards = $('#meteo-cards');
         cards.innerHTML = '';
-        cards.appendChild(card({ title:'Temperatura', value: fmt1(temp_c), unit:'°C', badge:'Ara', sub1: feels!=null?`Sensació: ${fmt1(feels)} °C`:'' , sub2: dew!=null?`Rosada: ${fmt1(dew)} °C`:'' }));
-        cards.appendChild(card({ title:'Humitat', value: hum==null?'—':Math.round(hum), unit:'%', badge:'Ara', sub1: '' , sub2: '' }));
-        cards.appendChild(card({ title:'Pressió (rel.)', value: fmt1(pRel), unit:'hPa', badge:'Relativa', sub1: pAbs!=null?`Abs.: ${fmt1(pAbs)} hPa`:'' }));
-        cards.appendChild(card({ title:'Vent', value: fmt1(wind), unit:'m/s', badge:'Mitjà', sub1: gust!=null?`Ràfega: ${fmt1(gust)} m/s`:'' , sub2: wdir!=null?`Direcció: ${Math.round(wdir)}°`:'' }));
-        cards.appendChild(card({ title:'Pluja (dia)', value: fmt1(rainDay), unit:'mm', badge:'Acumulada', sub1: rainRate!=null?`Taxa: ${fmt1(rainRate)} mm/h`:'' , sub2: rain1h!=null?`1h: ${fmt1(rain1h)} mm`:'' }));
-        cards.appendChild(card({ title:'Pluja (mes)', value: fmt1(rainMonth), unit:'mm', badge:'Acumulada', sub1: rainYear!=null?`Any: ${fmt1(rainYear)} mm`:'' }));
-        cards.appendChild(card({ title:'UV', value: uvi==null?'—':Math.round(uvi), unit:'', badge:'Índex', sub1: solar!=null?`Solar: ${fmt1(solar)} W/m²`:'' }));
-        cards.appendChild(card({ title:'Bateria', value: batt==null?'—':Math.round(batt), unit:'%', badge:'Sensor', sub1: '' }));
+        cards.appendChild(card({
+          title:'Temperatura',
+          value: fmt1(temp_c),
+          unit:'°C',
+          badge:'Ara',
+          subHtml: `${feels!=null?`Sensació: <strong>${fmt1(feels)} °C</strong>`:''}
+                   ${dew!=null?` · Rosada: <strong>${fmt1(dew)} °C</strong>`:''}`
+        }));
+        cards.appendChild(card({
+          title:'Humitat',
+          value: hum==null?'—':Math.round(hum),
+          unit:'%',
+          badge:'Ara',
+          subHtml: ``
+        }));
+        cards.appendChild(card({
+          title:'Pressió (rel.)',
+          value: fmt1(pRel),
+          unit:'hPa',
+          badge:'Relativa',
+          subHtml: `${pAbs!=null?`Abs.: <strong>${fmt1(pAbs)} hPa</strong>`:''}`
+        }));
+        cards.appendChild(card({
+          title:'Vent',
+          value: fmt1(wind),
+          unit:'m/s',
+          badge:'Mitjà',
+          subHtml: `${gust!=null?`Ràfega: <strong>${fmt1(gust)} m/s</strong>`:''}
+                   ${wdir!=null?` · Direcció: <strong>${Math.round(wdir)}°</strong>`:''}`
+        }));
+        cards.appendChild(card({
+          title:'Pluja (dia)',
+          value: fmt1(rainDay),
+          unit:'mm',
+          badge:'Acumulada',
+          subHtml: `${rainRate!=null?`Taxa: <strong>${fmt1(rainRate)} mm/h</strong>`:''}
+                   ${rain1h!=null?` · 1h: <strong>${fmt1(rain1h)} mm</strong>`:''}`
+        }));
+        cards.appendChild(card({
+          title:'Pluja (mes)',
+          value: fmt1(rainMonth),
+          unit:'mm',
+          badge:'Acumulada',
+          subHtml: `${rainYear!=null?`Any: <strong>${fmt1(rainYear)} mm</strong>`:''}`
+        }));
+        cards.appendChild(card({
+          title:'UV',
+          value: uvi==null?'—':Math.round(uvi),
+          unit:'',
+          badge:'Índex',
+          subHtml: `${solar!=null?`Solar: <strong>${fmt1(solar)} W/m²</strong>`:''}`
+        }));
+        cards.appendChild(card({
+          title:'Bateria',
+          value: batt==null?'—':Math.round(batt),
+          unit:'%',
+          badge:'Sensor',
+          subHtml: ``
+        }));
 
-        // Table
         $('#tbl-meteo tbody').innerHTML = rows.map(row => {
           const instant = row.instant ?? row.at;
           const temp_c = row.temp_c ?? row.temperature;
@@ -628,6 +671,19 @@
       }
     }
 
+    // ---- HIDRO: afegim Cardener + Valls + balanç ----
+
+    function pickRow(rows, predicates){
+      // retorna el primer registre que compleix alguna de les condicions
+      for (const pred of predicates){
+        const found = rows.find(pred);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function norm(s){ return (s ?? '').toString().trim().toLowerCase(); }
+
     async function loadHidro(){
       setErrH('');
       const codi = $('#codi-hidro').value.trim();
@@ -652,20 +708,125 @@
           return;
         }
 
-        const r0 = rows[0];
-        const instant = r0.instant;
         $('#hidro-summary').textContent = codi ? `Codi: ${codi} · ${rows.length} registres` : `${rows.length} registres`;
 
-        // Cards (fem “best effort” amb el primer registre)
-        const cabal = num(r0.cabal_m3s);
-        const cap = num(r0.capacitat_pct);
-        const niv = num(r0.nivell_m);
+        // Intentem identificar:
+        // - Llosa del Cavall (presa/embassament) -> capacitat/nivell i (si ve) sortida
+        // - Cardener -> cabal
+        // - Valls -> cabal
+        // Fallback: si l'API no porta 'nom', provem 'codi' o 'tipus'
+        const rowLlosa = pickRow(rows, [
+          r => norm(r.nom).includes('llosa') || norm(r.nom).includes('cavall'),
+          r => norm(r.codi).includes('llosa') || norm(r.codi).includes('cavall'),
+        ]);
+
+        const rowCardener = pickRow(rows, [
+          r => norm(r.nom).includes('cardener'),
+          r => norm(r.codi).includes('cardener'),
+        ]);
+
+        const rowValls = pickRow(rows, [
+          r => norm(r.nom).includes('valls'),
+          r => norm(r.codi).includes('valls'),
+        ]);
+
+        // Agafem valors
+        const instantLlosa = rowLlosa?.instant ?? null;
+        const cap = num(rowLlosa?.capacitat_pct);
+        const niv = num(rowLlosa?.nivell_m);
+
+        // "Sortida" pot venir com cabal_m3s si tens estació de sortida,
+        // o pot venir en un altre registre (p.ex. "Sortida Llosa")
+        let sortida = num(rowLlosa?.cabal_m3s);
+
+        // Si rowLlosa no porta cabal, intentem trobar un registre que sembli "sortida"
+        if (sortida == null){
+          const rowSortida = pickRow(rows, [
+            r => norm(r.nom).includes('sortida') && (norm(r.nom).includes('llosa') || norm(r.nom).includes('cavall')),
+            r => norm(r.nom).includes('sortida') && norm(r.nom).includes('cardener'),
+            r => norm(r.codi).includes('sortida') && (norm(r.codi).includes('llosa') || norm(r.codi).includes('cavall')),
+          ]);
+          sortida = num(rowSortida?.cabal_m3s);
+        }
+
+        const cabalCardener = num(rowCardener?.cabal_m3s);
+        const cabalValls = num(rowValls?.cabal_m3s);
+
+        const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
+        const delta = (sortida == null ? null : (entradaTotal - sortida));
+
+        let deltaHtml = '';
+        if (sortida != null && (cabalCardener != null || cabalValls != null)){
+          const cls = delta >= 0 ? 'ok' : 'bad';
+          const arrow = delta >= 0 ? '↑' : '↓';
+          const txt = delta >= 0 ? 'Omplint' : 'Buidant';
+          deltaHtml = `
+            <span class="sep"></span>
+            <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
+            <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
+            <span class="delta ${cls}">${arrow} Balanç: ${fmt1(delta)} m³/s · ${txt}</span>
+          `;
+        } else {
+          // si no podem calcular, com a mínim mostrem entrades
+          const inParts = [];
+          if (cabalCardener != null) inParts.push(`Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>`);
+          if (cabalValls != null) inParts.push(`Valls: <strong>${fmt1(cabalValls)} m³/s</strong>`);
+          if (inParts.length) deltaHtml = `<span class="sep"></span>${inParts.join(' · ')}`;
+        }
 
         const cards = $('#hidro-cards');
         cards.innerHTML = '';
-        cards.appendChild(card({ title:'Cabal', value: fmt1(cabal), unit:'m³/s', badge:'Últim', sub1: 'Hora: ' + fmtTime(instant) }));
-        cards.appendChild(card({ title:'Capacitat', value: cap==null?'—':fmt1(cap), unit:'%', badge:'Últim', sub1: r0.nom ? `Estació: ${r0.nom}` : '' }));
-        cards.appendChild(card({ title:'Nivell', value: fmt1(niv), unit:'m', badge:'Últim', sub1: r0.tipus ? `Tipus: ${r0.tipus}` : '' }));
+
+        // TARGETA CABAL amb entrades (Cardener, Valls) i balanç si es pot
+        cards.appendChild(card({
+          title:'Cabal (balanç)',
+          value: sortida == null ? '—' : fmt1(sortida),
+          unit:'m³/s',
+          badge:'Últim',
+          subHtml: `
+            ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ''}
+            ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ''}
+            ${cabalValls != null ? ` · Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ''}
+            ${deltaHtml}
+          `
+        }));
+
+        cards.appendChild(card({
+          title:'Capacitat',
+          value: cap==null?'—':fmt1(cap),
+          unit:'%',
+          badge:'Últim',
+          subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ''}`
+        }));
+
+        cards.appendChild(card({
+          title:'Nivell',
+          value: niv==null?'—':fmt1(niv),
+          unit:'m',
+          badge:'Últim',
+          subHtml: `${rowLlosa?.tipus ? `Tipus: <strong>${rowLlosa.tipus}</strong>` : ''}`
+        }));
+
+        // Targetes opcionals extra per veure Cardener i Valls com a "cards" separades (molt útil a mòbil)
+        if (cabalCardener != null){
+          cards.appendChild(card({
+            title:'Cardener (entrada)',
+            value: fmt1(cabalCardener),
+            unit:'m³/s',
+            badge:'Riu',
+            subHtml: rowCardener?.instant ? `Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : ''
+          }));
+        }
+
+        if (cabalValls != null){
+          cards.appendChild(card({
+            title:'Valls (entrada)',
+            value: fmt1(cabalValls),
+            unit:'m³/s',
+            badge:'Riu',
+            subHtml: rowValls?.instant ? `Hora: <strong>${fmtTime(rowValls.instant)}</strong>` : ''
+          }));
+        }
 
         // Table
         $('#tbl-hidro tbody').innerHTML = rows.map(row => {
@@ -718,10 +879,10 @@
 
     $('#auto').addEventListener('change', () => {
       if ($('#auto').checked){
-        if (t) clearInterval(t);
-        t = setInterval(() => { loadMeteo(); loadHidro(); }, 30000);
+        if (timer) clearInterval(timer);
+        timer = setInterval(() => { loadMeteo(); loadHidro(); }, 30000);
       } else {
-        if (t) clearInterval(t);
+        if (timer) clearInterval(timer);
       }
     });
 
