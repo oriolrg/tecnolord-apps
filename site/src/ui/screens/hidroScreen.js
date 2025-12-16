@@ -48,7 +48,6 @@ export async function refreshHidro(ui, store) {
 
     const instantLlosa = rowLlosa?.instant ?? null;
     const cap = num(rowLlosa?.capacitat_pct);
-    const niv = num(rowLlosa?.nivell_m);
 
     let sortida = num(rowLlosa?.cabal_m3s);
     if (sortida == null) {
@@ -103,14 +102,7 @@ export async function refreshHidro(ui, store) {
         unit: "%",
         badge: "Últim",
         subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
-      }),
-      card({
-        title: "Nivell",
-        value: niv == null ? "—" : fmt1(niv),
-        unit: "m",
-        badge: "Últim",
-        subHtml: `${rowLlosa?.tipus ? `Tipus: <strong>${rowLlosa.tipus}</strong>` : ""}`,
-      }),
+      })
     );
 
     if (cabalCardener != null) {
