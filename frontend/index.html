@@ -1,335 +1,733 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ca">
-  <head>
-    <meta charset="utf-8" />
-    <title>Tecnolord — Dades Meteo & Hidrologia</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tecnolord — Estació Meteo</title>
+  <meta name="description" content="Panell d'estació meteorològica i hidrologia. Dissenyat per mòbil, tablet i ordinador." />
 
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="TecnoLord — Dades Meteo & Hidrologia" />
-    <meta name="author" content="TecnoLord: Oriol Riu Gispert" />
+  <style>
+    :root{
+      --bg: #0b1220;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.08);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.70);
+      --muted2: rgba(255,255,255,.55);
+      --line: rgba(255,255,255,.12);
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --accent: #60a5fa;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
 
-    <!-- (Opció ràpida) Carregar el mateix tema des de tecnolord.cat -->
-    <link rel="shortcut icon" href="https://tecnolord.cat/assets/images/favicon.png" type="image/png" />
-    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/animate.css" />
-    <link rel="stylesheet" href="https://tecnolord.cat/assets/fonts/lineicons/font-css/LineIcons.css" />
-    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/default.css" />
-    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/style.css" />
+      --fs-0: clamp(14px, 1.1vw, 16px);
+      --fs-1: clamp(16px, 1.4vw, 18px);
+      --fs-2: clamp(18px, 1.8vw, 22px);
+      --fs-3: clamp(24px, 2.8vw, 34px);
+      --fs-4: clamp(34px, 4.5vw, 54px);
+    }
 
-    <!-- Estils del teu mòdul (renombrats per no xocar amb classes del tema) -->
-    <style>
-      .tl-wrap{padding: 2rem 0}
-      .tl-muted{color:#666;font-size:.95rem}
-      .tl-err{color:#b00020;margin-top:.25rem}
-      .tl-panel{border:1px solid #e5e7eb;border-radius: .75rem;padding:1rem;margin-top:1rem;background:#fff}
-      .tl-controls{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin:.75rem 0 1rem}
-      .tl-controls input{padding:.5rem .7rem;border:1px solid #ccc;border-radius:.5rem}
-      .tl-controls input[type="number"]{width:6rem}
-      .tl-controls button{padding:.55rem .9rem;border:0;border-radius:.5rem;cursor:pointer}
-      .tl-status{color:#666;font-size:.95rem}
-      .tl-table{width:100%;border-collapse:collapse;margin-top:.5rem}
-      .tl-table th,.tl-table td{border:1px solid #e5e7eb;padding:.4rem .5rem;text-align:left;font-size:.92rem;vertical-align:top}
-      .tl-table th{background:#f5f5f5}
-      .tl-nowrap{white-space:nowrap}
-      .tl-scroll{overflow:auto}
-      .tl-hdr{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-    </style>
-  </head>
-<script>
-  window.addEventListener('load', () => {
-    const p = document.querySelector('.preloader');
-    if (p) p.style.display = 'none';
-  });
-</script>
+    @media (prefers-color-scheme: light) {
+      :root{
+        --bg: #f6f7fb;
+        --card: rgba(0,0,0,.04);
+        --card2: rgba(0,0,0,.06);
+        --text: rgba(0,0,0,.88);
+        --muted: rgba(0,0,0,.62);
+        --muted2: rgba(0,0,0,.46);
+        --line: rgba(0,0,0,.10);
+        --shadow: 0 10px 26px rgba(0,0,0,.12);
+      }
+    }
 
-  <body>
-    <div id="app">
-      <!-- PRELOADER (igual que tecnolord) -->
-      <div class="preloader">
-        <div class="loader">
-          <div class="ytp-spinner">
-            <div class="ytp-spinner-container">
-              <div class="ytp-spinner-rotator">
-                <div class="ytp-spinner-left"><div class="ytp-spinner-circle"></div></div>
-                <div class="ytp-spinner-right"><div class="ytp-spinner-circle"></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      font-size: var(--fs-0);
+      line-height: 1.4;
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(96,165,250,.35), transparent 55%),
+                  radial-gradient(1000px 600px at 110% 10%, rgba(74,222,128,.22), transparent 55%),
+                  radial-gradient(900px 600px at 50% 110%, rgba(251,191,36,.18), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+    }
+
+    a{ color: inherit; }
+
+    .wrap{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px 14px 70px;
+    }
+
+    header{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:flex-end;
+      justify-content:space-between;
+      margin-bottom: 14px;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 260px;
+    }
+
+    .title{
+      font-size: var(--fs-3);
+      letter-spacing: -0.02em;
+      margin:0;
+    }
+
+    .subtitle{
+      margin:0;
+      color: var(--muted);
+      font-size: var(--fs-1);
+    }
+
+    .panel{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+      min-width: 320px;
+    }
+
+    label{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color: var(--muted);
+      font-size: var(--fs-0);
+    }
+
+    input[type="text"], input[type="number"]{
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      outline:none;
+      min-width: 140px;
+    }
+    input[type="number"]{ min-width: 96px; width: 96px; }
+
+    @media (prefers-color-scheme: light) {
+      input[type="text"], input[type="number"]{ background: rgba(0,0,0,.03); }
+    }
+
+    input:focus, button:focus{
+      outline: 3px solid rgba(96,165,250,.35);
+      outline-offset: 2px;
+    }
+
+    .btn{
+      border: 1px solid var(--line);
+      background: rgba(96,165,250,.18);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 650;
+    }
+    .btn:hover{ background: rgba(96,165,250,.26); }
+
+    .btn.secondary{
+      background: rgba(255,255,255,.06);
+    }
+
+    .tog{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      user-select:none;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card2);
+      color: var(--muted);
+      font-size: var(--fs-0);
+      white-space: nowrap;
+    }
+
+    .status-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin: 12px 0 14px;
+    }
+
+    .err{
+      color: var(--bad);
+      font-weight: 650;
+    }
+
+    .grid{
+      display:grid;
+      gap: 12px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+
+    .card{
+      grid-column: span 6;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow:hidden;
+      min-height: 102px;
+    }
+
+    @media (min-width: 700px){
+      .card{ grid-column: span 4; }
+    }
+    @media (min-width: 980px){
+      .card{ grid-column: span 3; }
+    }
+
+    .k{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+    .k h3{
+      margin:0;
+      font-size: var(--fs-1);
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .badge{
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      background: var(--card2);
+      padding: 6px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .v{
+      font-size: var(--fs-4);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin: 0;
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .unit{
+      font-size: var(--fs-1);
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .sub{
+      margin-top: 6px;
+      color: var(--muted2);
+      font-size: var(--fs-0);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .dot{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--accent);
+      display:inline-block;
+      margin-right: 8px;
+    }
+
+    .section-title{
+      margin: 18px 0 10px;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .section-title h2{
+      margin:0;
+      font-size: var(--fs-2);
+      letter-spacing: -0.02em;
+    }
+    .section-title p{
+      margin:0;
+      color: var(--muted);
+    }
+
+    details{
+      margin-top: 12px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    summary{
+      cursor:pointer;
+      padding: 14px;
+      font-weight: 750;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .detail-body{ padding: 0 14px 14px; color: var(--muted); }
+
+    .table-wrap{
+      overflow:auto;
+      border-top: 1px solid var(--line);
+    }
+
+    table{
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 920px;
+      background: transparent;
+      font-size: var(--fs-0);
+    }
+    th, td{
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    th{
+      position: sticky;
+      top: 0;
+      background: rgba(0,0,0,.12);
+      color: var(--muted);
+      font-weight: 800;
+      z-index: 2;
+    }
+    @media (prefers-color-scheme: light){
+      th{ background: rgba(0,0,0,.06); }
+    }
+
+    .smallnote{
+      color: var(--muted2);
+      margin-top: 10px;
+    }
+
+    .sr-only{
+      position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <header>
+      <div class="brand">
+        <h1 class="title">Estació Meteo</h1>
+        <p class="subtitle">Lectures en temps real (mòbil, tablet i ordinador)</p>
       </div>
 
-      <!-- NAVBAR (igual que tecnolord) -->
-      <section class="header_area">
-        <div class="header_navbar">
-          <nav class="navbar navbar-expand-lg">
-            <a class="navbar-brand" href="/">
-              <img class="logo" style="height:160%;width:auto;object-fit:contain;margin:0;top:0"
-                   src="assets/images/meteolord.png" alt="TecnoLord">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
-                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-              <span class="toggler-icon"></span><span class="toggler-icon"></span><span class="toggler-icon"></span>
-            </button>
+      <div class="panel controls" aria-label="Controls">
+        <label>
+          Estació
+          <input id="estacio" type="text" value="home" autocomplete="off" />
+        </label>
 
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-              <ul id="nav" class="languages ml-auto navbar-nav inline my-2 my-lg-0">
-                <li class="nav-item"><a class="" href="/#inici">Inici</a></li>
-                <li class="nav-item"><a class="" href="/#estrategia">Estrategia</a></li>
-                <li class="nav-item"><a class="" href="/#portafoli">Portafoli</a></li>
-                <li class="nav-item"><a class="active" href="/#dades">Meteo</a></li>
-                <li class="nav-item"><a class="" href="/#curriculum">Curriculum</a></li>
-                <li class="nav-item"><a class="" href="/#contact">Contacte</a></li>
-              </ul>
-            </div>
-          </nav>
-        </div>
-      </section>
+        <label>
+          Límit
+          <input id="limit" type="number" min="1" max="500" value="48" />
+        </label>
 
-      <!-- CONTINGUT (substitueix <meteo-app>) -->
-      <section id="dades" class="tl-wrap">
-        <div class="container">
-          <div class="section-title">
-            <h2>Dades Meteo & Hidrologia</h2>
-            <p class="tl-muted">Paràmetres per URL: <code>?estacio=home&limit=50&codi_hidro=251116-005</code></p>
-          </div>
+        <label class="tog">
+          <input id="auto" type="checkbox" />
+          Auto (30s)
+        </label>
 
-          <!-- METEO -->
-          <div class="tl-panel" id="meteo-sec">
-            <div class="tl-hdr">
-              <h4 style="margin:0">Meteo</h4>
-              <span id="status-meteo" class="tl-status"></span>
-            </div>
+        <button id="btn-refresh" class="btn">Refresca</button>
+        <button id="btn-copy" class="btn secondary" title="Copia l'enllaç amb paràmetres">Copia enllaç</button>
+      </div>
+    </header>
 
-            <div class="tl-controls">
-              <label>Estació <input id="estacio" value="home" /></label>
-              <label>Límit <input id="limit-meteo" type="number" min="1" max="1000" value="20" /></label>
-              <label style="display:flex;align-items:center;gap:.35rem">
-                <input id="auto-meteo" type="checkbox" /> Auto (30s)
-              </label>
-              <button id="btn-meteo" class="main-btn">Refresca</button>
-            </div>
-
-            <div id="error-meteo" class="tl-err"></div>
-
-            <div class="tl-scroll">
-              <table class="tl-table" id="tbl-meteo">
-                <thead>
-                  <tr>
-                    <th class="tl-nowrap">Hora</th><th>Temp (°C)</th><th>Sensació (°C)</th><th>Punt rosada (°C)</th>
-                    <th>Hum (%)</th><th>Pressió rel (hPa)</th><th>Pressió abs (hPa)</th><th>UVI</th><th>Solar (W/m²)</th>
-                    <th>Taxa pluja (mm/h)</th><th>Pluja dia</th><th>Pluja event</th><th>Pluja 1h</th><th>Pluja setmana</th>
-                    <th>Pluja mes</th><th>Pluja any</th><th>Vent (m/s)</th><th>Ràfega (m/s)</th><th>Direcció (°)</th><th>Bateria (%)</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- HIDRO -->
-          <div class="tl-panel" id="hidro-sec">
-            <div class="tl-hdr">
-              <h4 style="margin:0">Hidrologia</h4>
-              <span id="status-hidro" class="tl-status"></span>
-            </div>
-
-            <div class="tl-controls">
-              <label>Codi estació (opcional) <input id="codi-hidro" placeholder="p.ex. 251116-005" /></label>
-              <label>Límit <input id="limit-hidro" type="number" min="1" max="1000" value="20" /></label>
-              <label style="display:flex;align-items:center;gap:.35rem">
-                <input id="auto-hidro" type="checkbox" /> Auto (30s)
-              </label>
-              <button id="btn-hidro" class="main-btn">Refresca</button>
-            </div>
-
-            <div id="error-hidro" class="tl-err"></div>
-
-            <div class="tl-scroll">
-              <table class="tl-table" id="tbl-hidro">
-                <thead>
-                  <tr>
-                    <th class="tl-nowrap">Hora</th><th>Codi</th><th>Nom</th><th>Tipus</th><th>Cabal (m³/s)</th><th>Capacitat (%)</th><th>Nivell (m)</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- FOOTER (igual que tecnolord) -->
-      <footer id="footer" class="footer_area">
-        <div class="container">
-          <div class="footer_copyright d-sm-flex justify-content-between">
-            <div class="footer_social text-center">
-              <ul class="social">
-                <li><a href="https://twitter.com/tecno_lord"><i class="lni lni-twitter-filled"></i></a></li>
-                <li><a href="https://www.linkedin.com/in/oriol-riu-gispert-1b158854/"><i class="lni lni-linkedin-original"></i></a></li>
-              </ul>
-            </div>
-            <div class="footer_copyright_content text-center">
-              <p>Copyright © <a href="https://tecnolord.cat" rel="nofollow">TecnoLord</a></p>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      <a href="#" class="back-to-top"><i class="lni lni-chevron-up"></i></a>
+    <div class="status-row">
+      <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
+      <span class="pill">Font: <span id="src">/api/v1/mesures/darreres</span></span>
+      <span id="err" class="err" role="alert" aria-live="polite"></span>
     </div>
 
-    <!-- JS del tema (igual que tecnolord) -->
-    <script src="https://tecnolord.cat/assets/js/vendor/jquery-1.12.4.min.js"></script>
-    <script src="https://tecnolord.cat/assets/js/vendor/modernizr-3.7.1.min.js"></script>
-    <script src="https://tecnolord.cat/assets/js/popper.min.js"></script>
-    <script src="https://tecnolord.cat/assets/js/jquery.easing.min.js"></script>
-    <script src="https://tecnolord.cat/assets/js/scrolling-nav.js"></script>
-    <script src="https://tecnolord.cat/assets/js/wow.min.js"></script>
-    <script src="https://tecnolord.cat/assets/js/main.js"></script>
+    <div class="section-title">
+      <h2>Meteo</h2>
+      <p id="meteo-summary">—</p>
+    </div>
 
-    <!-- El teu script (sense canvis de lògica) -->
-    <script>
-      const $ = s => document.querySelector(s);
-      const fmtTime = iso => { try { return new Date(iso).toLocaleString(); } catch { return iso || ''; } };
-      const cell = v => (v == null || v === '' ? '' : v);
+    <div class="grid" id="meteo-cards">
+      <!-- Cards s’omplen per JS -->
+    </div>
 
-      const estacioEl = $('#estacio');
-      const limitMeteoEl = $('#limit-meteo');
-      const autoMeteoEl = $('#auto-meteo');
-      const btnMeteo = $('#btn-meteo');
-      const statusMeteoEl = $('#status-meteo');
-      const errMeteoEl = $('#error-meteo');
-      const tbodyMeteo = $('#tbl-meteo tbody');
-      let timerMeteo = null;
-
-      const codiHidroEl = $('#codi-hidro');
-      const limitHidroEl = $('#limit-hidro');
-      const autoHidroEl = $('#auto-hidro');
-      const btnHidro = $('#btn-hidro');
-      const statusHidroEl = $('#status-hidro');
-      const errHidroEl = $('#error-hidro');
-      const tbodyHidro = $('#tbl-hidro tbody');
-      let timerHidro = null;
-
-      const url = new URL(location.href);
-      const estFromUrl = url.searchParams.get('estacio') || url.searchParams.get('station_id');
-      const limFromUrl = url.searchParams.get('limit');
-      const codiFromUrl = url.searchParams.get('codi_hidro') || url.searchParams.get('codi');
-      if (estFromUrl) estacioEl.value = estFromUrl;
-      if (limFromUrl)  { limitMeteoEl.value = limFromUrl; limitHidroEl.value = limFromUrl; }
-      if (codiFromUrl) codiHidroEl.value = codiFromUrl;
-
-      async function loadMeteo() {
-        errMeteoEl.textContent = ''; statusMeteoEl.textContent = 'Carregant…';
-        const estacio = estacioEl.value.trim();
-        const limit = Math.max(1, Math.min(1000, parseInt(limitMeteoEl.value || '20', 10)));
-        const qs = new URLSearchParams({ limit: String(limit) });
-        if (estacio) qs.set('estacio', estacio);
-
-        try {
-          const res = await fetch('/api/v1/mesures/darreres?' + qs.toString());
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const { ok, items, error } = await res.json();
-          if (!ok) throw new Error(error || 'error');
-
-          tbodyMeteo.innerHTML = (items || []).map(row => {
-            const instant           = row.instant ?? row.at;
-            const temp_c            = row.temp_c ?? row.temperature;
-            const sensacio_c        = row.sensacio_c ?? row.feels_like ?? row.feels_like_c;
-            const punt_rosada_c     = row.punt_rosada_c ?? row.dew_point ?? row.dew_point_c;
-            const humitat_pct       = row.humitat_pct ?? row.humidity;
-            const pressio_rel_hpa   = row.pressio_rel_hpa ?? row.pressure_hpa ?? row.pressure_rel_hpa;
-            const pressio_abs_hpa   = row.pressio_abs_hpa ?? row.pressure_abs_hpa;
-            const uvi               = row.uvi;
-            const solar_wm2         = row.solar_wm2;
-            const taxa_pluja_mm_h   = row.taxa_pluja_mm_h ?? row.rain_rate_mmph;
-            const pluja_diaria_mm   = row.pluja_diaria_mm ?? row.rain_daily_mm ?? row.rain_mm;
-            const pluja_event_mm    = row.pluja_event_mm;
-            const pluja_hora_mm     = row.pluja_hora_mm ?? row.rain_hour_mm;
-            const pluja_setmana_mm  = row.pluja_setmana_mm ?? row.rain_week_mm;
-            const pluja_mes_mm      = row.pluja_mes_mm ?? row.rain_month_mm;
-            const pluja_any_mm      = row.pluja_any_mm ?? row.rain_year_mm;
-            const vent_ms           = row.vent_ms ?? row.wind_speed_ms;
-            const vent_rafega_ms    = row.vent_rafega_ms ?? row.wind_gust_ms;
-            const vent_dir_graus    = row.vent_direccio_graus ?? row.wind_dir_deg;
-            const bateria_pct       = row.bateria_pct;
-
-            return `
+    <details>
+      <summary>
+        Últims registres (taula)
+        <span class="badge" id="meteo-count">0</span>
+      </summary>
+      <div class="detail-body">
+        <div class="table-wrap">
+          <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
+            <thead>
               <tr>
-                <td class="tl-nowrap">${fmtTime(instant)}</td>
-                <td>${cell(temp_c)}</td><td>${cell(sensacio_c)}</td><td>${cell(punt_rosada_c)}</td><td>${cell(humitat_pct)}</td>
-                <td>${cell(pressio_rel_hpa)}</td><td>${cell(pressio_abs_hpa)}</td><td>${cell(uvi)}</td><td>${cell(solar_wm2)}</td>
-                <td>${cell(taxa_pluja_mm_h)}</td><td>${cell(pluja_diaria_mm)}</td><td>${cell(pluja_event_mm)}</td><td>${cell(pluja_hora_mm)}</td>
-                <td>${cell(pluja_setmana_mm)}</td><td>${cell(pluja_mes_mm)}</td><td>${cell(pluja_any_mm)}</td>
-                <td>${cell(vent_ms)}</td><td>${cell(vent_rafega_ms)}</td><td>${cell(vent_dir_graus)}</td><td>${cell(bateria_pct)}</td>
-              </tr>`;
-          }).join('');
+                <th>Hora</th>
+                <th>Temp (°C)</th>
+                <th>Sensació (°C)</th>
+                <th>Rosada (°C)</th>
+                <th>Hum (%)</th>
+                <th>Pressió rel (hPa)</th>
+                <th>Pressió abs (hPa)</th>
+                <th>UVI</th>
+                <th>Solar (W/m²)</th>
+                <th>Taxa pluja (mm/h)</th>
+                <th>Pluja dia</th>
+                <th>Pluja 1h</th>
+                <th>Pluja mes</th>
+                <th>Pluja any</th>
+                <th>Vent (m/s)</th>
+                <th>Ràfega (m/s)</th>
+                <th>Dir (°)</th>
+                <th>Bateria (%)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="smallnote">Consell: a mòbil, fes scroll horitzontal dins la taula.</p>
+      </div>
+    </details>
 
-          statusMeteoEl.textContent = `Mostrant ${items?.length ?? 0} registres${estacio ? ' — estació: ' + estacio : ''}`;
-        } catch (e) {
-          errMeteoEl.textContent = 'Error carregant meteo: ' + (e.message || e);
-          statusMeteoEl.textContent = '';
-        }
-      }
+    <div class="section-title" style="margin-top:22px">
+      <h2>Hidrologia</h2>
+      <p id="hidro-summary">—</p>
+    </div>
 
-      async function loadHidro() {
-        errHidroEl.textContent = ''; statusHidroEl.textContent = 'Carregant…';
-        const codi = codiHidroEl.value.trim();
-        const limit = Math.max(1, Math.min(1000, parseInt(limitHidroEl.value || '20', 10)));
-        const qs = new URLSearchParams({ limit: String(limit) });
-        if (codi) qs.set('codi', codi);
+    <div class="panel controls" style="justify-content:flex-start; margin-bottom:12px">
+      <label>
+        Codi estació (opcional)
+        <input id="codi-hidro" type="text" placeholder="p.ex. 251116-005" autocomplete="off" />
+      </label>
+      <button id="btn-hidro" class="btn">Refresca hidro</button>
+      <span id="err-h" class="err" role="alert" aria-live="polite"></span>
+    </div>
 
-        try {
-          const res = await fetch('/api/v1/hidro/darreres?' + qs.toString());
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const { ok, items, error } = await res.json();
-          if (!ok) throw new Error(error || 'error');
+    <div class="grid" id="hidro-cards"></div>
 
-          tbodyHidro.innerHTML = (items || []).map(row => {
-            const instant   = row.instant;
-            const codi      = row.codi ?? '';
-            const nom       = row.nom ?? '';
-            const tipus     = row.tipus ?? '';
-            const cabal     = row.cabal_m3s ?? '';
-            const capacitat = row.capacitat_pct ?? '';
-            const nivell    = row.nivell_m ?? '';
-            const fallbackId= row.estacio_id ?? '';
-
-            return `
+    <details>
+      <summary>
+        Últims registres (taula)
+        <span class="badge" id="hidro-count">0</span>
+      </summary>
+      <div class="detail-body">
+        <div class="table-wrap">
+          <table id="tbl-hidro" aria-label="Taula d'hidrologia">
+            <thead>
               <tr>
-                <td class="tl-nowrap">${fmtTime(instant)}</td>
-                <td>${cell(codi || ('#'+fallbackId))}</td>
-                <td>${cell(nom)}</td>
-                <td>${cell(tipus)}</td>
-                <td>${cell(cabal)}</td>
-                <td>${cell(capacitat)}</td>
-                <td>${cell(nivell)}</td>
-              </tr>`;
-          }).join('');
+                <th>Hora</th>
+                <th>Codi</th>
+                <th>Nom</th>
+                <th>Tipus</th>
+                <th>Cabal (m³/s)</th>
+                <th>Capacitat (%)</th>
+                <th>Nivell (m)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="smallnote">Aquesta secció és opcional: si no hi ha dades, quedarà buida.</p>
+      </div>
+    </details>
 
-          statusHidroEl.textContent = `Mostrant ${items?.length ?? 0} registres${codi ? ' — codi: ' + codi : ''}`;
-        } catch (e) {
-          errHidroEl.textContent = 'Error carregant hidrologia: ' + (e.message || e);
-          statusHidroEl.textContent = '';
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const fmtTime = (iso) => { try { return new Date(iso).toLocaleString(); } catch { return iso || ''; } };
+    const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+    const num = (v) => (v == null || v === '' ? null : Number(v));
+    const cell = (v) => (v == null || v === '' ? '—' : v);
+    const fmt1 = (v) => (v == null || Number.isNaN(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1));
+
+    // URL params
+    const url = new URL(location.href);
+    const estFromUrl = url.searchParams.get('estacio') || url.searchParams.get('station_id');
+    const limFromUrl = url.searchParams.get('limit');
+    const codiFromUrl = url.searchParams.get('codi_hidro') || url.searchParams.get('codi');
+    if (estFromUrl) $('#estacio').value = estFromUrl;
+    if (limFromUrl) $('#limit').value = String(clamp(parseInt(limFromUrl, 10) || 48, 1, 500));
+    if (codiFromUrl) $('#codi-hidro').value = codiFromUrl;
+
+    let t = null;
+
+    function card({ title, value, unit, badge, sub1, sub2 }) {
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <div class="k">
+          <h3>${title}</h3>
+          <span class="badge">${badge || ''}</span>
+        </div>
+        <p class="v">${value} <span class="unit">${unit || ''}</span></p>
+        <div class="sub">
+          ${sub1 ? `<span>${sub1}</span>` : ''}
+          ${sub2 ? `<span>${sub2}</span>` : ''}
+        </div>
+      `;
+      return el;
+    }
+
+    function setErr(msg){
+      $('#err').textContent = msg || '';
+    }
+    function setErrH(msg){
+      $('#err-h').textContent = msg || '';
+    }
+
+    async function loadMeteo(){
+      setErr('');
+      const estacio = $('#estacio').value.trim();
+      const limit = clamp(parseInt($('#limit').value || '48', 10), 1, 500);
+
+      const qs = new URLSearchParams({ limit: String(limit) });
+      if (estacio) qs.set('estacio', estacio);
+
+      try{
+        const res = await fetch('/api/v1/mesures/darreres?' + qs.toString(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const { ok, items, error } = await res.json();
+        if (!ok) throw new Error(error || 'error');
+
+        const rows = items || [];
+        $('#meteo-count').textContent = String(rows.length);
+
+        if (!rows.length){
+          $('#meteo-summary').textContent = 'Sense registres.';
+          $('#meteo-cards').innerHTML = '';
+          $('#tbl-meteo tbody').innerHTML = '';
+          $('#last').textContent = 'Sense dades';
+          return;
         }
+
+        // agafem l'últim registre (assumim que el primer és el més recent; si no, invertim)
+        const r0 = rows[0];
+
+        const instant = r0.instant ?? r0.at;
+        const temp_c = num(r0.temp_c ?? r0.temperature);
+        const feels = num(r0.sensacio_c ?? r0.feels_like ?? r0.feels_like_c);
+        const dew = num(r0.punt_rosada_c ?? r0.dew_point ?? r0.dew_point_c);
+        const hum = num(r0.humitat_pct ?? r0.humidity);
+        const pRel = num(r0.pressio_rel_hpa ?? r0.pressure_hpa ?? r0.pressure_rel_hpa);
+        const pAbs = num(r0.pressio_abs_hpa ?? r0.pressure_abs_hpa);
+        const uvi = num(r0.uvi);
+        const solar = num(r0.solar_wm2);
+        const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
+        const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
+        const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
+        const rainMonth = num(r0.pluja_mes_mm ?? r0.rain_month_mm);
+        const rainYear = num(r0.pluja_any_mm ?? r0.rain_year_mm);
+        const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
+        const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
+        const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
+        const batt = num(r0.bateria_pct);
+
+        $('#last').textContent = 'Actualitzat: ' + fmtTime(instant);
+        $('#meteo-summary').textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
+
+        // Cards
+        const cards = $('#meteo-cards');
+        cards.innerHTML = '';
+        cards.appendChild(card({ title:'Temperatura', value: fmt1(temp_c), unit:'°C', badge:'Ara', sub1: feels!=null?`Sensació: ${fmt1(feels)} °C`:'' , sub2: dew!=null?`Rosada: ${fmt1(dew)} °C`:'' }));
+        cards.appendChild(card({ title:'Humitat', value: hum==null?'—':Math.round(hum), unit:'%', badge:'Ara', sub1: '' , sub2: '' }));
+        cards.appendChild(card({ title:'Pressió (rel.)', value: fmt1(pRel), unit:'hPa', badge:'Relativa', sub1: pAbs!=null?`Abs.: ${fmt1(pAbs)} hPa`:'' }));
+        cards.appendChild(card({ title:'Vent', value: fmt1(wind), unit:'m/s', badge:'Mitjà', sub1: gust!=null?`Ràfega: ${fmt1(gust)} m/s`:'' , sub2: wdir!=null?`Direcció: ${Math.round(wdir)}°`:'' }));
+        cards.appendChild(card({ title:'Pluja (dia)', value: fmt1(rainDay), unit:'mm', badge:'Acumulada', sub1: rainRate!=null?`Taxa: ${fmt1(rainRate)} mm/h`:'' , sub2: rain1h!=null?`1h: ${fmt1(rain1h)} mm`:'' }));
+        cards.appendChild(card({ title:'Pluja (mes)', value: fmt1(rainMonth), unit:'mm', badge:'Acumulada', sub1: rainYear!=null?`Any: ${fmt1(rainYear)} mm`:'' }));
+        cards.appendChild(card({ title:'UV', value: uvi==null?'—':Math.round(uvi), unit:'', badge:'Índex', sub1: solar!=null?`Solar: ${fmt1(solar)} W/m²`:'' }));
+        cards.appendChild(card({ title:'Bateria', value: batt==null?'—':Math.round(batt), unit:'%', badge:'Sensor', sub1: '' }));
+
+        // Table
+        $('#tbl-meteo tbody').innerHTML = rows.map(row => {
+          const instant = row.instant ?? row.at;
+          const temp_c = row.temp_c ?? row.temperature;
+          const feels = row.sensacio_c ?? row.feels_like ?? row.feels_like_c;
+          const dew = row.punt_rosada_c ?? row.dew_point ?? row.dew_point_c;
+          const hum = row.humitat_pct ?? row.humidity;
+          const pRel = row.pressio_rel_hpa ?? row.pressure_hpa ?? row.pressure_rel_hpa;
+          const pAbs = row.pressio_abs_hpa ?? row.pressure_abs_hpa;
+          const uvi = row.uvi;
+          const solar = row.solar_wm2;
+          const rainRate = row.taxa_pluja_mm_h ?? row.rain_rate_mmph;
+          const rainDay = row.pluja_diaria_mm ?? row.rain_daily_mm ?? row.rain_mm;
+          const rain1h = row.pluja_hora_mm ?? row.rain_hour_mm;
+          const rainMonth = row.pluja_mes_mm ?? row.rain_month_mm;
+          const rainYear = row.pluja_any_mm ?? row.rain_year_mm;
+          const wind = row.vent_ms ?? row.wind_speed_ms;
+          const gust = row.vent_rafega_ms ?? row.wind_gust_ms;
+          const wdir = row.vent_direccio_graus ?? row.wind_dir_deg;
+          const batt = row.bateria_pct;
+
+          return `
+            <tr>
+              <td>${fmtTime(instant)}</td>
+              <td>${cell(temp_c)}</td>
+              <td>${cell(feels)}</td>
+              <td>${cell(dew)}</td>
+              <td>${cell(hum)}</td>
+              <td>${cell(pRel)}</td>
+              <td>${cell(pAbs)}</td>
+              <td>${cell(uvi)}</td>
+              <td>${cell(solar)}</td>
+              <td>${cell(rainRate)}</td>
+              <td>${cell(rainDay)}</td>
+              <td>${cell(rain1h)}</td>
+              <td>${cell(rainMonth)}</td>
+              <td>${cell(rainYear)}</td>
+              <td>${cell(wind)}</td>
+              <td>${cell(gust)}</td>
+              <td>${cell(wdir)}</td>
+              <td>${cell(batt)}</td>
+            </tr>`;
+        }).join('');
+
+      } catch(e){
+        setErr('Error meteo: ' + (e.message || e));
       }
+    }
 
-      btnMeteo.addEventListener('click', loadMeteo);
-      btnHidro.addEventListener('click', loadHidro);
+    async function loadHidro(){
+      setErrH('');
+      const codi = $('#codi-hidro').value.trim();
+      const limit = clamp(parseInt($('#limit').value || '48', 10), 1, 500);
 
-      autoMeteoEl.addEventListener('change', () => {
-        if (autoMeteoEl.checked) { if (timerMeteo) clearInterval(timerMeteo); timerMeteo = setInterval(loadMeteo, 30000); loadMeteo(); }
-        else { if (timerMeteo) clearInterval(timerMeteo); }
-      });
+      const qs = new URLSearchParams({ limit: String(limit) });
+      if (codi) qs.set('codi', codi);
 
-      autoHidroEl.addEventListener('change', () => {
-        if (autoHidroEl.checked) { if (timerHidro) clearInterval(timerHidro); timerHidro = setInterval(loadHidro, 30000); loadHidro(); }
-        else { if (timerHidro) clearInterval(timerHidro); }
-      });
+      try{
+        const res = await fetch('/api/v1/hidro/darreres?' + qs.toString(), { cache:'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const { ok, items, error } = await res.json();
+        if (!ok) throw new Error(error || 'error');
 
-      loadMeteo();
-      loadHidro();
-    </script>
-  </body>
+        const rows = items || [];
+        $('#hidro-count').textContent = String(rows.length);
+
+        if (!rows.length){
+          $('#hidro-summary').textContent = 'Sense registres.';
+          $('#hidro-cards').innerHTML = '';
+          $('#tbl-hidro tbody').innerHTML = '';
+          return;
+        }
+
+        const r0 = rows[0];
+        const instant = r0.instant;
+        $('#hidro-summary').textContent = codi ? `Codi: ${codi} · ${rows.length} registres` : `${rows.length} registres`;
+
+        // Cards (fem “best effort” amb el primer registre)
+        const cabal = num(r0.cabal_m3s);
+        const cap = num(r0.capacitat_pct);
+        const niv = num(r0.nivell_m);
+
+        const cards = $('#hidro-cards');
+        cards.innerHTML = '';
+        cards.appendChild(card({ title:'Cabal', value: fmt1(cabal), unit:'m³/s', badge:'Últim', sub1: 'Hora: ' + fmtTime(instant) }));
+        cards.appendChild(card({ title:'Capacitat', value: cap==null?'—':fmt1(cap), unit:'%', badge:'Últim', sub1: r0.nom ? `Estació: ${r0.nom}` : '' }));
+        cards.appendChild(card({ title:'Nivell', value: fmt1(niv), unit:'m', badge:'Últim', sub1: r0.tipus ? `Tipus: ${r0.tipus}` : '' }));
+
+        // Table
+        $('#tbl-hidro tbody').innerHTML = rows.map(row => {
+          const instant = row.instant;
+          const codi = row.codi ?? (row.estacio_id != null ? ('#' + row.estacio_id) : '');
+          const nom = row.nom ?? '';
+          const tipus = row.tipus ?? '';
+          const cabal = row.cabal_m3s ?? '';
+          const cap = row.capacitat_pct ?? '';
+          const niv = row.nivell_m ?? '';
+          return `
+            <tr>
+              <td>${fmtTime(instant)}</td>
+              <td>${cell(codi)}</td>
+              <td>${cell(nom)}</td>
+              <td>${cell(tipus)}</td>
+              <td>${cell(cabal)}</td>
+              <td>${cell(cap)}</td>
+              <td>${cell(niv)}</td>
+            </tr>`;
+        }).join('');
+
+      } catch(e){
+        setErrH('Error hidro: ' + (e.message || e));
+      }
+    }
+
+    function setUrlParams(){
+      const u = new URL(location.href);
+      u.searchParams.set('estacio', $('#estacio').value.trim() || 'home');
+      u.searchParams.set('limit', String(clamp(parseInt($('#limit').value || '48',10),1,500)));
+      const c = $('#codi-hidro').value.trim();
+      if (c) u.searchParams.set('codi_hidro', c);
+      else u.searchParams.delete('codi_hidro');
+      return u.toString();
+    }
+
+    $('#btn-refresh').addEventListener('click', () => { loadMeteo(); loadHidro(); });
+    $('#btn-hidro').addEventListener('click', loadHidro);
+    $('#btn-copy').addEventListener('click', async () => {
+      const link = setUrlParams();
+      try{
+        await navigator.clipboard.writeText(link);
+        $('#btn-copy').textContent = 'Copiat!';
+        setTimeout(() => $('#btn-copy').textContent = 'Copia enllaç', 1200);
+      } catch {
+        prompt('Copia aquest enllaç:', link);
+      }
+    });
+
+    $('#auto').addEventListener('change', () => {
+      if ($('#auto').checked){
+        if (t) clearInterval(t);
+        t = setInterval(() => { loadMeteo(); loadHidro(); }, 30000);
+      } else {
+        if (t) clearInterval(t);
+      }
+    });
+
+    // primera càrrega
+    loadMeteo();
+    loadHidro();
+  </script>
+</body>
 </html>
