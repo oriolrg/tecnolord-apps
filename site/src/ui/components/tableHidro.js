@@ -8,7 +8,6 @@ export function renderHidroTable(tbody, rows) {
     const tipus = row.tipus ?? "";
     const cabal = row.cabal_m3s ?? "";
     const cap = row.capacitat_pct ?? "";
-    const niv = row.nivell_m ?? "";
     return `
       <tr>
         <td>${fmtTime(instant)}</td>
@@ -17,7 +16,6 @@ export function renderHidroTable(tbody, rows) {
         <td>${cell(tipus)}</td>
         <td>${cell(cabal)}</td>
         <td>${cell(cap)}</td>
-        <td>${cell(niv)}</td>
       </tr>`;
   }).join("");
 }

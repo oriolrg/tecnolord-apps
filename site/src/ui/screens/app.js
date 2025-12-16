@@ -110,7 +110,6 @@ function buildUI(root, store) {
                   <th>Tipus</th>
                   <th>Cabal (m³/s)</th>
                   <th>Capacitat (%)</th>
-                  <th>Nivell (m)</th>
                 </tr>
               </thead>
               <tbody></tbody>
