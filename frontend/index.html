@@ -1,115 +1,193 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ca">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tecnolord — Dades Meteo & Hidrologia</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="TecnoLord — Dades Meteo & Hidrologia" />
+    <meta name="author" content="TecnoLord: Oriol Riu Gispert" />
+
+    <!-- (Opció ràpida) Carregar el mateix tema des de tecnolord.cat -->
+    <link rel="shortcut icon" href="https://tecnolord.cat/assets/images/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/animate.css" />
+    <link rel="stylesheet" href="https://tecnolord.cat/assets/fonts/lineicons/font-css/LineIcons.css" />
+    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/default.css" />
+    <link rel="stylesheet" href="https://tecnolord.cat/assets/css/style.css" />
+
+    <!-- Estils del teu mòdul (renombrats per no xocar amb classes del tema) -->
     <style>
-      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:2rem;line-height:1.45}
-      h1{margin-bottom:.25rem}
-      h2{margin-top:2rem}
-      .row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin:.5rem 0 1rem}
-      input,select,button{padding:.5rem .7rem;border:1px solid #ccc;border-radius:.5rem}
-      input[type="number"]{width:6rem}
-      button{cursor:pointer}
-      table{border-collapse:collapse;width:100%;margin-top:.5rem}
-      th,td{border:1px solid #e5e7eb;padding:.4rem .5rem;text-align:left;font-size:.92rem;vertical-align:top}
-      th{background:#f5f5f5}
-      .muted{color:#666;font-size:.9rem}
-      .err{color:#b00020;margin-top:.25rem}
-      .section{border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem;margin-top:1rem}
-      .controls{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
-      .hdr{display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
-      .nowrap{white-space:nowrap}
-      .small{font-size:.85rem}
+      .tl-wrap{padding: 2rem 0}
+      .tl-muted{color:#666;font-size:.95rem}
+      .tl-err{color:#b00020;margin-top:.25rem}
+      .tl-panel{border:1px solid #e5e7eb;border-radius: .75rem;padding:1rem;margin-top:1rem;background:#fff}
+      .tl-controls{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin:.75rem 0 1rem}
+      .tl-controls input{padding:.5rem .7rem;border:1px solid #ccc;border-radius:.5rem}
+      .tl-controls input[type="number"]{width:6rem}
+      .tl-controls button{padding:.55rem .9rem;border:0;border-radius:.5rem;cursor:pointer}
+      .tl-status{color:#666;font-size:.95rem}
+      .tl-table{width:100%;border-collapse:collapse;margin-top:.5rem}
+      .tl-table th,.tl-table td{border:1px solid #e5e7eb;padding:.4rem .5rem;text-align:left;font-size:.92rem;vertical-align:top}
+      .tl-table th{background:#f5f5f5}
+      .tl-nowrap{white-space:nowrap}
+      .tl-scroll{overflow:auto}
+      .tl-hdr{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap}
     </style>
   </head>
+
   <body>
-    <h1>Dades Meteo & Hidrologia</h1>
-    <p class="muted small">Passa paràmetres per URL si vols: <code>?estacio=home&limit=50&codi_hidro=251116-005</code></p>
-
-    <!-- ───────────── METEO ───────────── -->
-    <div class="section" id="meteo-sec">
-      <div class="hdr">
-        <h2>Meteo</h2>
-        <span id="status-meteo" class="muted"></span>
+    <div id="app">
+      <!-- PRELOADER (igual que tecnolord) -->
+      <div class="preloader">
+        <div class="loader">
+          <div class="ytp-spinner">
+            <div class="ytp-spinner-container">
+              <div class="ytp-spinner-rotator">
+                <div class="ytp-spinner-left"><div class="ytp-spinner-circle"></div></div>
+                <div class="ytp-spinner-right"><div class="ytp-spinner-circle"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="controls">
-        <label>Estació <input id="estacio" value="home" /></label>
-        <label>Límit <input id="limit-meteo" type="number" min="1" max="1000" value="20" /></label>
-        <label><input id="auto-meteo" type="checkbox" /> Auto (30s)</label>
-        <button id="btn-meteo">Refresca</button>
-      </div>
-      <div id="error-meteo" class="err"></div>
+      <!-- NAVBAR (igual que tecnolord) -->
+      <section class="header_area">
+        <div class="header_navbar">
+          <nav class="navbar navbar-expand-lg">
+            <a class="navbar-brand" href="/">
+              <img class="logo" style="height:160%;width:auto;object-fit:contain;margin:0;top:0"
+                   src="assets/images/meteolord.png" alt="TecnoLord">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+              <span class="toggler-icon"></span><span class="toggler-icon"></span><span class="toggler-icon"></span>
+            </button>
 
-      <table id="tbl-meteo">
-        <thead>
-          <tr>
-            <th class="nowrap">Hora</th>
-            <th>Temp (°C)</th>
-            <th>Sensació (°C)</th>
-            <th>Punt rosada (°C)</th>
-            <th>Hum (%)</th>
-            <th>Pressió rel (hPa)</th>
-            <th>Pressió abs (hPa)</th>
-            <th>UVI</th>
-            <th>Solar (W/m²)</th>
-            <th>Taxa pluja (mm/h)</th>
-            <th>Pluja dia</th>
-            <th>Pluja event</th>
-            <th>Pluja 1h</th>
-            <th>Pluja setmana</th>
-            <th>Pluja mes</th>
-            <th>Pluja any</th>
-            <th>Vent (m/s)</th>
-            <th>Ràfega (m/s)</th>
-            <th>Direcció (°)</th>
-            <th>Bateria (%)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+              <ul id="nav" class="languages ml-auto navbar-nav inline my-2 my-lg-0">
+                <li class="nav-item"><a class="" href="/#inici">Inici</a></li>
+                <li class="nav-item"><a class="" href="/#estrategia">Estrategia</a></li>
+                <li class="nav-item"><a class="" href="/#portafoli">Portafoli</a></li>
+                <li class="nav-item"><a class="active" href="/#dades">Meteo</a></li>
+                <li class="nav-item"><a class="" href="/#curriculum">Curriculum</a></li>
+                <li class="nav-item"><a class="" href="/#contact">Contacte</a></li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </section>
+
+      <!-- CONTINGUT (substitueix <meteo-app>) -->
+      <section id="dades" class="tl-wrap">
+        <div class="container">
+          <div class="section-title">
+            <h2>Dades Meteo & Hidrologia</h2>
+            <p class="tl-muted">Paràmetres per URL: <code>?estacio=home&limit=50&codi_hidro=251116-005</code></p>
+          </div>
+
+          <!-- METEO -->
+          <div class="tl-panel" id="meteo-sec">
+            <div class="tl-hdr">
+              <h4 style="margin:0">Meteo</h4>
+              <span id="status-meteo" class="tl-status"></span>
+            </div>
+
+            <div class="tl-controls">
+              <label>Estació <input id="estacio" value="home" /></label>
+              <label>Límit <input id="limit-meteo" type="number" min="1" max="1000" value="20" /></label>
+              <label style="display:flex;align-items:center;gap:.35rem">
+                <input id="auto-meteo" type="checkbox" /> Auto (30s)
+              </label>
+              <button id="btn-meteo" class="main-btn">Refresca</button>
+            </div>
+
+            <div id="error-meteo" class="tl-err"></div>
+
+            <div class="tl-scroll">
+              <table class="tl-table" id="tbl-meteo">
+                <thead>
+                  <tr>
+                    <th class="tl-nowrap">Hora</th><th>Temp (°C)</th><th>Sensació (°C)</th><th>Punt rosada (°C)</th>
+                    <th>Hum (%)</th><th>Pressió rel (hPa)</th><th>Pressió abs (hPa)</th><th>UVI</th><th>Solar (W/m²)</th>
+                    <th>Taxa pluja (mm/h)</th><th>Pluja dia</th><th>Pluja event</th><th>Pluja 1h</th><th>Pluja setmana</th>
+                    <th>Pluja mes</th><th>Pluja any</th><th>Vent (m/s)</th><th>Ràfega (m/s)</th><th>Direcció (°)</th><th>Bateria (%)</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- HIDRO -->
+          <div class="tl-panel" id="hidro-sec">
+            <div class="tl-hdr">
+              <h4 style="margin:0">Hidrologia</h4>
+              <span id="status-hidro" class="tl-status"></span>
+            </div>
+
+            <div class="tl-controls">
+              <label>Codi estació (opcional) <input id="codi-hidro" placeholder="p.ex. 251116-005" /></label>
+              <label>Límit <input id="limit-hidro" type="number" min="1" max="1000" value="20" /></label>
+              <label style="display:flex;align-items:center;gap:.35rem">
+                <input id="auto-hidro" type="checkbox" /> Auto (30s)
+              </label>
+              <button id="btn-hidro" class="main-btn">Refresca</button>
+            </div>
+
+            <div id="error-hidro" class="tl-err"></div>
+
+            <div class="tl-scroll">
+              <table class="tl-table" id="tbl-hidro">
+                <thead>
+                  <tr>
+                    <th class="tl-nowrap">Hora</th><th>Codi</th><th>Nom</th><th>Tipus</th><th>Cabal (m³/s)</th><th>Capacitat (%)</th><th>Nivell (m)</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- FOOTER (igual que tecnolord) -->
+      <footer id="footer" class="footer_area">
+        <div class="container">
+          <div class="footer_copyright d-sm-flex justify-content-between">
+            <div class="footer_social text-center">
+              <ul class="social">
+                <li><a href="https://twitter.com/tecno_lord"><i class="lni lni-twitter-filled"></i></a></li>
+                <li><a href="https://www.linkedin.com/in/oriol-riu-gispert-1b158854/"><i class="lni lni-linkedin-original"></i></a></li>
+              </ul>
+            </div>
+            <div class="footer_copyright_content text-center">
+              <p>Copyright © <a href="https://tecnolord.cat" rel="nofollow">TecnoLord</a></p>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      <a href="#" class="back-to-top"><i class="lni lni-chevron-up"></i></a>
     </div>
 
-    <!-- ───────────── HIDRO ───────────── -->
-    <div class="section" id="hidro-sec">
-      <div class="hdr">
-        <h2>Hidrologia</h2>
-        <span id="status-hidro" class="muted"></span>
-      </div>
+    <!-- JS del tema (igual que tecnolord) -->
+    <script src="https://tecnolord.cat/assets/js/vendor/jquery-1.12.4.min.js"></script>
+    <script src="https://tecnolord.cat/assets/js/vendor/modernizr-3.7.1.min.js"></script>
+    <script src="https://tecnolord.cat/assets/js/popper.min.js"></script>
+    <script src="https://tecnolord.cat/assets/js/jquery.easing.min.js"></script>
+    <script src="https://tecnolord.cat/assets/js/scrolling-nav.js"></script>
+    <script src="https://tecnolord.cat/assets/js/wow.min.js"></script>
+    <script src="https://tecnolord.cat/assets/js/main.js"></script>
 
-      <div class="controls">
-        <label>Codi estació (opcional) <input id="codi-hidro" placeholder="p.ex. 251116-005" /></label>
-        <label>Límit <input id="limit-hidro" type="number" min="1" max="1000" value="20" /></label>
-        <label><input id="auto-hidro" type="checkbox" /> Auto (30s)</label>
-        <button id="btn-hidro">Refresca</button>
-      </div>
-      <div id="error-hidro" class="err"></div>
-
-      <table id="tbl-hidro">
-        <thead>
-          <tr>
-            <th class="nowrap">Hora</th>
-            <th>Codi</th>
-            <th>Nom</th>
-            <th>Tipus</th>
-            <th>Cabal (m³/s)</th>
-            <th>Capacitat (%)</th>
-            <th>Nivell (m)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
+    <!-- El teu script (sense canvis de lògica) -->
     <script>
-      // Helpers
       const $ = s => document.querySelector(s);
       const fmtTime = iso => { try { return new Date(iso).toLocaleString(); } catch { return iso || ''; } };
       const cell = v => (v == null || v === '' ? '' : v);
 
-      // ───────────── METEO ─────────────
       const estacioEl = $('#estacio');
       const limitMeteoEl = $('#limit-meteo');
       const autoMeteoEl = $('#auto-meteo');
@@ -119,7 +197,6 @@
       const tbodyMeteo = $('#tbl-meteo tbody');
       let timerMeteo = null;
 
-      // ───────────── HIDRO ─────────────
       const codiHidroEl = $('#codi-hidro');
       const limitHidroEl = $('#limit-hidro');
       const autoHidroEl = $('#auto-hidro');
@@ -129,12 +206,10 @@
       const tbodyHidro = $('#tbl-hidro tbody');
       let timerHidro = null;
 
-      // Params d'URL
       const url = new URL(location.href);
       const estFromUrl = url.searchParams.get('estacio') || url.searchParams.get('station_id');
       const limFromUrl = url.searchParams.get('limit');
       const codiFromUrl = url.searchParams.get('codi_hidro') || url.searchParams.get('codi');
-
       if (estFromUrl) estacioEl.value = estFromUrl;
       if (limFromUrl)  { limitMeteoEl.value = limFromUrl; limitHidroEl.value = limFromUrl; }
       if (codiFromUrl) codiHidroEl.value = codiFromUrl;
@@ -176,26 +251,12 @@
 
             return `
               <tr>
-                <td class="nowrap">${fmtTime(instant)}</td>
-                <td>${cell(temp_c)}</td>
-                <td>${cell(sensacio_c)}</td>
-                <td>${cell(punt_rosada_c)}</td>
-                <td>${cell(humitat_pct)}</td>
-                <td>${cell(pressio_rel_hpa)}</td>
-                <td>${cell(pressio_abs_hpa)}</td>
-                <td>${cell(uvi)}</td>
-                <td>${cell(solar_wm2)}</td>
-                <td>${cell(taxa_pluja_mm_h)}</td>
-                <td>${cell(pluja_diaria_mm)}</td>
-                <td>${cell(pluja_event_mm)}</td>
-                <td>${cell(pluja_hora_mm)}</td>
-                <td>${cell(pluja_setmana_mm)}</td>
-                <td>${cell(pluja_mes_mm)}</td>
-                <td>${cell(pluja_any_mm)}</td>
-                <td>${cell(vent_ms)}</td>
-                <td>${cell(vent_rafega_ms)}</td>
-                <td>${cell(vent_dir_graus)}</td>
-                <td>${cell(bateria_pct)}</td>
+                <td class="tl-nowrap">${fmtTime(instant)}</td>
+                <td>${cell(temp_c)}</td><td>${cell(sensacio_c)}</td><td>${cell(punt_rosada_c)}</td><td>${cell(humitat_pct)}</td>
+                <td>${cell(pressio_rel_hpa)}</td><td>${cell(pressio_abs_hpa)}</td><td>${cell(uvi)}</td><td>${cell(solar_wm2)}</td>
+                <td>${cell(taxa_pluja_mm_h)}</td><td>${cell(pluja_diaria_mm)}</td><td>${cell(pluja_event_mm)}</td><td>${cell(pluja_hora_mm)}</td>
+                <td>${cell(pluja_setmana_mm)}</td><td>${cell(pluja_mes_mm)}</td><td>${cell(pluja_any_mm)}</td>
+                <td>${cell(vent_ms)}</td><td>${cell(vent_rafega_ms)}</td><td>${cell(vent_dir_graus)}</td><td>${cell(bateria_pct)}</td>
               </tr>`;
           }).join('');
 
@@ -221,7 +282,6 @@
 
           tbodyHidro.innerHTML = (items || []).map(row => {
             const instant   = row.instant;
-            // si no has aplicat el retoc backend, 'codi','nom','tipus' poden no existir
             const codi      = row.codi ?? '';
             const nom       = row.nom ?? '';
             const tipus     = row.tipus ?? '';
@@ -232,7 +292,7 @@
 
             return `
               <tr>
-                <td class="nowrap">${fmtTime(instant)}</td>
+                <td class="tl-nowrap">${fmtTime(instant)}</td>
                 <td>${cell(codi || ('#'+fallbackId))}</td>
                 <td>${cell(nom)}</td>
                 <td>${cell(tipus)}</td>
@@ -249,7 +309,6 @@
         }
       }
 
-      // Botons i Auto
       btnMeteo.addEventListener('click', loadMeteo);
       btnHidro.addEventListener('click', loadHidro);
 
@@ -263,7 +322,6 @@
         else { if (timerHidro) clearInterval(timerHidro); }
       });
 
-      // Primera càrrega
       loadMeteo();
       loadHidro();
     </script>
