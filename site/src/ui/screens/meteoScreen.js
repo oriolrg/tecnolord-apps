@@ -1,5 +1,6 @@
 import { card } from "../components/card.js";
 import { fmtTime, num, fmt1, clamp, degToCompass, degToArrow } from "../format.js";
+import { windNameCa } from "../format.js";
 
 import { fetchMeteo } from "../../services/meteoService.js";
 import { renderMeteoTable } from "../components/tableMeteo.js";
@@ -55,7 +56,7 @@ export async function refreshMeteo(ui, store) {
     // +180 per invertir origen → destí
     // +180 extra perquè l’SVG té l’eix Y invertit
     const arrowDeg = deg == null ? null : (deg + 180 + 180) % 360;
-
+    const windLabel = windNameCa(deg);
 
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
     const ageTxt =
@@ -80,7 +81,7 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
   title: "Vent",
-  value: deg == null ? "—" : `${Math.round(deg)}°`,
+  value: deg == null ? "—" : `${Math.round(deg)}° ${windLabel}`,
   unit: "",
   badge: "Direcció",
   subHtml: `

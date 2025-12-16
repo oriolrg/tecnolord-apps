@@ -23,3 +23,17 @@ export function degToArrow(deg) {
   const i = Math.round(deg / 45) % 8;
   return arrows[i];
 }
+export function windNameCa(deg) {
+  if (deg == null || Number.isNaN(deg)) return "";
+  const d = ((deg % 360) + 360) % 360;
+
+  // 8 vents (cada 45°). Llindars a mig camí (22.5°)
+  if (d < 22.5 || d >= 337.5) return "tramuntana";
+  if (d < 67.5)  return "gregal";
+  if (d < 112.5) return "llevant";
+  if (d < 157.5) return "xaloc";
+  if (d < 202.5) return "migjorn";
+  if (d < 247.5) return "garbí";
+  if (d < 292.5) return "ponent";
+  return "mestral";
+}
