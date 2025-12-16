@@ -111,7 +111,7 @@ function buildUI(root, store) {
         <p id="hidro-summary">—</p>
       </div>
 
-      <div class="panel controls" style="justify-content:flex-start; margin-bottom:12px">
+      <div id="hidro-controls" class="panel controls" style="justify-content:flex-start; margin-bottom:12px">
         <label>Codi estació (opcional) <input id="codi-hidro" type="text" value="${store.get().codiHidro || ""}" placeholder="p.ex. 251116-005" autocomplete="off" /></label>
         <button id="btn-hidro" class="btn">Refresca hidro</button>
         <span id="err-h" class="err" role="alert" aria-live="polite"></span>
