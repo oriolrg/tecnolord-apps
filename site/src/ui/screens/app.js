@@ -28,7 +28,7 @@ function buildUI(root, store) {
           <p class="subtitle">Lectures en temps real </p>
         </div>
 
-        <div id="hidro-controls" class="panel controls" style="justify-content:flex-start; margin-bottom:12px">
+        <div id="main-controls" class="panel controls" style="justify-content:flex-start; margin-bottom:12px">
           <label>
             Estació
             <input id="estacio" type="text" value="${store.get().estacio}" autocomplete="off" />
@@ -149,6 +149,7 @@ function buildUI(root, store) {
     auto: $("#auto", root),
     btnRefresh: $("#btn-refresh", root),
     btnCopy: $("#btn-copy", root),
+    mainControls: $("#main-controls", root),
 
     last: $("#last", root),
     err: $("#err", root),
