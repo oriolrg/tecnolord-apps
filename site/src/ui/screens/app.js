@@ -22,10 +22,10 @@ function readUrlParams(store) {
 function buildUI(root, store) {
   root.innerHTML = `
     <div class="wrap">
-      <header>
+      <header  id="header-controls">
         <div class="brand">
-          <h1 class="title">Estació Meteo</h1>
-          <p class="subtitle">Lectures en temps real (mòbil, tablet i ordinador)</p>
+          <h1 class="title">MeteoLord</h1>
+          <p class="subtitle">Lectures en temps real </p>
         </div>
 
         <div class="panel controls" aria-label="Controls principals">
@@ -97,7 +97,6 @@ function buildUI(root, store) {
                   <th>Vent (m/s)</th>
                   <th>Ràfega (m/s)</th>
                   <th>Dir (°)</th>
-                  <th>Bateria (%)</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -144,6 +143,7 @@ function buildUI(root, store) {
   `;
 
   const ui = {
+    header: $("#header-controls", root),
     estacio: $("#estacio", root),
     limit: $("#limit", root),
     auto: $("#auto", root),
@@ -180,10 +180,14 @@ function setUrlFromStore(store) {
 }
 
 export function initApp(root) {
+  
   const store = createStore();
   readUrlParams(store);
 
   const ui = buildUI(root, store);
+  if (!CONFIG.stations || CONFIG.stations.length <= 1) {
+    ui.header.style.display = "none";
+  }
 
   let timer = null;
 

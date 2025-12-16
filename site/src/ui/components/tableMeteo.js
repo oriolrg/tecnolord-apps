@@ -19,7 +19,6 @@ export function renderMeteoTable(tbody, rows) {
     const wind = row.vent_ms ?? row.wind_speed_ms;
     const gust = row.vent_rafega_ms ?? row.wind_gust_ms;
     const wdir = row.vent_direccio_graus ?? row.wind_dir_deg;
-    const batt = row.bateria_pct;
 
     return `
       <tr>
@@ -40,7 +39,6 @@ export function renderMeteoTable(tbody, rows) {
         <td>${cell(wind)}</td>
         <td>${cell(gust)}</td>
         <td>${cell(wdir)}</td>
-        <td>${cell(batt)}</td>
       </tr>`;
   }).join("");
 }
