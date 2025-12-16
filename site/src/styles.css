@@ -407,19 +407,19 @@ th{
   line-height: 1.35;
 }
 
-.wind-deg{
-  font-size: var(--fs-4);
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  color: var(--text);         /* 👈 abans et quedava gris */
-}
+.wind-deg{ color: var(--text); }
 
 .wind-rose{
-  width: 104px;
-  height: 104px;
+  width: 112px;
+  height: 112px;
   flex: 0 0 auto;
+  color: var(--muted);   /* per a text */
 }
+
+.wind-rose text{
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
 
 .wind-rose svg{
   width: 100%;

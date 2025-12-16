@@ -48,7 +48,8 @@ export async function refreshMeteo(ui, store) {
     const deg = (wdir == null || Number.isNaN(wdir))
     ? null
     : ((wdir % 360) + 360) % 360;
-    const arrowDeg = deg;
+    const arrowDeg = deg == null ? null : (deg + 180) % 360;
+
 
 
 
@@ -89,51 +90,66 @@ export async function refreshMeteo(ui, store) {
             </div>
 
            ${deg == null ? "" : `
-            <svg class="wind-rose" viewBox="0 0 120 120" aria-label="Direcció del vent" role="img">
-              <!-- anells -->
-              <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(96,165,250,.55)" stroke-width="2"/>
-              <circle cx="60" cy="60" r="36" fill="none" stroke="rgba(96,165,250,.18)" stroke-width="2"/>
+            <svg class="wind-rose" viewBox="0 0 140 140" role="img" aria-label="Rosa de vents">
+              <!-- gradients suaus -->
+              <defs>
+                <radialGradient id="roseGlow" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="rgba(96,165,250,.25)"/>
+                  <stop offset="100%" stop-color="rgba(96,165,250,0)"/>
+                </radialGradient>
+              </defs>
 
-              <!-- ticks majors (cada 45°) -->
-              ${Array.from({length: 8}).map((_,i)=>{
-                const a = i*45 * Math.PI/180;
-                const r1 = 48, r2 = 38;
-                const x1 = 60 + Math.cos(a)*r1;
-                const y1 = 60 + Math.sin(a)*r1;
-                const x2 = 60 + Math.cos(a)*r2;
-                const y2 = 60 + Math.sin(a)*r2;
-                return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
-                  stroke="rgba(96,165,250,.45)" stroke-width="2.4" stroke-linecap="round"/>`;
-              }).join("")}
+              <!-- glow -->
+              <circle cx="70" cy="70" r="58" fill="url(#roseGlow)"/>
 
-              <!-- ticks menors (cada 15°) -->
-              ${Array.from({length: 24}).map((_,i)=>{
-                const a = i*15 * Math.PI/180;
-                const r1 = 48, r2 = (i%3===0?40:44);
-                const x1 = 60 + Math.cos(a)*r1;
-                const y1 = 60 + Math.sin(a)*r1;
-                const x2 = 60 + Math.cos(a)*r2;
-                const y2 = 60 + Math.sin(a)*r2;
-                return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
-                  stroke="rgba(96,165,250,.22)" stroke-width="${i%3===0?1.6:1}" stroke-linecap="round"/>`;
-              }).join("")}
+              <!-- anell exterior -->
+              <circle cx="70" cy="70" r="56" fill="none" stroke="rgba(96,165,250,.45)" stroke-width="2"/>
 
-              <!-- lletres N/E/S/W -->
-              <text x="60" y="18" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">N</text>
-              <text x="104" y="64" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">E</text>
-              <text x="60" y="112" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">S</text>
-              <text x="16" y="64" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">W</text>
+              <!-- rosa (8 puntes: llargues + curtes) -->
+              <g transform="translate(70 70)">
+                <!-- puntes llargues (N,E,S,W) -->
+                ${[0,90,180,270].map(a=>`
+                  <g transform="rotate(${a})">
+                    <polygon points="0,-54 -10,-18 0,-26 10,-18" fill="rgba(96,165,250,.80)"/>
+                  </g>
+                `).join("")}
 
-              <!-- fletxa -->
-              <g transform="rotate(${arrowDeg} 60 60)">
-                <polygon points="60,14 52,34 68,34" fill="rgba(96,165,250,.95)"/>
-                <line x1="60" y1="34" x2="60" y2="66" stroke="rgba(96,165,250,.95)" stroke-width="5" stroke-linecap="round"/>
+                <!-- puntes diagonals (NE,SE,SW,NW) -->
+                ${[45,135,225,315].map(a=>`
+                  <g transform="rotate(${a})">
+                    <polygon points="0,-42 -9,-16 0,-22 9,-16" fill="rgba(96,165,250,.35)"/>
+                  </g>
+                `).join("")}
+
+                <!-- cercle central -->
+                <circle cx="0" cy="0" r="16" fill="rgba(0,0,0,.08)" stroke="rgba(96,165,250,.55)" stroke-width="2"/>
+                <circle cx="0" cy="0" r="4" fill="rgba(96,165,250,.95)"/>
+
+                <!-- agulla direcció (gira segons arrowDeg) -->
+                <g transform="rotate(${arrowDeg})">
+                  <polygon points="0,-50 -7,-30 0,-36 7,-30" fill="rgba(96,165,250,.95)"/>
+                  <line x1="0" y1="-30" x2="0" y2="0" stroke="rgba(96,165,250,.95)" stroke-width="4" stroke-linecap="round"/>
+                </g>
               </g>
 
-              <!-- centre -->
-              <circle cx="60" cy="60" r="4" fill="rgba(96,165,250,.95)"/>
+              <!-- lletres principals -->
+              <text x="70" y="14" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">N</text>
+              <text x="126" y="74" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">E</text>
+              <text x="70" y="136" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">S</text>
+              <text x="14" y="74" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">W</text>
+
+              <!-- (Opcional) noms catalans petits -->
+              <text x="70" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">tramuntana</text>
+              <text x="112" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">gregal</text>
+              <text x="122" y="74" text-anchor="start" font-size="9" font-weight="700" fill="currentColor" opacity=".75">llevant</text>
+              <text x="112" y="120" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">xaloc</text>
+              <text x="70" y="128" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">migjorn</text>
+              <text x="28" y="120" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">garbí</text>
+              <text x="18" y="74" text-anchor="end" font-size="9" font-weight="700" fill="currentColor" opacity=".75">ponent</text>
+              <text x="28" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" opacity=".75">mestral</text>
             </svg>
             `}
+
 
           </div>
         `,
