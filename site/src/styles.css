@@ -407,7 +407,24 @@ th{
   line-height: 1.35;
 }
 
-.wind-deg{ color: var(--text); }
+.wind-deg{
+  display: block;
+  font-size: var(--fs-4);   /* gran, protagonista */
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--text);
+}
+
+.wind-name{
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-1);   /* molt més petit */
+  font-weight: 600;        /* no tan pesat */
+  letter-spacing: .02em;
+  text-transform: lowercase;
+  color: var(--muted);     /* 👈 clau: baixa jerarquia */
+}
+
 
 .wind-rose{
   width: 112px;
@@ -425,3 +442,17 @@ th{
   width: 100%;
   height: 100%;
 }
+/* el value “14° · NNE” no ha de ser gegant com abans */
+.card .v{
+  font-size: var(--fs-3);
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+/* rosa centrada */
+.wind-block{
+  margin-top: 10px;
+  display:flex;
+  justify-content:center;
+}
+.wind-rose{ width: 120px; height: 120px; }

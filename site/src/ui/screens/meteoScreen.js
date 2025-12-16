@@ -46,6 +46,7 @@ export async function refreshMeteo(ui, store) {
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
     const dirTxt = degToCompass(wdir);
     const dirArrow = degToArrow(wdir);
+    
     // wdir = direcció d’on ve el vent (meteo estàndard)
     const deg =
       wdir == null || Number.isNaN(wdir)
@@ -57,7 +58,10 @@ export async function refreshMeteo(ui, store) {
     // +180 extra perquè l’SVG té l’eix Y invertit
     const arrowDeg = deg == null ? null : (deg + 180 + 180) % 360;
     const windLabel = windNameCa(deg);
-
+    const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
+    const abbr = deg == null ? "—" : windAbbr16(deg);          // N, NNE, NE...
+    const name = deg == null ? "" : windNameCa(deg);           // tramuntana, gregal...
+    const fromTxt = deg == null ? "Vent" : `Vent del ${windFromCa(deg)} (${name})`;
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
     const ageTxt =
       ageSec < 60 ? `${ageSec} s` :
@@ -80,65 +84,14 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Última lectura", subHtml: "" }),
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
-  title: "Vent",
-  value: deg == null ? "—" : `${Math.round(deg)}° ${windLabel}`,
-  unit: "",
-  badge: "Direcció",
-  subHtml: `
-    <div class="wind-block">
-
-      <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Direcció del vent" role="img">
-
-        <!-- cercle exterior -->
-        <circle cx="50" cy="50" r="46"
-                fill="none"
-                stroke="rgba(96,165,250,.6)"
-                stroke-width="2"/>
-
-        <!-- rosa de vents (8 puntes) -->
-        <g transform="translate(50 50)">
-          <!-- N E S W -->
-          <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
-          <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
-          <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
-          <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
-
-          <!-- diagonals -->
-          <polygon points="30,-30 8,-8 14,-14" fill="rgba(96,165,250,.35)"/>
-          <polygon points="30,30 8,8 14,14" fill="rgba(96,165,250,.35)"/>
-          <polygon points="-30,30 -8,8 -14,14" fill="rgba(96,165,250,.35)"/>
-          <polygon points="-30,-30 -8,-8 -14,-14" fill="rgba(96,165,250,.35)"/>
-
-          <!-- punta vermella (direcció del vent) -->
-          ${
-            arrowDeg == null
-              ? ""
-              : `
-            <g transform="rotate(${arrowDeg})">
-              <polygon points="0,-32 -6,-46 0,-42 6,-46" fill="rgba(239,68,68,.95)"/>
-
-            </g>
-          `}
-        </g>
-
-        <!-- lletres -->
-        <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
-        <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
-        <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
-        <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
-
-      </svg>
-
-      <div class="wind-meta">
-        ${
-          wind != null
-            ? `Velocitat: <strong>${fmt1(wind)} m/s</strong>`
-            : "Velocitat no disponible"
-        }
-        ${gust != null ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}
-      </div>
-
-    </div>
+        title: fromTxt,
+        value: `${degTxt} · ${abbr}`,
+        unit: "",
+        badge: "Direcció",
+        subHtml: `
+          <div class="wind-block">
+            ${renderWindRoseSvg(arrowDeg)}
+          </div>
         `,
       }),
 
@@ -157,4 +110,26 @@ export async function refreshMeteo(ui, store) {
   } catch (e) {
     ui.err.textContent = "Error meteo: " + (e.message || e);
   }
+}
+function renderWindRoseSvg(arrowDeg){
+  return `
+  <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
+    <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
+    <g transform="translate(50 50)">
+      <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
+      <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
+      <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
+      <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
+      ${
+        arrowDeg == null ? "" : `
+        <g transform="rotate(${arrowDeg})">
+          <polygon points="0,-32 -6,-46 0,-42 6,-46" fill="rgba(239,68,68,.95)"/>
+        </g>`
+      }
+    </g>
+    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
+    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
+    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
+    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
+  </svg>`;
 }

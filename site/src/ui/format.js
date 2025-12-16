@@ -37,3 +37,17 @@ export function windNameCa(deg) {
   if (d < 292.5) return "ponent";
   return "mestral";
 }
+export function windAbbr16(deg){
+  const d = ((deg % 360) + 360) % 360;
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(d / 22.5) % 16];
+}
+
+export function windFromCa(deg){
+  const a = windAbbr16(deg);
+  // “del” + punt cardinal en català (abreujat → text)
+  if (a.startsWith("N")) return "nord";
+  if (a.startsWith("S")) return "sud";
+  if (a.startsWith("E")) return "est";
+  return "oest";
+}
