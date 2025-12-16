@@ -67,6 +67,16 @@ export async function refreshMeteo(ui, store) {
       ageSec < 60 ? `${ageSec} s` :
       ageSec < 3600 ? `${Math.round(ageSec/60)} min` :
       `${Math.round(ageSec/3600)} h`;
+      const windSpeedHtml =
+        wind == null
+          ? "Velocitat no disponible"
+          : `Velocitat: <strong>${fmt1(wind)} m/s</strong>`;
+
+      const gustHtml =
+        gust != null && !Number.isNaN(gust) && gust > 0 && (wind == null || Math.abs(gust - wind) > 0.05)
+          ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>`
+          : "";
+
 
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
 
@@ -85,12 +95,15 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
         title: fromTxt,
-        value: `${degTxt}  ${abbr}`,
+        value: `${degTxt} · ${abbr}`,
         unit: "",
         badge: "Direcció",
         subHtml: `
           <div class="wind-block">
             ${renderWindRoseSvg(arrowDeg)}
+          </div>
+          <div class="wind-meta">
+            ${windSpeedHtml}${gustHtml}
           </div>
         `,
       }),
