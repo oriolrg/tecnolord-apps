@@ -1,5 +1,5 @@
 import { card } from "../components/card.js";
-import { fmtTime, num, fmt1, clamp, degToCompass, degToArrow } from "../format.js";
+import { fmtTime, num, fmt1, clamp, degToCompass, degToArrow, windAbbr16, windFromCa } from "../format.js";
 import { windNameCa } from "../format.js";
 
 import { fetchMeteo } from "../../services/meteoService.js";
