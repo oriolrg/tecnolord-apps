@@ -28,18 +28,41 @@ function buildUI(root, store) {
           <p class="subtitle">Lectures en temps real (mòbil, tablet i ordinador)</p>
         </div>
 
-        <div class="panel controls" aria-label="Controls">
-          <label>Estació <input id="estacio" type="text" value="${store.get().estacio}" autocomplete="off" /></label>
-          <label>Límit <input id="limit" type="number" min="1" max="${CONFIG.maxLimit}" value="${store.get().limit}" /></label>
-          <label class="tog"><input id="auto" type="checkbox" /> Auto (30s)</label>
-          <button id="btn-refresh" class="btn">Refresca</button>
-          <button id="btn-copy" class="btn secondary" title="Copia l'enllaç amb paràmetres">Copia enllaç</button>
+        <div class="panel controls" aria-label="Controls principals">
+          <label>
+            Estació
+            <input id="estacio" type="text" value="${store.get().estacio}" autocomplete="off" />
+          </label>
+
+          <button id="btn-refresh" class="btn" aria-label="Refresca dades meteo i hidro">Refresca</button>
+
+          <details class="controls-advanced">
+            <summary class="btn secondary" aria-label="Obre opcions avançades">Opcions</summary>
+
+            <div class="controls-advanced-body">
+              <label>
+                Límit
+                <input id="limit" type="number" min="1" max="${CONFIG.maxLimit}" value="${store.get().limit}" />
+              </label>
+
+              <label class="tog">
+                <input id="auto" type="checkbox" />
+                Actualització automàtica cada 30 s
+              </label>
+
+              <button id="btn-copy" class="btn secondary" title="Copia l'enllaç amb paràmetres">Copia enllaç</button>
+
+              <div class="pill small">
+                API: <span id="src">${CONFIG.meteoEndpoint}</span>
+              </div>
+            </div>
+          </details>
         </div>
+
       </header>
 
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
-        <span class="pill">Font: <span id="src">${CONFIG.meteoEndpoint}</span></span>
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 

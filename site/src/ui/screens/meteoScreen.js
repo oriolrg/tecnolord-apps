@@ -42,9 +42,15 @@ export async function refreshMeteo(ui, store) {
     const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
-    const batt = num(r0.bateria_pct);
 
-    ui.last.textContent = "Actualitzat: " + fmtTime(instant);
+    const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
+    const ageTxt =
+      ageSec < 60 ? `${ageSec} s` :
+      ageSec < 3600 ? `${Math.round(ageSec/60)} min` :
+      `${Math.round(ageSec/3600)} h`;
+
+    ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
+
     ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
 
     ui.meteoCards.innerHTML = "";
@@ -53,16 +59,16 @@ export async function refreshMeteo(ui, store) {
         title: "Temperatura",
         value: fmt1(temp_c),
         unit: "°C",
-        badge: "Ara",
+        badge: "Última lectura",
         subHtml: `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}`,
       }),
-      card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Ara", subHtml: "" }),
+      card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Última lectura", subHtml: "" }),
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
         title: "Vent",
         value: fmt1(wind),
         unit: "m/s",
-        badge: "Mitjà",
+        badge: "Última lectura",
         subHtml: `${gust != null ? `Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}${wdir != null ? ` · Direcció: <strong>${Math.round(wdir)}°</strong>` : ""}`,
       }),
       card({
@@ -74,7 +80,6 @@ export async function refreshMeteo(ui, store) {
       }),
       card({ title: "Pluja (mes)", value: fmt1(rainMonth), unit: "mm", badge: "Acumulada", subHtml: `${rainYear != null ? `Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}` }),
       card({ title: "UV", value: uvi == null ? "—" : Math.round(uvi), unit: "", badge: "Índex", subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}` }),
-      card({ title: "Bateria", value: batt == null ? "—" : Math.round(batt), unit: "%", badge: "Sensor", subHtml: "" }),
     );
 
     renderMeteoTable(ui.meteoTbody, rows);

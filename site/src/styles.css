@@ -339,3 +339,12 @@ th{
   color: var(--muted2);
   margin-top: 10px;
 }
+:focus-visible{
+  outline: 3px solid rgba(96,165,250,.55);
+  outline-offset: 3px;
+}
+
+.na{
+  color: var(--muted2);
+  font-style: italic;
+}

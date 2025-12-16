@@ -68,7 +68,7 @@ export async function refreshHidro(ui, store) {
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
       const cls = delta >= 0 ? "ok" : "bad";
       const arrow = delta >= 0 ? "↑" : "↓";
-      const txt = delta >= 0 ? "Omplint" : "Buidant";
+      const txt = delta >= 0 ? "Entrada > sortida" : "Sortida > entrada";
       deltaHtml = `
         <span class="sep"></span>
         <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
