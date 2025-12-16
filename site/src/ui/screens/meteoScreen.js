@@ -70,77 +70,65 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Última lectura", subHtml: "" }),
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
-        title: "Vent",
-        value: "",       // 👈 important: evitem duplicat
-        unit: "",
-        badge: "Direcció",
-        subHtml: `
-          <div class="wind-card">
-            <div class="wind-left">
-              <div class="wind-deg">${deg == null ? "Sense dades" : `${Math.round(deg)}°`}</div>
-              <div class="wind-meta">
-                ${wind != null ? `Velocitat: <strong>${fmt1(wind)} m/s</strong>` : ""}
-                ${gust != null ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}
-              </div>
-            </div>
+  title: "Vent",
+  value: deg == null ? "—" : `${Math.round(deg)}°`,
+  unit: "",
+  badge: "Direcció",
+  subHtml: `
+    <div class="wind-block">
 
-           ${deg == null ? "" : `
-            <svg class="wind-rose" viewBox="0 0 140 140" role="img" aria-label="Rosa de vents">
-              <!-- gradients suaus -->
-              <defs>
-                <radialGradient id="roseGlow" cx="50%" cy="50%" r="60%">
-                  <stop offset="0%" stop-color="rgba(96,165,250,.25)"/>
-                  <stop offset="100%" stop-color="rgba(96,165,250,0)"/>
-                </radialGradient>
-              </defs>
+      <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Direcció del vent" role="img">
 
-              <!-- glow -->
-              <circle cx="70" cy="70" r="58" fill="url(#roseGlow)"/>
+        <!-- cercle exterior -->
+        <circle cx="50" cy="50" r="46"
+                fill="none"
+                stroke="rgba(96,165,250,.6)"
+                stroke-width="2"/>
 
-              <!-- anell exterior -->
-              <circle cx="70" cy="70" r="56" fill="none" stroke="rgba(96,165,250,.45)" stroke-width="2"/>
+        <!-- rosa de vents (8 puntes) -->
+        <g transform="translate(50 50)">
+          <!-- N E S W -->
+          <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
+          <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
+          <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
+          <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
 
-              <!-- rosa (8 puntes: llargues + curtes) -->
-              <g transform="translate(70 70)">
-                <!-- puntes llargues (N,E,S,W) -->
-                ${[0,90,180,270].map(a=>`
-                  <g transform="rotate(${a})">
-                    <polygon points="0,-54 -10,-18 0,-26 10,-18" fill="rgba(96,165,250,.80)"/>
-                  </g>
-                `).join("")}
+          <!-- diagonals -->
+          <polygon points="30,-30 8,-8 14,-14" fill="rgba(96,165,250,.35)"/>
+          <polygon points="30,30 8,8 14,14" fill="rgba(96,165,250,.35)"/>
+          <polygon points="-30,30 -8,8 -14,14" fill="rgba(96,165,250,.35)"/>
+          <polygon points="-30,-30 -8,-8 -14,-14" fill="rgba(96,165,250,.35)"/>
 
-                <!-- puntes diagonals (NE,SE,SW,NW) -->
-                ${[45,135,225,315].map(a=>`
-                  <g transform="rotate(${a})">
-                    <polygon points="0,-42 -9,-16 0,-22 9,-16" fill="rgba(96,165,250,.35)"/>
-                  </g>
-                `).join("")}
+          <!-- punta vermella (direcció del vent) -->
+          ${
+            arrowDeg == null
+              ? ""
+              : `
+            <g transform="rotate(${arrowDeg})">
+              <polygon points="0,-46 -6,-32 0,-36 6,-32"
+                       fill="rgba(239,68,68,.95)"/>
+            </g>
+          `}
+        </g>
 
-                <!-- cercle central -->
-                <circle cx="0" cy="0" r="16" fill="rgba(0,0,0,.08)" stroke="rgba(96,165,250,.55)" stroke-width="2"/>
-                <circle cx="0" cy="0" r="4" fill="rgba(96,165,250,.95)"/>
+        <!-- lletres -->
+        <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
+        <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
+        <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
+        <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
 
-                <!-- agulla direcció (gira segons arrowDeg) -->
-                <g transform="rotate(${arrowDeg} 70 70)">
-                  <!-- punta vermella (sense pal) -->
-                  <polygon points="70,14 60,32 70,28 80,32"
-                          fill="rgba(239,68,68,.95)"/>
-                </g>
+      </svg>
 
-              </g>
+      <div class="wind-meta">
+        ${
+          wind != null
+            ? `Velocitat: <strong>${fmt1(wind)} m/s</strong>`
+            : "Velocitat no disponible"
+        }
+        ${gust != null ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}
+      </div>
 
-              <!-- lletres principals -->
-              <text x="70" y="14" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">N</text>
-              <text x="126" y="74" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">E</text>
-              <text x="70" y="136" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">S</text>
-              <text x="14" y="74" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor">W</text>
-
-              
-            </svg>
-            `}
-
-
-          </div>
+    </div>
         `,
       }),
 
