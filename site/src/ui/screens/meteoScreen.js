@@ -69,7 +69,7 @@ export async function refreshMeteo(ui, store) {
       `${Math.round(ageSec/3600)} h`;
       const windSpeedHtml =
         wind == null
-          ? "Velocitat no disponible"
+          ? "Velocitat; 0m/s"
           : `Velocitat: <strong>${fmt1(wind)} m/s</strong>`;
 
       const gustHtml =
@@ -95,7 +95,7 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
         title: fromTxt,
-        value: `${degTxt} · ${abbr}`,
+        value: `${degTxt} ${abbr}`,
         unit: "",
         badge: "Direcció",
         subHtml: `
