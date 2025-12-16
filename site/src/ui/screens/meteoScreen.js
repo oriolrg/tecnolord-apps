@@ -45,8 +45,17 @@ export async function refreshMeteo(ui, store) {
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
     const dirTxt = degToCompass(wdir);
     const dirArrow = degToArrow(wdir);
-    const deg = (wdir == null || Number.isNaN(wdir)) ? null : ((wdir % 360) + 360) % 360;
-    const arrowDeg = deg; // cap on va
+    // wdir = direcció d’on ve el vent (meteo estàndard)
+    const deg =
+      wdir == null || Number.isNaN(wdir)
+        ? null
+        : ((wdir % 360) + 360) % 360;
+
+    // volem mostrar CAP ON VA el vent
+    // +180 per invertir origen → destí
+    // +180 extra perquè l’SVG té l’eix Y invertit
+    const arrowDeg = deg == null ? null : (deg + 180 + 180) % 360;
+
 
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
     const ageTxt =
