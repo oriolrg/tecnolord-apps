@@ -114,8 +114,8 @@ export async function refreshMeteo(ui, store) {
               ? ""
               : `
             <g transform="rotate(${arrowDeg})">
-              <polygon points="0,-46 -6,-32 0,-36 6,-32"
-                       fill="rgba(239,68,68,.95)"/>
+              <polygon points="0,-32 -6,-46 0,-42 6,-46" fill="rgba(239,68,68,.95)"/>
+
             </g>
           `}
         </g>
