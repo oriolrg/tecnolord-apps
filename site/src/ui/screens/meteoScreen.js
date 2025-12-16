@@ -45,6 +45,10 @@ export async function refreshMeteo(ui, store) {
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
     const dirTxt = degToCompass(wdir);
     const dirArrow = degToArrow(wdir);
+    const deg = (wdir == null || Number.isNaN(wdir))
+    ? null
+    : ((wdir % 360) + 360) % 360;
+
 
 
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
