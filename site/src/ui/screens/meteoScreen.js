@@ -123,8 +123,8 @@ export async function refreshMeteo(ui, store) {
                 <!-- agulla direcció (gira segons arrowDeg) -->
                 <g transform="rotate(${arrowDeg} 70 70)">
                   <!-- punta vermella (sense pal) -->
-                  <polygon points="70,14 64,32 70,28 76,32" fill="rgba(239,68,68,.95)"/>
-
+                  <polygon points="70,14 60,32 70,28 80,32"
+                          fill="rgba(239,68,68,.95)"/>
                 </g>
 
               </g>
