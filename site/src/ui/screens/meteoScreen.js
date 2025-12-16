@@ -83,35 +83,58 @@ export async function refreshMeteo(ui, store) {
             <div class="wind-left">
               <div class="wind-deg">${deg == null ? "Sense dades" : `${Math.round(deg)}°`}</div>
               <div class="wind-meta">
-                ${wind != null ? `Velocitat: <strong>${fmt1(wind)} m/s</strong>` : "Sense dades de vent"}
+                ${wind != null ? `Velocitat: <strong>${fmt1(wind)} m/s</strong>` : ""}
                 ${gust != null ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}
               </div>
             </div>
 
-            ${deg == null ? "" : `
-            <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Direcció del vent" role="img">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(96,165,250,.55)" stroke-width="2"/>
+           ${deg == null ? "" : `
+            <svg class="wind-rose" viewBox="0 0 120 120" aria-label="Direcció del vent" role="img">
+              <!-- anells -->
+              <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(96,165,250,.55)" stroke-width="2"/>
+              <circle cx="60" cy="60" r="36" fill="none" stroke="rgba(96,165,250,.18)" stroke-width="2"/>
 
-              <!-- ticks (12 principals) -->
-              ${Array.from({length: 12}).map((_,i)=>{
-                const a = i*30 * Math.PI/180;
-                const r1 = 42, r2 = 34;
-                const x1 = 50 + Math.cos(a)*r1;
-                const y1 = 50 + Math.sin(a)*r1;
-                const x2 = 50 + Math.cos(a)*r2;
-                const y2 = 50 + Math.sin(a)*r2;
-                return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="rgba(96,165,250,.35)" stroke-width="2" stroke-linecap="round"/>`;
+              <!-- ticks majors (cada 45°) -->
+              ${Array.from({length: 8}).map((_,i)=>{
+                const a = i*45 * Math.PI/180;
+                const r1 = 48, r2 = 38;
+                const x1 = 60 + Math.cos(a)*r1;
+                const y1 = 60 + Math.sin(a)*r1;
+                const x2 = 60 + Math.cos(a)*r2;
+                const y2 = 60 + Math.sin(a)*r2;
+                return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
+                  stroke="rgba(96,165,250,.45)" stroke-width="2.4" stroke-linecap="round"/>`;
               }).join("")}
 
+              <!-- ticks menors (cada 15°) -->
+              ${Array.from({length: 24}).map((_,i)=>{
+                const a = i*15 * Math.PI/180;
+                const r1 = 48, r2 = (i%3===0?40:44);
+                const x1 = 60 + Math.cos(a)*r1;
+                const y1 = 60 + Math.sin(a)*r1;
+                const x2 = 60 + Math.cos(a)*r2;
+                const y2 = 60 + Math.sin(a)*r2;
+                return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
+                  stroke="rgba(96,165,250,.22)" stroke-width="${i%3===0?1.6:1}" stroke-linecap="round"/>`;
+              }).join("")}
+
+              <!-- lletres N/E/S/W -->
+              <text x="60" y="18" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">N</text>
+              <text x="104" y="64" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">E</text>
+              <text x="60" y="112" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">S</text>
+              <text x="16" y="64" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.75)">W</text>
+
               <!-- fletxa -->
-              <g transform="rotate(${arrowDeg} 50 50)">
-                <polygon points="50,8 43,22 57,22" fill="rgba(96,165,250,.95)"/>
-                <line x1="50" y1="22" x2="50" y2="52" stroke="rgba(96,165,250,.95)" stroke-width="4" stroke-linecap="round"/>
+              <g transform="rotate(${arrowDeg} 60 60)">
+                <polygon points="60,14 52,34 68,34" fill="rgba(96,165,250,.95)"/>
+                <line x1="60" y1="34" x2="60" y2="66" stroke="rgba(96,165,250,.95)" stroke-width="5" stroke-linecap="round"/>
               </g>
 
-              <circle cx="50" cy="50" r="3.4" fill="rgba(96,165,250,.95)"/>
+              <!-- centre -->
+              <circle cx="60" cy="60" r="4" fill="rgba(96,165,250,.95)"/>
             </svg>
             `}
+
           </div>
         `,
       }),

@@ -400,12 +400,6 @@ th{
   min-width: 0;
 }
 
-.wind-deg{
-  font-size: var(--fs-4);
-  font-weight: 850;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
 
 .wind-meta{
   color: var(--muted2);
@@ -413,12 +407,20 @@ th{
   line-height: 1.35;
 }
 
-.wind-rose{
-  width: 96px;
-  height: 96px;
-  flex: 0 0 auto;
-  opacity: .95;
+.wind-deg{
+  font-size: var(--fs-4);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text);         /* 👈 abans et quedava gris */
 }
+
+.wind-rose{
+  width: 104px;
+  height: 104px;
+  flex: 0 0 auto;
+}
+
 .wind-rose svg{
   width: 100%;
   height: 100%;
