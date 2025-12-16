@@ -85,7 +85,7 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
         title: fromTxt,
-        value: `${degTxt} · ${abbr}`,
+        value: `${degTxt}  ${abbr}`,
         unit: "",
         badge: "Direcció",
         subHtml: `
