@@ -1,5 +1,6 @@
 import { card } from "../components/card.js";
-import { fmtTime, num, fmt1, clamp } from "../format.js";
+import { fmtTime, num, fmt1, clamp, degToCompass, degToArrow } from "../format.js";
+
 import { fetchMeteo } from "../../services/meteoService.js";
 import { renderMeteoTable } from "../components/tableMeteo.js";
 
@@ -42,6 +43,9 @@ export async function refreshMeteo(ui, store) {
     const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
+    const dirTxt = degToCompass(wdir);
+    const dirArrow = degToArrow(wdir);
+
 
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
     const ageTxt =
@@ -66,11 +70,12 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
         title: "Vent",
-        value: fmt1(wind),
-        unit: "m/s",
-        badge: "Última lectura",
-        subHtml: `${gust != null ? `Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}${wdir != null ? ` · Direcció: <strong>${Math.round(wdir)}°</strong>` : ""}`,
+        value: dirTxt ? `${dirArrow} ${dirTxt}` : "Sense dades",
+        unit: "",
+        badge: "Direcció",
+        subHtml: `${wind != null ? `Velocitat: <strong>${fmt1(wind)} m/s</strong>` : "Sense dades de vent"}${gust != null ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>` : ""}`,
       }),
+
       card({
         title: "Pluja (dia)",
         value: fmt1(rainDay),

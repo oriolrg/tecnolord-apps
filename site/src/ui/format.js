@@ -9,3 +9,17 @@ export const fmt1 = (v) =>
 
 
 export const norm = (s) => (s ?? "").toString().trim().toLowerCase();
+
+export function degToCompass(deg) {
+  if (deg == null || Number.isNaN(deg)) return null;
+  const dirs = ["N","NE","E","SE","S","SW","W","NW"];
+  const i = Math.round(deg / 45) % 8;
+  return dirs[i];
+}
+
+export function degToArrow(deg) {
+  if (deg == null || Number.isNaN(deg)) return "↑";
+  const arrows = ["↑","↗","→","↘","↓","↙","←","↖"];
+  const i = Math.round(deg / 45) % 8;
+  return arrows[i];
+}
