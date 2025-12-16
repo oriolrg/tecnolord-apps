@@ -46,8 +46,7 @@ export async function refreshMeteo(ui, store) {
     const dirTxt = degToCompass(wdir);
     const dirArrow = degToArrow(wdir);
     const deg = (wdir == null || Number.isNaN(wdir)) ? null : ((wdir % 360) + 360) % 360;
-    const arrowDeg = deg == null ? null : (deg + 180) % 360;
- // cap on va
+    const arrowDeg = deg; // cap on va
 
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
     const ageTxt =
