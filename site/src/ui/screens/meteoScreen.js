@@ -48,7 +48,7 @@ export async function refreshMeteo(ui, store) {
     const deg = (wdir == null || Number.isNaN(wdir))
     ? null
     : ((wdir % 360) + 360) % 360;
-    const arrowDeg = deg == null ? null : (deg + 180) % 360;
+    const arrowDeg = deg ;
 
 
 
