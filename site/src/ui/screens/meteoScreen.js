@@ -95,12 +95,12 @@ export async function refreshMeteo(ui, store) {
       card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
       card({
         title: fromTxt,
-        value: `${degTxt} ${abbr}`,
+        value: "",
         unit: "",
         badge: "Direcció",
         subHtml: `
           <div class="wind-block">
-            ${renderWindRoseSvg(arrowDeg)}
+            ${renderWindRoseSvg(arrowDeg, degTxt.replace("°","°"), abbr)}
           </div>
           <div class="wind-meta">
             ${windSpeedHtml}${gustHtml}
@@ -124,25 +124,33 @@ export async function refreshMeteo(ui, store) {
     ui.err.textContent = "Error meteo: " + (e.message || e);
   }
 }
-function renderWindRoseSvg(arrowDeg){
+function renderWindRoseSvg(arrowDeg, centerTextTop, centerTextBottom){
   return `
   <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
     <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
+
     <g transform="translate(50 50)">
       <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
       <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
       <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
       <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
-      ${
-        arrowDeg == null ? "" : `
+
+      ${arrowDeg == null ? "" : `
         <g transform="rotate(${arrowDeg})">
           <polygon points="0,-32 -6,-46 0,-42 6,-46" fill="rgba(239,68,68,.95)"/>
-        </g>`
-      }
+        </g>
+      `}
+
+      <!-- centre -->
+      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
+      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800" fill="rgba(0,0,0,.75)">${centerTextTop || ""}</text>
+      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" fill="rgba(0,0,0,.55)">${centerTextBottom || ""}</text>
     </g>
+
     <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
     <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
     <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
     <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
   </svg>`;
 }
+
