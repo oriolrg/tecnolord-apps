@@ -71,11 +71,13 @@ function buildUI(root, store) {
       </section>
 
       <!-- HIDRO -->
-      <section id="hidro-section" class="section-block section-hidro" style="--fill: 0%">
-        <div class="section-title" style="margin-top:0">
-          <h2>Hidrologia</h2>
-          <p id="hidro-summary">—</p>
-        </div>
+      <div class="section-title" style="margin-top:0">
+        <h2>Hidrologia</h2>
+        <p id="hidro-summary">—</p>
+      </div>
+
+      <span id="err-h" class="err" role="alert" aria-live="polite"></span>
+
 
         <div class="grid" id="hidro-cards"></div>
 
@@ -120,10 +122,12 @@ function buildUI(root, store) {
     meteoTbody: $("#tbl-meteo tbody", root),
 
     // hidro
+    errH: $("#err-h", root),
     hidroSummary: $("#hidro-summary", root),
     hidroCards: $("#hidro-cards", root),
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
+
   };
 
   return ui;

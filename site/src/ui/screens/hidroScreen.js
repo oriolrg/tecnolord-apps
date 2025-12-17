@@ -12,7 +12,8 @@ function pickRow(rows, predicates) {
 }
 
 export async function refreshHidro(ui, store) {
-  ui.errH.textContent = "";
+  // ✅ si has amagat/eliminat el panell, errH pot no existir
+  if (ui.errH) ui.errH.textContent = "";
 
   const s = store.get();
   const codi = (s.codiHidro || "").trim();
@@ -24,16 +25,18 @@ export async function refreshHidro(ui, store) {
   try {
     const rows = await fetchHidro(qs);
 
-    ui.hidroCount.textContent = String(rows.length);
+    if (ui.hidroCount) ui.hidroCount.textContent = String(rows.length);
 
     if (!rows.length) {
-      ui.hidroSummary.textContent = "Sense registres.";
-      ui.hidroCards.innerHTML = "";
-      ui.hidroTbody.innerHTML = "";
+      if (ui.hidroSummary) ui.hidroSummary.textContent = "Sense registres.";
+      if (ui.hidroCards) ui.hidroCards.innerHTML = "";
+      if (ui.hidroTbody) ui.hidroTbody.innerHTML = "";
       return;
     }
 
-    ui.hidroSummary.textContent = codi ? `Codi: ${codi} · ${rows.length} registres` : `${rows.length} registres`;
+    if (ui.hidroSummary) {
+      ui.hidroSummary.textContent = codi ? `Codi: ${codi} · ${rows.length} registres` : `${rows.length} registres`;
+    }
 
     // Identificació de registres clau
     const rowLlosa = pickRow(rows, [
@@ -94,67 +97,67 @@ export async function refreshHidro(ui, store) {
       if (inParts.length) deltaHtml = `<span class="sep"></span>${inParts.join(" · ")}`;
     }
 
-    // Render cards
-    ui.hidroCards.innerHTML = "";
+    if (ui.hidroCards) {
+      ui.hidroCards.innerHTML = "";
 
-    ui.hidroCards.append(
-      card({
-        title: "Cabal (balanç)",
-        value: sortida == null ? "—" : fmt1(sortida),
-        unit: "m³/s",
-        badge: "Última lectura",
-        className: hydroFillClass,
-        style: hydroFillStyle,
-        subHtml: `
-          ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
-          ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
-          ${cabalValls != null ? ` · Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ""}
-          ${deltaHtml}
-        `,
-      }),
-
-      card({
-        title: "Capacitat",
-        value: cap == null ? "—" : fmt1(cap),
-        unit: "%",
-        badge: "Última lectura",
-        className: hydroFillClass,
-        style: hydroFillStyle,
-        subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
-      })
-    );
-
-    if (cabalCardener != null) {
       ui.hidroCards.append(
         card({
-          title: "Cardener (entrada)",
-          value: fmt1(cabalCardener),
+          title: "Cabal (balanç)",
+          value: sortida == null ? "—" : fmt1(sortida),
           unit: "m³/s",
-          badge: "Riu",
+          badge: "Última lectura",
           className: hydroFillClass,
           style: hydroFillStyle,
-          subHtml: rowCardener?.instant ? `Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : "",
-        })
-      );
-    }
+          subHtml: `
+            ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
+            ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
+            ${cabalValls != null ? ` · Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ""}
+            ${deltaHtml}
+          `,
+        }),
 
-    if (cabalValls != null) {
-      ui.hidroCards.append(
         card({
-          title: "Valls (entrada)",
-          value: fmt1(cabalValls),
-          unit: "m³/s",
-          badge: "Riu",
+          title: "Capacitat",
+          value: cap == null ? "—" : fmt1(cap),
+          unit: "%",
+          badge: "Última lectura",
           className: hydroFillClass,
           style: hydroFillStyle,
-          subHtml: rowValls?.instant ? `Hora: <strong>${fmtTime(rowValls.instant)}</strong>` : "",
+          subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
         })
       );
+
+      if (cabalCardener != null) {
+        ui.hidroCards.append(
+          card({
+            title: "Cardener (entrada)",
+            value: fmt1(cabalCardener),
+            unit: "m³/s",
+            badge: "Riu",
+            className: hydroFillClass,
+            style: hydroFillStyle,
+            subHtml: rowCardener?.instant ? `Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : "",
+          })
+        );
+      }
+
+      if (cabalValls != null) {
+        ui.hidroCards.append(
+          card({
+            title: "Valls (entrada)",
+            value: fmt1(cabalValls),
+            unit: "m³/s",
+            badge: "Riu",
+            className: hydroFillClass,
+            style: hydroFillStyle,
+            subHtml: rowValls?.instant ? `Hora: <strong>${fmtTime(rowValls.instant)}</strong>` : "",
+          })
+        );
+      }
     }
 
-    // Taula
-    renderHidroTable(ui.hidroTbody, rows);
+    if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
   } catch (e) {
-    ui.errH.textContent = "Error hidro: " + (e.message || e);
+    if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
   }
 }
