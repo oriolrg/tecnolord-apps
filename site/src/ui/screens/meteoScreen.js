@@ -78,7 +78,7 @@ export async function refreshMeteo(ui, store) {
 
     const windSpeedHtml =
       wind == null
-        ? "Velocitat no disponible"
+        ? "Velocitat: <strong>0 m/s</strong>"
         : `Velocitat: <strong>${fmt1(wind)} m/s</strong>`;
 
     const gustHtml =
