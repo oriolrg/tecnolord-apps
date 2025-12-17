@@ -1,6 +1,15 @@
 import { card } from "../components/card.js";
-import { fmtTime, num, fmt1, clamp, degToCompass, degToArrow, windAbbr16, windFromCa } from "../format.js";
-import { windNameCa } from "../format.js";
+import {
+  fmtTime,
+  num,
+  fmt1,
+  clamp,
+  degToCompass,
+  degToArrow,
+  windAbbr16,
+  windFromCa,
+  windNameCa,
+} from "../format.js";
 
 import { fetchMeteo } from "../../services/meteoService.js";
 import { renderMeteoTable } from "../components/tableMeteo.js";
@@ -44,9 +53,7 @@ export async function refreshMeteo(ui, store) {
     const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
-    const dirTxt = degToCompass(wdir);
-    const dirArrow = degToArrow(wdir);
-    
+
     // wdir = direcció d’on ve el vent (meteo estàndard)
     const deg =
       wdir == null || Number.isNaN(wdir)
@@ -55,32 +62,37 @@ export async function refreshMeteo(ui, store) {
 
     // volem mostrar CAP ON VA el vent
     // +180 per invertir origen → destí
-    // +180 extra perquè l’SVG té l’eix Y invertit
+    // +180 extra perquè l’SVG té l’eix Y invertit (per com estàs dibuixant la punta)
     const arrowDeg = deg == null ? null : (deg + 180 + 180) % 360;
-    const windLabel = windNameCa(deg);
-    const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
-    const abbr = deg == null ? "—" : windAbbr16(deg);          // N, NNE, NE...
-    const name = deg == null ? "" : windNameCa(deg);           // tramuntana, gregal...
+
+    const degTxt = deg == null ? "" : `${Math.round(deg)}°`;
+    const abbr = deg == null ? "" : windAbbr16(deg);      // N, NNE, NE...
+    const name = deg == null ? "" : windNameCa(deg);      // tramuntana, gregal...
     const fromTxt = deg == null ? "Vent" : `Vent del ${windFromCa(deg)} (${name})`;
+
     const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
     const ageTxt =
       ageSec < 60 ? `${ageSec} s` :
-      ageSec < 3600 ? `${Math.round(ageSec/60)} min` :
-      `${Math.round(ageSec/3600)} h`;
-      const windSpeedHtml =
-        wind == null
-          ? "Velocitat; 0m/s"
-          : `Velocitat: <strong>${fmt1(wind)} m/s</strong>`;
+      ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
+      `${Math.round(ageSec / 3600)} h`;
 
-      const gustHtml =
-        gust != null && !Number.isNaN(gust) && gust > 0 && (wind == null || Math.abs(gust - wind) > 0.05)
-          ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>`
-          : "";
+    const windSpeedHtml =
+      wind == null
+        ? "Velocitat no disponible"
+        : `Velocitat: <strong>${fmt1(wind)} m/s</strong>`;
 
+    const gustHtml =
+      gust != null &&
+      !Number.isNaN(gust) &&
+      gust > 0 &&
+      (wind == null || Math.abs(gust - wind) > 0.05)
+        ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>`
+        : "";
 
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
-
-    ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
+    ui.meteoSummary.textContent = estacio
+      ? `Estació: ${estacio} · ${rows.length} registres`
+      : `${rows.length} registres`;
 
     ui.meteoCards.innerHTML = "";
     ui.meteoCards.append(
@@ -89,10 +101,27 @@ export async function refreshMeteo(ui, store) {
         value: fmt1(temp_c),
         unit: "°C",
         badge: "Última lectura",
-        subHtml: `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}`,
+        subHtml:
+          `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}` +
+          `${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}`,
       }),
-      card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Última lectura", subHtml: "" }),
-      card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
+
+      card({
+        title: "Humitat",
+        value: hum == null ? "—" : Math.round(hum),
+        unit: "%",
+        badge: "Última lectura",
+        subHtml: "",
+      }),
+
+      card({
+        title: "Pressió (rel.)",
+        value: fmt1(pRel),
+        unit: "hPa",
+        badge: "Relativa",
+        subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}`,
+      }),
+
       card({
         title: fromTxt,
         value: "",
@@ -100,7 +129,7 @@ export async function refreshMeteo(ui, store) {
         badge: "Direcció",
         subHtml: `
           <div class="wind-block">
-            ${renderWindRoseSvg(arrowDeg, degTxt.replace("°","°"), abbr)}
+            ${renderWindRoseSvg(arrowDeg, degTxt, abbr)}
           </div>
           <div class="wind-meta">
             ${windSpeedHtml}${gustHtml}
@@ -113,10 +142,26 @@ export async function refreshMeteo(ui, store) {
         value: fmt1(rainDay),
         unit: "mm",
         badge: "Acumulada",
-        subHtml: `${rainRate != null ? `Taxa: <strong>${fmt1(rainRate)} mm/h</strong>` : ""}${rain1h != null ? ` · 1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}`,
+        subHtml:
+          `${rainRate != null ? `Taxa: <strong>${fmt1(rainRate)} mm/h</strong>` : ""}` +
+          `${rain1h != null ? ` · 1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}`,
       }),
-      card({ title: "Pluja (mes)", value: fmt1(rainMonth), unit: "mm", badge: "Acumulada", subHtml: `${rainYear != null ? `Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}` }),
-      card({ title: "UV", value: uvi == null ? "—" : Math.round(uvi), unit: "", badge: "Índex", subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}` }),
+
+      card({
+        title: "Pluja (mes)",
+        value: fmt1(rainMonth),
+        unit: "mm",
+        badge: "Acumulada",
+        subHtml: `${rainYear != null ? `Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}`,
+      }),
+
+      card({
+        title: "UV",
+        value: uvi == null ? "—" : Math.round(uvi),
+        unit: "",
+        badge: "Índex",
+        subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
+      }),
     );
 
     renderMeteoTable(ui.meteoTbody, rows);
@@ -124,7 +169,8 @@ export async function refreshMeteo(ui, store) {
     ui.err.textContent = "Error meteo: " + (e.message || e);
   }
 }
-function renderWindRoseSvg(arrowDeg, centerTextTop, centerTextBottom){
+
+function renderWindRoseSvg(arrowDeg, centerTextTop, centerTextBottom) {
   return `
   <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
     <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
@@ -141,16 +187,27 @@ function renderWindRoseSvg(arrowDeg, centerTextTop, centerTextBottom){
         </g>
       `}
 
-      <!-- centre -->
-      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
-      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800" fill="rgba(0,0,0,.75)">${centerTextTop || ""}</text>
-      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" fill="rgba(0,0,0,.55)">${centerTextBottom || ""}</text>
+      <!-- CENTRE (al final perquè quedi a sobre) -->
+      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.80)" stroke="rgba(0,0,0,.10)" stroke-width="1"></circle>
+
+      <text x="0" y="-2"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        style="font: 800 10px ui-sans-serif,system-ui; fill: rgba(0,0,0,.85);">
+        ${centerTextTop ?? ""}
+      </text>
+
+      <text x="0" y="9"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        style="font: 800 8px ui-sans-serif,system-ui; fill: rgba(0,0,0,.65);">
+        ${centerTextBottom ?? ""}
+      </text>
     </g>
 
-    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
-    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
-    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
-    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
+    <text x="50" y="12" text-anchor="middle" style="font: 800 10px ui-sans-serif,system-ui; fill: rgba(0,0,0,.75);">N</text>
+    <text x="88" y="54" text-anchor="middle" style="font: 800 10px ui-sans-serif,system-ui; fill: rgba(0,0,0,.75);">E</text>
+    <text x="50" y="96" text-anchor="middle" style="font: 800 10px ui-sans-serif,system-ui; fill: rgba(0,0,0,.75);">S</text>
+    <text x="12" y="54" text-anchor="middle" style="font: 800 10px ui-sans-serif,system-ui; fill: rgba(0,0,0,.75);">W</text>
   </svg>`;
 }
-
