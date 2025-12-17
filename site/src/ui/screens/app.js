@@ -19,7 +19,7 @@ function readUrlParams(store) {
   store.set(patch);
 }
 
-function buildUI(root, store) {
+function buildUI(root) {
   root.innerHTML = `
     <div class="wrap">
 
@@ -28,92 +28,82 @@ function buildUI(root, store) {
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
-      <!-- METEO -->
-      <section id="meteo-section" class="section-block section-meteo" style="--fill: 0%">
-        <div class="section-title">
-          <h2>Meteo</h2>
-          <p id="meteo-summary">—</p>
-        </div>
+      <div class="section-title">
+        <h2>Meteo</h2>
+        <p id="meteo-summary">—</p>
+      </div>
 
-        <div class="grid" id="meteo-cards"></div>
+      <div class="grid" id="meteo-cards"></div>
 
-        <details>
-          <summary>Últims registres (taula) <span class="badge" id="meteo-count">0</span></summary>
-          <div class="detail-body">
-            <div class="table-wrap">
-              <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
-                <thead>
-                  <tr>
-                    <th>Hora</th>
-                    <th>Temp (°C)</th>
-                    <th>Sensació (°C)</th>
-                    <th>Rosada (°C)</th>
-                    <th>Hum (%)</th>
-                    <th>Pressió rel (hPa)</th>
-                    <th>Pressió abs (hPa)</th>
-                    <th>UVI</th>
-                    <th>Solar (W/m²)</th>
-                    <th>Taxa pluja (mm/h)</th>
-                    <th>Pluja dia</th>
-                    <th>Pluja 1h</th>
-                    <th>Pluja mes</th>
-                    <th>Pluja any</th>
-                    <th>Vent (m/s)</th>
-                    <th>Ràfega (m/s)</th>
-                    <th>Dir (°)</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+      <details>
+        <summary>Últims registres (taula) <span class="badge" id="meteo-count">0</span></summary>
+        <div class="detail-body">
+          <div class="table-wrap">
+            <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Temp (°C)</th>
+                  <th>Sensació (°C)</th>
+                  <th>Rosada (°C)</th>
+                  <th>Hum (%)</th>
+                  <th>Pressió rel (hPa)</th>
+                  <th>Pressió abs (hPa)</th>
+                  <th>UVI</th>
+                  <th>Solar (W/m²)</th>
+                  <th>Taxa pluja (mm/h)</th>
+                  <th>Pluja dia</th>
+                  <th>Pluja 1h</th>
+                  <th>Pluja mes</th>
+                  <th>Pluja any</th>
+                  <th>Vent (m/s)</th>
+                  <th>Ràfega (m/s)</th>
+                  <th>Dir (°)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
-        </details>
-      </section>
+        </div>
+      </details>
 
-      <!-- HIDRO -->
-      <div class="section-title" style="margin-top:0">
+      <div class="section-title" style="margin-top:22px">
         <h2>Hidrologia</h2>
         <p id="hidro-summary">—</p>
       </div>
 
       <span id="err-h" class="err" role="alert" aria-live="polite"></span>
 
+      <div class="grid" id="hidro-cards"></div>
 
-        <div class="grid" id="hidro-cards"></div>
-
-        <details>
-          <summary>Últims registres (taula) <span class="badge" id="hidro-count">0</span></summary>
-          <div class="detail-body">
-            <div class="table-wrap">
-              <table id="tbl-hidro" aria-label="Taula d'hidrologia">
-                <thead>
-                  <tr>
-                    <th>Hora</th>
-                    <th>Codi</th>
-                    <th>Nom</th>
-                    <th>Tipus</th>
-                    <th>Cabal (m³/s)</th>
-                    <th>Capacitat (%)</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+      <details>
+        <summary>Últims registres (taula) <span class="badge" id="hidro-count">0</span></summary>
+        <div class="detail-body">
+          <div class="table-wrap">
+            <table id="tbl-hidro" aria-label="Taula d'hidrologia">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Codi</th>
+                  <th>Nom</th>
+                  <th>Tipus</th>
+                  <th>Cabal (m³/s)</th>
+                  <th>Capacitat (%)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
-        </details>
-      </section>
+        </div>
+      </details>
 
     </div>
   `;
 
-  const ui = {
+  return {
     // status
     last: $("#last", root),
     err: $("#err", root),
-
-    // sections
-    meteoSection: $("#meteo-section", root),
-    hidroSection: $("#hidro-section", root),
 
     // meteo
     meteoSummary: $("#meteo-summary", root),
@@ -127,21 +117,17 @@ function buildUI(root, store) {
     hidroCards: $("#hidro-cards", root),
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
-
   };
-
-  return ui;
 }
 
 export function initApp(root) {
   const store = createStore();
   readUrlParams(store);
 
-  const ui = buildUI(root, store);
+  const ui = buildUI(root);
 
   let timer = null;
 
-  // Auto refresh (si el tens actiu en store; si no, queda inactiu)
   if (store.get().auto) {
     timer = setInterval(async () => {
       await refreshMeteo(ui, store);
@@ -149,7 +135,6 @@ export function initApp(root) {
     }, CONFIG.autoRefreshMs);
   }
 
-  // Initial load
   refreshMeteo(ui, store);
   refreshHidro(ui, store);
 }
