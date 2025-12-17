@@ -12,14 +12,17 @@ function pickRow(rows, predicates) {
 }
 
 export async function refreshHidro(ui, store) {
-  ui.errH && (ui.errH.textContent = ""); // per si el tens; si no, no passa res
+  ui.errH.textContent = "";
 
   const s = store.get();
-  const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
   const codi = (s.codiHidro || "").trim();
+  const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
+
+  const qs = { limit };
+  if (codi) qs.codi = codi;
 
   try {
-    const rows = await fetchHidro({ limit, codi });
+    const rows = await fetchHidro(qs);
 
     ui.hidroCount.textContent = String(rows.length);
 
@@ -27,12 +30,12 @@ export async function refreshHidro(ui, store) {
       ui.hidroSummary.textContent = "Sense registres.";
       ui.hidroCards.innerHTML = "";
       ui.hidroTbody.innerHTML = "";
-      if (ui.hidroSection) ui.hidroSection.style.setProperty("--fill", "0%");
       return;
     }
 
     ui.hidroSummary.textContent = codi ? `Codi: ${codi} · ${rows.length} registres` : `${rows.length} registres`;
 
+    // Identificació de registres clau
     const rowLlosa = pickRow(rows, [
       (r) => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
       (r) => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
@@ -48,16 +51,12 @@ export async function refreshHidro(ui, store) {
       (r) => norm(r.codi).includes("valls"),
     ]);
 
-    const cap = num(rowLlosa?.capacitat_pct);
+    // Valors
     const instantLlosa = rowLlosa?.instant ?? null;
+    const cap = num(rowLlosa?.capacitat_pct);
 
-    // >>>>>> AQUI: FILL DE SECCIÓ (0..100%)
-    const fillPct = cap == null || Number.isNaN(cap) ? 0 : Math.max(0, Math.min(100, cap));
-    if (ui.hidroSection) ui.hidroSection.style.setProperty("--fill", `${fillPct}%`);
-    // <<<<<<
-
-    // Sortida (si ve en un registre “sortida”)
     let sortida = num(rowLlosa?.cabal_m3s);
+
     if (sortida == null) {
       const rowSortida = pickRow(rows, [
         (r) => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
@@ -68,15 +67,20 @@ export async function refreshHidro(ui, store) {
 
     const cabalCardener = num(rowCardener?.cabal_m3s);
     const cabalValls = num(rowValls?.cabal_m3s);
-    const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
 
+    const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
     const delta = sortida == null ? null : (entradaTotal - sortida);
+
+    // % d’ompliment per al fons (mateix % a totes les cards d’hidro)
+    const fill = cap == null || Number.isNaN(cap) ? 0 : Math.max(0, Math.min(100, cap));
+    const hydroFillClass = "card-fill card-fill-hydro";
+    const hydroFillStyle = `--fill:${fill}`;
 
     let deltaHtml = "";
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
       const cls = delta >= 0 ? "ok" : "bad";
       const arrow = delta >= 0 ? "↑" : "↓";
-      const txt = delta >= 0 ? "Entrada > sortida" : "Sortida > entrada";
+      const txt = delta >= 0 ? "Omplint" : "Sortida > entrada";
       deltaHtml = `
         <span class="sep"></span>
         <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
@@ -90,13 +94,17 @@ export async function refreshHidro(ui, store) {
       if (inParts.length) deltaHtml = `<span class="sep"></span>${inParts.join(" · ")}`;
     }
 
-    const cards = [];
-    cards.push(
+    // Render cards
+    ui.hidroCards.innerHTML = "";
+
+    ui.hidroCards.append(
       card({
         title: "Cabal (balanç)",
         value: sortida == null ? "—" : fmt1(sortida),
         unit: "m³/s",
-        badge: "Últim",
+        badge: "Última lectura",
+        className: hydroFillClass,
+        style: hydroFillStyle,
         subHtml: `
           ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
           ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
@@ -104,45 +112,49 @@ export async function refreshHidro(ui, store) {
           ${deltaHtml}
         `,
       }),
+
       card({
         title: "Capacitat",
         value: cap == null ? "—" : fmt1(cap),
         unit: "%",
-        badge: "Últim",
+        badge: "Última lectura",
+        className: hydroFillClass,
+        style: hydroFillStyle,
         subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
-      }),
+      })
     );
 
     if (cabalCardener != null) {
-      cards.push(
+      ui.hidroCards.append(
         card({
           title: "Cardener (entrada)",
           value: fmt1(cabalCardener),
           unit: "m³/s",
           badge: "Riu",
+          className: hydroFillClass,
+          style: hydroFillStyle,
           subHtml: rowCardener?.instant ? `Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : "",
-        }),
+        })
       );
     }
 
     if (cabalValls != null) {
-      cards.push(
+      ui.hidroCards.append(
         card({
           title: "Valls (entrada)",
           value: fmt1(cabalValls),
           unit: "m³/s",
           badge: "Riu",
+          className: hydroFillClass,
+          style: hydroFillStyle,
           subHtml: rowValls?.instant ? `Hora: <strong>${fmtTime(rowValls.instant)}</strong>` : "",
-        }),
+        })
       );
     }
 
-    ui.hidroCards.innerHTML = "";
-    ui.hidroCards.append(...cards);
-
+    // Taula
     renderHidroTable(ui.hidroTbody, rows);
   } catch (e) {
-    if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
-    if (ui.hidroSection) ui.hidroSection.style.setProperty("--fill", "0%");
+    ui.errH.textContent = "Error hidro: " + (e.message || e);
   }
 }
