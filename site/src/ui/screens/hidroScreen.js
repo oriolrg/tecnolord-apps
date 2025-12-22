@@ -16,8 +16,6 @@ export async function refreshHidro(ui, store) {
 
   const s = store.get();
   const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
-
-  // (si després vols tornar a tenir filtre per codi, el reenganxem)
   const codi = (s.codiHidro || "").trim();
 
   try {
@@ -63,6 +61,7 @@ export async function refreshHidro(ui, store) {
 
     const cabalCardener = num(rowCardener?.cabal_m3s);
     const cabalValls = num(rowValls?.cabal_m3s);
+
     const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
     const delta = (sortida == null ? null : (entradaTotal - sortida));
 
@@ -72,34 +71,45 @@ export async function refreshHidro(ui, store) {
       const arrow = delta >= 0 ? "↑" : "↓";
       const txt = delta >= 0 ? "Entrada > sortida" : "Sortida > entrada";
       deltaHtml = `
-        <span class="sep"></span>
-        <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
-        <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
-        <span class="delta ${cls}">${arrow} Balanç: ${fmt1(delta)} m³/s · ${txt}</span>
+        <div class="sep"></div>
+        <div>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></div>
+        <div>Sortida: <strong>${fmt1(sortida)} m³/s</strong></div>
+        <div class="delta ${cls}">${arrow} Balanç: ${fmt1(delta)} m³/s · ${txt}</div>
       `;
     }
 
+    // compacta hora
+    const horaLlosa = instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : "";
+
     ui.hidroCards.innerHTML = "";
     ui.hidroCards.append(
+      // ⭐ Card gran vertical
       card({
         title: "Cabal (balanç)",
         value: sortida == null ? "—" : fmt1(sortida),
         unit: "m³/s",
         badge: "Últim",
+        className: "card--tall",
         subHtml: `
-          ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
-          ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
-          ${cabalValls != null ? ` · Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ""}
+          <div>${horaLlosa}</div>
+          <div>
+            ${cabalCardener != null ? `Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
+            ${cabalValls != null ? `${cabalCardener != null ? " · " : ""}Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ""}
+          </div>
           ${deltaHtml}
         `,
       }),
+
+      // Capacitat
       card({
         title: "Capacitat",
         value: cap == null ? "—" : fmt1(cap),
         unit: "%",
         badge: "Últim",
-        subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
+        subHtml: rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : "",
       }),
+
+      // Entrades (si hi són)
       ...(cabalCardener != null ? [card({
         title: "Cardener (entrada)",
         value: fmt1(cabalCardener),
@@ -107,6 +117,7 @@ export async function refreshHidro(ui, store) {
         badge: "Riu",
         subHtml: rowCardener?.instant ? `Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : "",
       })] : []),
+
       ...(cabalValls != null ? [card({
         title: "Valls (entrada)",
         value: fmt1(cabalValls),

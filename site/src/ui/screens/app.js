@@ -19,34 +19,24 @@ function readUrlParams(store) {
   store.set(patch);
 }
 
-function buildUI(root) {
+function buildUI(root, store) {
   root.innerHTML = `
     <div class="wrap">
 
-      <!-- STATUS -->
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
-      <!-- METEO (CARDS) -->
+      <!-- METEO -->
       <div class="section-title">
-        <h2>Meteo</h2>
         <p id="meteo-summary">—</p>
       </div>
+
       <div class="grid" id="meteo-cards"></div>
 
-      <!-- HIDRO (CARDS) -->
-      <div class="section-title" style="margin-top:22px">
-        <h2>Hidrologia</h2>
-        <p id="hidro-summary">—</p>
-      </div>
-      <div class="grid" id="hidro-cards"></div>
-      <span id="err-h" class="err" role="alert" aria-live="polite"></span>
-
-      <!-- TAULA METEO (APART) -->
-      <details style="margin-top:16px">
-        <summary>Històric Meteo (taula) <span class="badge" id="meteo-count">0</span></summary>
+      <details>
+        <summary>Últims registres (taula) <span class="badge" id="meteo-count">0</span></summary>
         <div class="detail-body">
           <div class="table-wrap">
             <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
@@ -77,9 +67,15 @@ function buildUI(root) {
         </div>
       </details>
 
-      <!-- TAULA HIDRO (APART) -->
+      <!-- HIDRO -->
+      <div class="section-title" style="margin-top:22px">
+        <p id="hidro-summary">—</p>
+      </div>
+
+      <div class="grid" id="hidro-cards"></div>
+
       <details>
-        <summary>Històric Hidro (taula) <span class="badge" id="hidro-count">0</span></summary>
+        <summary>Últims registres (taula) <span class="badge" id="hidro-count">0</span></summary>
         <div class="detail-body">
           <div class="table-wrap">
             <table id="tbl-hidro" aria-label="Taula d'hidrologia">
@@ -102,30 +98,33 @@ function buildUI(root) {
     </div>
   `;
 
-  const ui = {
+  return {
+    // status
     last: $("#last", root),
     err: $("#err", root),
 
+    // meteo
     meteoSummary: $("#meteo-summary", root),
     meteoCards: $("#meteo-cards", root),
     meteoCount: $("#meteo-count", root),
     meteoTbody: $("#tbl-meteo tbody", root),
 
-    errH: $("#err-h", root),
+    // hidro
     hidroSummary: $("#hidro-summary", root),
     hidroCards: $("#hidro-cards", root),
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
-  };
 
-  return ui;
+    // optional error slot (si algun dia el tornes a posar)
+    errH: null,
+  };
 }
 
 export function initApp(root) {
   const store = createStore();
   readUrlParams(store);
 
-  const ui = buildUI(root);
+  const ui = buildUI(root, store);
 
   let timer = null;
 

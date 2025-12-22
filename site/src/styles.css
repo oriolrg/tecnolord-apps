@@ -422,3 +422,8 @@ th{
   .card{ height: auto; }
   .wind-rose{ width: 120px; height: 120px; }
 }
+@media (min-width: 980px){
+  .grid{ grid-auto-rows: 170px; align-items: stretch; }
+  .card{ height: 100%; }
+  .card--tall{ grid-row: span 2; }
+}
