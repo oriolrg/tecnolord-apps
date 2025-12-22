@@ -23,20 +23,30 @@ function buildUI(root) {
   root.innerHTML = `
     <div class="wrap">
 
+      <!-- STATUS -->
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
+      <!-- METEO (CARDS) -->
       <div class="section-title">
         <h2>Meteo</h2>
         <p id="meteo-summary">—</p>
       </div>
-
       <div class="grid" id="meteo-cards"></div>
 
-      <details>
-        <summary>Últims registres (taula) <span class="badge" id="meteo-count">0</span></summary>
+      <!-- HIDRO (CARDS) -->
+      <div class="section-title" style="margin-top:22px">
+        <h2>Hidrologia</h2>
+        <p id="hidro-summary">—</p>
+      </div>
+      <div class="grid" id="hidro-cards"></div>
+      <span id="err-h" class="err" role="alert" aria-live="polite"></span>
+
+      <!-- TAULA METEO (APART) -->
+      <details style="margin-top:16px">
+        <summary>Històric Meteo (taula) <span class="badge" id="meteo-count">0</span></summary>
         <div class="detail-body">
           <div class="table-wrap">
             <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
@@ -67,17 +77,9 @@ function buildUI(root) {
         </div>
       </details>
 
-      <div class="section-title" style="margin-top:22px">
-        <h2>Hidrologia</h2>
-        <p id="hidro-summary">—</p>
-      </div>
-
-      <span id="err-h" class="err" role="alert" aria-live="polite"></span>
-
-      <div class="grid" id="hidro-cards"></div>
-
+      <!-- TAULA HIDRO (APART) -->
       <details>
-        <summary>Últims registres (taula) <span class="badge" id="hidro-count">0</span></summary>
+        <summary>Històric Hidro (taula) <span class="badge" id="hidro-count">0</span></summary>
         <div class="detail-body">
           <div class="table-wrap">
             <table id="tbl-hidro" aria-label="Taula d'hidrologia">
@@ -100,24 +102,23 @@ function buildUI(root) {
     </div>
   `;
 
-  return {
-    // status
+  const ui = {
     last: $("#last", root),
     err: $("#err", root),
 
-    // meteo
     meteoSummary: $("#meteo-summary", root),
     meteoCards: $("#meteo-cards", root),
     meteoCount: $("#meteo-count", root),
     meteoTbody: $("#tbl-meteo tbody", root),
 
-    // hidro
     errH: $("#err-h", root),
     hidroSummary: $("#hidro-summary", root),
     hidroCards: $("#hidro-cards", root),
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
   };
+
+  return ui;
 }
 
 export function initApp(root) {
