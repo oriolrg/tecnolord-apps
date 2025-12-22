@@ -35,6 +35,7 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
@@ -51,6 +52,35 @@ body{
   max-width: 1180px;
   margin: 0 auto;
   padding: 18px 14px 70px;
+}
+
+/* Header (si el tens encara) */
+header{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:flex-end;
+  justify-content:space-between;
+  margin-bottom: 14px;
+}
+
+.brand{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width: 260px;
+}
+
+.title{
+  font-size: var(--fs-3);
+  letter-spacing: -0.02em;
+  margin:0;
+}
+
+.subtitle{
+  margin:0;
+  color: var(--muted);
+  font-size: var(--fs-1);
 }
 
 .panel{
@@ -144,14 +174,40 @@ input:focus, button:focus{
 
 .err{ color: var(--bad); font-weight: 700; }
 
+.dot{
+  width: 10px; height: 10px; border-radius: 999px;
+  background: var(--accent);
+  display:inline-block;
+  margin-right: 8px;
+}
+
+.section-title{
+  margin: 18px 0 10px;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.section-title h2{
+  margin:0;
+  font-size: var(--fs-2);
+  letter-spacing: -0.02em;
+}
+.section-title p{
+  margin:0;
+  color: var(--muted);
+}
+
+/* ✅ GRID AUTO-FIT: elimina buits quan hi ha 3 cards, 5 cards, etc. */
 .grid{
   display:grid;
   gap: 12px;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+/* Cards */
 .card{
-  grid-column: span 6;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -159,14 +215,7 @@ input:focus, button:focus{
   box-shadow: var(--shadow);
   position: relative;
   overflow:hidden;
-  min-height: 110px;
-}
-
-@media (min-width: 700px){
-  .card{ grid-column: span 4; }
-}
-@media (min-width: 980px){
-  .card{ grid-column: span 3; }
+  min-height: 0; /* important: no forcem alçades */
 }
 
 .k{
@@ -174,7 +223,7 @@ input:focus, button:focus{
   align-items:baseline;
   justify-content:space-between;
   gap:10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px; /* una mica més compacte */
 }
 .k h3{
   margin:0;
@@ -193,9 +242,8 @@ input:focus, button:focus{
 }
 
 .v{
-  font-size: var(--fs-3);
+  font-size: var(--fs-4);
   font-weight: 850;
-  line-height: 1.1;
   letter-spacing: -0.03em;
   margin: 0;
   display:flex;
@@ -230,31 +278,6 @@ input:focus, button:focus{
 .delta{ font-weight: 800; }
 .delta.ok{ color: var(--ok); }
 .delta.bad{ color: var(--bad); }
-
-.dot{
-  width: 10px; height: 10px; border-radius: 999px;
-  background: var(--accent);
-  display:inline-block;
-  margin-right: 8px;
-}
-
-.section-title{
-  margin: 18px 0 10px;
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.section-title h2{
-  margin:0;
-  font-size: var(--fs-2);
-  letter-spacing: -0.02em;
-}
-.section-title p{
-  margin:0;
-  color: var(--muted);
-}
 
 details{
   margin-top: 12px;
@@ -324,164 +347,30 @@ th{
 }
 
 /* Vent */
-.wind-rose{
-  width: 120px;
-  height: 120px;
-  flex: 0 0 auto;
-  opacity: .95;
-}
-.wind-meta{
-  color: var(--muted2);
-  font-size: var(--fs-0);
-  line-height: 1.35;
-}
 .wind-block{
   margin-top: 10px;
   display:flex;
   justify-content:center;
 }
+
+.wind-rose{
+  width: 132px;
+  height: 132px;
+  flex: 0 0 auto;
+  opacity: .95;
+}
+
 .wind-rose text{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  fill: rgba(0,0,0,.75);
 }
-/* =========================
-   TAULES RESPONSIVE + FILTRE DIA
-   ========================= */
-
-.table-controls{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  margin: 8px 0 10px;
+@media (prefers-color-scheme: dark){
+  .wind-rose text{ fill: rgba(255,255,255,.75); }
 }
 
-.table-controls select{
-  background: rgba(255,255,255,.08);
-  border: 1px solid var(--line);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 8px 10px;
-  outline: none;
-  min-width: 160px;
-}
-
-@media (prefers-color-scheme: light) {
-  .table-controls select{ background: rgba(0,0,0,.03); }
-}
-
-/* treu el "min-width: 920px" que forçava scroll */
-table{
-  min-width: 0;
-}
-
-/* ==========
-   Ocultar columnes secundàries segons ample (sense scroll horitzontal)
-   ========== */
-
-/* portàtil: fora coses menys crítiques */
-@media (max-width: 1100px){
-  #tbl-meteo .col-feels,
-  #tbl-meteo .col-dew,
-  #tbl-meteo .col-press-abs,
-  #tbl-meteo .col-uvi,
-  #tbl-meteo .col-solar,
-  #tbl-meteo .col-batt{
-    display:none;
-  }
-}
-
-/* tablet: encara més compacta */
-@media (max-width: 900px){
-  #tbl-meteo .col-rainmonth,
-  #tbl-meteo .col-rainyear,
-  #tbl-meteo .col-rain1h,
-  #tbl-meteo .col-gust,
-  #tbl-meteo .col-wdir{
-    display:none;
-  }
-}
-
-/* ==========
-   Mòbil: taula apilada (files tipus "card"), 0 scroll horitzontal
-   ========== */
-@media (max-width: 720px){
-  .table-wrap{ overflow: hidden; } /* no scroll horitzontal */
-
-  #tbl-meteo thead,
-  #tbl-hidro thead{
-    display:none;
-  }
-
-  #tbl-meteo tr,
-  #tbl-hidro tr{
-    display:block;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  #tbl-meteo td,
-  #tbl-hidro td{
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    padding: 6px 0;
-    border-bottom: none;
-    white-space: normal;
-  }
-
-  #tbl-meteo td::before,
-  #tbl-hidro td::before{
-    content: attr(data-label);
-    color: var(--muted);
-    font-weight: 800;
-  }
-
-  /* a mòbil, encara més resum (opcional) */
-  #tbl-meteo .col-press-rel,
-  #tbl-meteo .col-hum{
-    display:none;
-  }
-}
-/* Taules responsive: en mòbil, cada fila passa a fitxa vertical (sense scroll horitzontal) */
-@media (max-width: 860px){
-  .table-wrap{
-    overflow: visible; /* no scroll */
-  }
-
-  table{
-    min-width: 0;
-  }
-
-  thead{
-    display: none;
-  }
-
-  tbody, tr, td{
-    display: block;
-    width: 100%;
-  }
-
-  tr{
-    padding: 10px 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  td{
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 8px 10px;
-    white-space: normal; /* permet salt de línia */
-  }
-
-  td::before{
-    content: attr(data-label);
-    color: var(--muted);
-    font-weight: 750;
-    flex: 0 0 auto;
-    padding-right: 10px;
-  }
-
-  td:last-child{
-    border-bottom: none;
-  }
+/* El value “14° · NNE” no ha de ser gegant com abans (però només si tens cards especials pots afinar més) */
+.card .v{
+  font-size: var(--fs-3);
+  font-weight: 850;
+  line-height: 1.1;
 }
