@@ -11,7 +11,16 @@
     reverse_proxy backend:3000
   }
 
-  # STATIC
-  root * /srv
-  file_server
+  # Arrel -> /meteo (opcional)
+  redir / /meteo/ 302
+
+  # STATIC només a /meteo
+  handle_path /meteo* {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+  }
+
+  # Resta -> 404 (evita que / segueixi servint estàtics)
+  respond "Not found" 404
 }
