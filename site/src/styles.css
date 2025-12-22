@@ -374,3 +374,51 @@ th{
   font-weight: 850;
   line-height: 1.1;
 }
+/* =========================================================
+   LAYOUT DESKTOP: una card pot ocupar 2 files (Vent)
+   ========================================================= */
+
+@media (min-width: 980px){
+  /* fa que cada “fila” tingui alçada consistent */
+  .grid{
+    grid-auto-rows: 170px; /* ajusta si vols més/menys */
+    align-items: stretch;
+  }
+
+  /* totes les cards omplen l'alçada de la cel·la */
+  .card{
+    height: 100%;
+  }
+
+  /* card alta (2 files) */
+  .card--tall{
+    grid-row: span 2;
+  }
+
+  /* Vent: que quedi centrat i sense buits estranys */
+  .wind-tall{
+    height: calc(100% - 38px); /* resta aprox el header intern de la card */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .wind-rose-wrap{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* rosa més gran dins la card alta */
+  .wind-rose{
+    width: 140px;
+    height: 140px;
+  }
+}
+
+/* mòbil: alçada natural, una sota l'altra */
+@media (max-width: 979px){
+  .card{ height: auto; }
+  .wind-rose{ width: 120px; height: 120px; }
+}
