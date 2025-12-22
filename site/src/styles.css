@@ -343,3 +343,145 @@ th{
 .wind-rose text{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
+/* =========================
+   TAULES RESPONSIVE + FILTRE DIA
+   ========================= */
+
+.table-controls{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin: 8px 0 10px;
+}
+
+.table-controls select{
+  background: rgba(255,255,255,.08);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 8px 10px;
+  outline: none;
+  min-width: 160px;
+}
+
+@media (prefers-color-scheme: light) {
+  .table-controls select{ background: rgba(0,0,0,.03); }
+}
+
+/* treu el "min-width: 920px" que forçava scroll */
+table{
+  min-width: 0;
+}
+
+/* ==========
+   Ocultar columnes secundàries segons ample (sense scroll horitzontal)
+   ========== */
+
+/* portàtil: fora coses menys crítiques */
+@media (max-width: 1100px){
+  #tbl-meteo .col-feels,
+  #tbl-meteo .col-dew,
+  #tbl-meteo .col-press-abs,
+  #tbl-meteo .col-uvi,
+  #tbl-meteo .col-solar,
+  #tbl-meteo .col-batt{
+    display:none;
+  }
+}
+
+/* tablet: encara més compacta */
+@media (max-width: 900px){
+  #tbl-meteo .col-rainmonth,
+  #tbl-meteo .col-rainyear,
+  #tbl-meteo .col-rain1h,
+  #tbl-meteo .col-gust,
+  #tbl-meteo .col-wdir{
+    display:none;
+  }
+}
+
+/* ==========
+   Mòbil: taula apilada (files tipus "card"), 0 scroll horitzontal
+   ========== */
+@media (max-width: 720px){
+  .table-wrap{ overflow: hidden; } /* no scroll horitzontal */
+
+  #tbl-meteo thead,
+  #tbl-hidro thead{
+    display:none;
+  }
+
+  #tbl-meteo tr,
+  #tbl-hidro tr{
+    display:block;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #tbl-meteo td,
+  #tbl-hidro td{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding: 6px 0;
+    border-bottom: none;
+    white-space: normal;
+  }
+
+  #tbl-meteo td::before,
+  #tbl-hidro td::before{
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight: 800;
+  }
+
+  /* a mòbil, encara més resum (opcional) */
+  #tbl-meteo .col-press-rel,
+  #tbl-meteo .col-hum{
+    display:none;
+  }
+}
+/* Taules responsive: en mòbil, cada fila passa a fitxa vertical (sense scroll horitzontal) */
+@media (max-width: 860px){
+  .table-wrap{
+    overflow: visible; /* no scroll */
+  }
+
+  table{
+    min-width: 0;
+  }
+
+  thead{
+    display: none;
+  }
+
+  tbody, tr, td{
+    display: block;
+    width: 100%;
+  }
+
+  tr{
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  td{
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 10px;
+    white-space: normal; /* permet salt de línia */
+  }
+
+  td::before{
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight: 750;
+    flex: 0 0 auto;
+    padding-right: 10px;
+  }
+
+  td:last-child{
+    border-bottom: none;
+  }
+}

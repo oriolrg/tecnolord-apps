@@ -24,6 +24,57 @@ export async function refreshMeteo(ui, store) {
   try {
     const rows = await fetchMeteo({ estacio, limit });
 
+    // --- FILTRE PER DIA (taula) ---
+    let rowsForTable = rows;
+
+    if (ui.meteoDay) {
+      // crea keys YYYY-MM-DD en hora local
+      const dayKey = (iso) => {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return "";
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${da}`;
+      };
+
+      const groups = new Map();
+      for (const r of rows) {
+        const k = dayKey(r.instant ?? r.at);
+        if (!k) continue;
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(r);
+      }
+
+      const keys = Array.from(groups.keys()).sort().reverse(); // últim dia primer
+
+      // omple el select si cal
+      const current = ui.meteoDay.value;
+      const needRebuild =
+        ui.meteoDay.options.length !== keys.length ||
+        Array.from(ui.meteoDay.options).some((o, i) => o.value !== keys[i]);
+
+      if (needRebuild) {
+        ui.meteoDay.innerHTML = keys.map((k) => `<option value="${k}">${k}</option>`).join("");
+      }
+
+      if (!current || !groups.has(current)) {
+        ui.meteoDay.value = keys[0] || "";
+      }
+
+      // bind 1 cop
+      if (!ui._meteoDayBound) {
+        ui.meteoDay.addEventListener("change", () => refreshMeteo(ui, store));
+        ui._meteoDayBound = true;
+      }
+
+      rowsForTable = ui.meteoDay.value && groups.has(ui.meteoDay.value) ? groups.get(ui.meteoDay.value) : rows;
+    }
+
+    // IMPORTANT: usa rowsForTable per pintar la taula i el badge
+    ui.meteoCount.textContent = String(rowsForTable.length);
+    renderMeteoTable(ui.meteoTbody, rowsForTable);
+
     ui.meteoCount.textContent = String(rows.length);
 
     if (!rows.length) {
