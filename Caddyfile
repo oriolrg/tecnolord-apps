@@ -1,26 +1,25 @@
 :80 {
   encode gzip zstd
 
-  # PYTHON API (manté el path complet)
+  # API PYTHON (manté /api/v1/...)
   handle /api/v1/* {
     reverse_proxy api_py:8000
   }
 
-  # NODE legacy (si cal)
+  # API legacy node (si la vols)
   handle /api/* {
     reverse_proxy backend:3000
   }
 
-  # Arrel -> /meteo (opcional)
-  redir / /meteo/ 302
-
-  # STATIC només a /meteo
-  handle_path /meteo* {
+  # WEB METEO a /meteo
+  handle /meteo* {
     root * /srv
-    try_files {path} /index.html
+    try_files {path} /meteo/index.html
     file_server
   }
 
-  # Resta -> 404 (evita que / segueixi servint estàtics)
-  respond "Not found" 404
+  # (opcional) redirigir / -> /meteo
+  handle {
+    redir / /meteo 302
+  }
 }
