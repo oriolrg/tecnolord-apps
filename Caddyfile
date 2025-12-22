@@ -1,25 +1,32 @@
 :80 {
   encode gzip zstd
 
-  # API PYTHON (manté /api/v1/...)
-  handle /api/v1/* {
+  # --- REDIRECT NOMÉS "/" ---
+  @root path /
+  redir @root /meteo/ 302
+
+  # 1) PyAPI només pels endpoints que realment existeixen
+  @py path /api/v1/kpis* /api/v1/forecast* /health
+  handle @py {
     reverse_proxy api_py:8000
   }
 
-  # API legacy node (si la vols)
-  handle /api/* {
+  # 2) La resta d'API (inclòs /api/v1/mesures i /api/v1/hidro) va a Node
+  @api path /api/* /api/v1/*
+  handle @api {
     reverse_proxy backend:3000
   }
 
-  # WEB METEO a /meteo
-  handle /meteo* {
+  # 3) Estàtics
+  # --- WEB METEO a /meteo ---
+  handle_path /meteo* {
     root * /srv
-    try_files {path} /meteo/index.html
+    try_files {path} /index.html
     file_server
   }
 
-  # (opcional) redirigir / -> /meteo
-  handle {
-    redir / /meteo 302
+  # Opcional: si algú entra a "/" el portes a "/meteo/"
+  handle / {
+    redir /meteo/ 302
   }
 }
