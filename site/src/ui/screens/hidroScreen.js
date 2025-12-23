@@ -100,19 +100,19 @@ export async function refreshHidro(ui, store) {
     const extras = [];
     if (cabalCardener != null) {
       extras.push(card({
-        title: "Cardener (entrada)",
+        title: "Entrada",
         value: fmt1(cabalCardener),
         unit: "m³/s",
-        badge: "Riu",
+        badge: "Riu Cardener",
         subHtml: rowCardener?.instant ? `<strong>${fmtTime(rowCardener.instant)}</strong>` : "",
       }));
     }
     if (cabalValls != null) {
       extras.push(card({
-        title: "Valls (entrada)",
+        title: "Entrada",
         value: fmt1(cabalValls),
         unit: "m³/s",
-        badge: "Riu",
+        badge: "Riu de Valls",
         subHtml: rowValls?.instant ? `<strong>${fmtTime(rowValls.instant)}</strong>` : "",
       }));
     }
