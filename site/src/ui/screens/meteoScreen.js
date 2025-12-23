@@ -53,12 +53,14 @@ export async function refreshMeteo(ui, store) {
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
 
+    // 0..359
     const deg =
       wdir == null || Number.isNaN(wdir)
         ? null
         : ((wdir % 360) + 360) % 360;
 
-    const arrowDeg = deg == null ? null : (deg + 180) % 360;
+    // ✅ “cap on va el vent” (oposat a “d’on ve”)
+    const degTo = deg == null ? null : (deg + 180) % 360;
 
     const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
     const abbr = deg == null ? "—" : windAbbr16(deg);
@@ -83,17 +85,15 @@ export async function refreshMeteo(ui, store) {
       · Ràfega: <strong>${gustVal} m/s</strong>
     `;
 
-    // --- PLUJA: valor gran = taxa (mm/h) o — (sense cap fallback) ---
+    // --- PLUJA: valor gran = taxa (mm/h) o — ---
     const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
     const rainMainUnit = "mm/h";
 
     const plujaLines = [];
 
-    // Dia (sempre la línia, encara que sigui —)
     const dayTxt = (rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay);
     plujaLines.push(`Dia: <strong>${dayTxt} mm</strong>`);
 
-    // Secundaris (només si existeixen)
     if (rain1h != null && !Number.isNaN(rain1h)) plujaLines.push(`<span class="muted">1h: ${fmt1(rain1h)} mm</span>`);
     if (rainWeek != null && !Number.isNaN(rainWeek)) plujaLines.push(`<span class="muted">Setmana: ${fmt1(rainWeek)} mm</span>`);
     if (rainEvent != null && !Number.isNaN(rainEvent)) plujaLines.push(`<span class="muted">Event: ${fmt1(rainEvent)} mm</span>`);
@@ -134,7 +134,7 @@ export async function refreshMeteo(ui, store) {
       className: "card--wind",
       subHtml: `
         <div class="wind-block">
-          ${renderWindRoseSvg(arrowDeg, degTxt, abbr)}
+          ${renderWindRoseSvg(degTo, degTxt, abbr)}
         </div>
         <div class="wind-meta">${windMetaHtml}</div>
       `,
