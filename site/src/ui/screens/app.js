@@ -4,7 +4,7 @@ import { $ } from "../dom.js";
 import { clamp } from "../format.js";
 import { refreshMeteo } from "./meteoScreen.js";
 import { refreshHidro } from "./hidroScreen.js";
-import { renderTecnolordHeader, wireTecnolordHeader } from "../components/tecnolordHeader.js";
+import { renderTecnolordHeader } from "../components/tecnolordHeader.js";
 
 function readUrlParams(store) {
   const url = new URL(location.href);
@@ -25,7 +25,7 @@ function readUrlParams(store) {
   store.set(patch);
 }
 
-function buildUI(root, store) {
+function buildUI(root) {
   root.innerHTML = `
     ${renderTecnolordHeader({
       title: CONFIG.appTitle,
@@ -133,13 +133,7 @@ export function initApp(root) {
   const store = createStore();
   readUrlParams(store);
 
-  const ui = buildUI(root, store);
-
-  // Si existeix aquesta funció al teu header, perfecte.
-  // Si no existeix (undefined), comenta aquesta línia.
-  if (typeof wireTecnolordHeader === "function") {
-    wireTecnolordHeader(root);
-  }
+  const ui = buildUI(root);
 
   let timer = null;
 
