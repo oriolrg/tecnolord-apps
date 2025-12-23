@@ -3,13 +3,17 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
   const safeSubtitle = subtitle || "";
   const safeAction = actionLabel || "Inicia sessió";
 
-  // IMPORTANT: ruta robusta del logo
-  const safeIcon = resolveAssetUrl((icon || "/meteo/assets/icons/favicon.svg").trim());
+  // Si l'asset és a l'arrel del teu subsite /meteo/
+  // (tu has confirmat que existeix aquí)
+  const baseIcon = (icon || "/meteo/assets/icons/favicon.svg").trim();
+
+  // Cache-buster per evitar que una resposta antiga (404) quedi en memòria
+  const safeIcon = withCacheBuster(resolveAssetUrl(baseIcon));
 
   return `
     <header class="tl-header" role="banner">
       <div class="tl-header__inner">
-        <a class="tl-brand" href="/" aria-label="${escapeHtml(safeTitle)}">
+        <a class="tl-brand" href="/meteo/" aria-label="${escapeHtml(safeTitle)}">
           <span class="tl-logoWrap" aria-hidden="true">
             <img class="tl-logo"
                  src="${escapeAttr(safeIcon)}"
@@ -18,7 +22,11 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
                  height="44"
                  loading="eager"
                  decoding="async"
-                 onerror="this.closest('.tl-logoWrap')?.classList.add('is-missing'); this.remove();" />
+                 onerror="
+                   const w = this.closest('.tl-logoWrap');
+                   if (w) w.classList.add('is-missing');
+                   this.style.display='none';
+                 " />
             <span class="tl-logoFallback" aria-hidden="true">TL</span>
           </span>
 
@@ -38,50 +46,31 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
   `;
 }
 
-/**
- * Resol un asset perquè funcioni tant si serveixes a / com a /subpath/
- * - Si ve amb http(s):// o data: o blob: -> el retorna tal qual
- * - Si comença per / -> el retorna tal qual (arrel del domini)
- * - Si és relatiu (./assets/... o assets/...) -> el fixa a basePath detectat
- */
-function resolveAssetUrl(path) {
-  const p = String(path || "").trim();
-
-  if (!p) return "";
-  if (/^(https?:)?\/\//i.test(p)) return p;      // http://, https://, //cdn...
-  if (/^(data:|blob:)/i.test(p)) return p;       // data:, blob:
-  if (p.startsWith("/")) return p;               // absolut del domini
-
-  // Neteja prefix ./ si existeix
-  const cleaned = p.replace(/^\.\//, "");
-
-  // Detecta basePath si estàs servint el site en subcarpeta:
-  // Exemple: https://domini.tld/meteo/ -> basePath "/meteo/"
-  // Si ets a arrel -> "/"
-  const basePath = detectBasePath();
-
-  // Construeix URL absoluta i la torna com a string
-  return new URL(cleaned, `${location.origin}${basePath}`).toString();
+function withCacheBuster(url) {
+  const u = String(url || "");
+  if (!u) return u;
+  const sep = u.includes("?") ? "&" : "?";
+  return `${u}${sep}v=${Date.now()}`;
 }
 
-/**
- * Heurística: agafa la carpeta on està el current URL.
- * Si tens rutes tipus /app/index.html -> retorna /app/
- * Si tens / -> retorna /
- */
+function resolveAssetUrl(path) {
+  const p = String(path || "").trim();
+  if (!p) return "";
+  if (/^(https?:)?\/\//i.test(p)) return p;
+  if (/^(data:|blob:)/i.test(p)) return p;
+  if (p.startsWith("/")) return p;
+
+  // Relatiu -> el fem relatiu a la carpeta actual
+  const cleaned = p.replace(/^\.\//, "");
+  return new URL(cleaned, `${location.origin}${detectBasePath()}`).toString();
+}
+
 function detectBasePath() {
   const { pathname } = location;
-
-  // si hi ha un index.html explícit, treu-lo
   const p = pathname.endsWith("index.html") ? pathname.slice(0, -("index.html".length)) : pathname;
-
-  // assegura acabar amb /
   if (p.endsWith("/")) return p;
-
-  // si és /algo.html -> torna /
   const lastSlash = p.lastIndexOf("/");
   if (lastSlash <= 0) return "/";
-
   return p.slice(0, lastSlash + 1);
 }
 
