@@ -59,9 +59,6 @@ export async function refreshMeteo(ui, store) {
         ? null
         : ((wdir % 360) + 360) % 360;
 
-    // ✅ “cap on va el vent” (oposat a “d’on ve”)
-    const degTo = deg == null ? null : (deg + 180) % 360;
-
     const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
     const abbr = deg == null ? "—" : windAbbr16(deg);
     const name = deg == null ? "" : windNameCa(deg);
@@ -90,7 +87,6 @@ export async function refreshMeteo(ui, store) {
     const rainMainUnit = "mm/h";
 
     const plujaLines = [];
-
     const dayTxt = (rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay);
     plujaLines.push(`Dia: <strong>${dayTxt} mm</strong>`);
 
@@ -134,7 +130,7 @@ export async function refreshMeteo(ui, store) {
       className: "card--wind",
       subHtml: `
         <div class="wind-block">
-          ${renderWindRoseSvg(degTo, degTxt, abbr)}
+          ${renderWindRoseSvg(deg, degTxt, abbr)}
         </div>
         <div class="wind-meta">${windMetaHtml}</div>
       `,
@@ -166,7 +162,12 @@ export async function refreshMeteo(ui, store) {
   }
 }
 
-function renderWindRoseSvg(arrowDeg, centerTextTop, centerTextBottom) {
+/**
+ * La fletxa vermella:
+ * - es POSICIONA sobre els graus "deg" (d'on ve el vent)
+ * - però ORIENTA cap on va (gir 180º)
+ */
+function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
   return `
   <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
     <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
@@ -177,9 +178,11 @@ function renderWindRoseSvg(arrowDeg, centerTextTop, centerTextBottom) {
       <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
       <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
 
-      ${arrowDeg == null ? "" : `
-        <g transform="rotate(${arrowDeg})">
-          <polygon points="0,-32 -6,-46 0,-42 6,-46" fill="rgba(239,68,68,.95)"/>
+      ${degFrom == null ? "" : `
+        <g transform="rotate(${degFrom})">
+          <g transform="rotate(180)">
+            <polygon points="0,-32 -6,-46 0,-42 6,-46" fill="rgba(239,68,68,.95)"/>
+          </g>
         </g>
       `}
 
