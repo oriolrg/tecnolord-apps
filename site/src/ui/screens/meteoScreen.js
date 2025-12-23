@@ -53,7 +53,7 @@ export async function refreshMeteo(ui, store) {
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
 
-    // 0..359
+    // 0..359 (direcció D'ON VE el vent)
     const deg =
       wdir == null || Number.isNaN(wdir)
         ? null
@@ -73,7 +73,7 @@ export async function refreshMeteo(ui, store) {
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
     ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
 
-    // --- VENT: sempre mostrar (— si null) ---
+    // VENT: sempre mostrar (— si null)
     const windVal = (wind == null || Number.isNaN(wind)) ? "—" : fmt1(wind);
     const gustVal = (gust == null || Number.isNaN(gust)) ? "—" : fmt1(gust);
 
@@ -82,7 +82,7 @@ export async function refreshMeteo(ui, store) {
       · Ràfega: <strong>${gustVal} m/s</strong>
     `;
 
-    // --- PLUJA: valor gran = taxa (mm/h) o — ---
+    // PLUJA: valor gran = taxa (mm/h) o —
     const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
     const rainMainUnit = "mm/h";
 
@@ -163,11 +163,18 @@ export async function refreshMeteo(ui, store) {
 }
 
 /**
- * La fletxa vermella:
- * - es POSICIONA sobre els graus "deg" (d'on ve el vent)
- * - però ORIENTA cap on va (gir 180º)
+ * Fletxa vermella:
+ * - POSICIÓ: es col·loca exactament als graus degFrom (d'on ve el vent)
+ * - ORIENTACIÓ: apunta cap al centre (cap on va, en el sentit "from -> to")
  */
 function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
+  const arrow = degFrom == null ? "" : `
+    <g transform="rotate(${degFrom}) translate(0,-40)">
+      <!-- tip a la vora; cos cap al centre -->
+      <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
+    </g>
+  `;
+
   return `
   <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
     <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
@@ -178,13 +185,7 @@ function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
       <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
       <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
 
-      ${degFrom == null ? "" : `
-        <g transform="rotate(${degFrom})">
-          <g transform="rotate(180)">
-            <polygon points="0,-32 -6,-46 0,-42 6,-46" fill="rgba(239,68,68,.95)"/>
-          </g>
-        </g>
-      `}
+      ${arrow}
 
       <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
       <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800">${centerTextTop || ""}</text>
