@@ -8,18 +8,21 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
     <header class="tl-header" role="banner">
       <div class="tl-header__inner">
         <a class="tl-brand" href="/" aria-label="${escapeHtml(safeTitle)}">
-          <img class="tl-logo"
-               src="${escapeAttr(safeIcon)}"
-               alt=""
-               width="44"
-               height="44"
-               loading="eager"
-               decoding="async"
-               onerror="this.style.display='none';" />
-          <div class="tl-brandtext">
-            <div class="tl-title">${escapeHtml(safeTitle)}</div>
-            ${safeSubtitle ? `<div class="tl-subtitle">${escapeHtml(safeSubtitle)}</div>` : ""}
-          </div>
+          <span class="tl-logoWrap" aria-hidden="true">
+            <img class="tl-logo"
+                 src="${escapeAttr(safeIcon)}"
+                 alt=""
+                 width="44"
+                 height="44"
+                 loading="eager"
+                 decoding="async"
+                 onerror="this.style.display='none';" />
+          </span>
+
+          <span class="tl-brandtext">
+            <span class="tl-title">${escapeHtml(safeTitle)}</span>
+            ${safeSubtitle ? `<span class="tl-subtitle">${escapeHtml(safeSubtitle)}</span>` : ""}
+          </span>
         </a>
 
         <div class="tl-right">

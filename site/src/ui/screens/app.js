@@ -22,16 +22,22 @@ function readUrlParams(store) {
 
 function buildUI(root, store) {
   root.innerHTML = `
-    <div id="tl-header-slot"></div>
+    ${renderTecnolordHeader({
+      title: CONFIG.appTitle,
+      subtitle: CONFIG.appSubtitle,
+      icon: CONFIG.appIcon,
+      actionLabel: "Inicia sessió",
+    })}
 
     <div class="wrap">
+
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
       <!-- METEO -->
-      <div class="section-title section-title--tight">
+      <div class="section-title">
         <p id="meteo-summary">—</p>
       </div>
 
@@ -70,7 +76,7 @@ function buildUI(root, store) {
       </details>
 
       <!-- HIDRO -->
-      <div class="section-title section-title--tight" style="margin-top:22px">
+      <div class="section-title" style="margin-top:22px">
         <p id="hidro-summary">—</p>
       </div>
 
@@ -96,12 +102,9 @@ function buildUI(root, store) {
           </div>
         </div>
       </details>
+
     </div>
   `;
-
-  // Header (full width)
-  const headerSlot = $("#tl-header-slot", root);
-  headerSlot.innerHTML = renderTecnolordHeader(CONFIG.ui);
 
   return {
     // status

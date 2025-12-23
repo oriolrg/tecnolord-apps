@@ -35,7 +35,6 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
-
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
@@ -54,98 +53,50 @@ body{
   padding: 18px 14px 70px;
 }
 
-/* -----------------------------------------
-   Tecnolord shared header (FULL WIDTH)
------------------------------------------ */
-.tl-header{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-
-  width: 100%;
-  margin: 0 0 12px;
-
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(10px);
-
-  border-bottom: 1px solid var(--line);
-  box-shadow: var(--shadow);
-}
-
-.tl-header__inner{
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 12px 14px;
-
+/* (el teu CSS existent) */
+header{
   display:flex;
-  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:flex-end;
   justify-content:space-between;
-  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.tl-brand{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  text-decoration:none;
-  color: var(--text);
-  min-width: 0;
-}
-
-.tl-logo{
-  border-radius: 10px;
-  flex: 0 0 auto;
-  box-shadow: 0 6px 14px rgba(0,0,0,.12);
-  background: rgba(255,255,255,.15);
-  border: 1px solid var(--line);
-}
-
-.tl-brandtext{
+.brand{
   display:flex;
   flex-direction:column;
-  gap: 2px;
-  min-width: 0;
+  gap:6px;
+  min-width: 260px;
 }
 
-.tl-title{
-  font-weight: 850;
+.title{
+  font-size: var(--fs-3);
   letter-spacing: -0.02em;
-  font-size: var(--fs-2);
-  line-height: 1.05;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 58vw;
+  margin:0;
 }
 
-.tl-subtitle{
+.subtitle{
+  margin:0;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.1;
+  font-size: var(--fs-1);
 }
 
-.tl-right{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  flex: 0 0 auto;
-}
-
-@media (max-width: 520px){
-  .tl-subtitle{ display:none; }
-  .tl-header__inner{ padding: 10px 12px; }
-  .tl-title{ max-width: 52vw; font-size: var(--fs-1); }
-}
-
-/* -----------------------------------------
-   Controls / UI base
------------------------------------------ */
 .panel{
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 14px;
+}
+
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  justify-content:flex-end;
+  min-width: 320px;
 }
 
 label{
@@ -191,6 +142,13 @@ input:focus, button:focus{
   background: rgba(255,255,255,.06);
 }
 
+.tog{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  user-select:none;
+}
+
 .pill{
   display:inline-flex;
   align-items:center;
@@ -215,41 +173,14 @@ input:focus, button:focus{
 
 .err{ color: var(--bad); font-weight: 700; }
 
-.dot{
-  width: 10px; height: 10px; border-radius: 999px;
-  background: var(--accent);
-  display:inline-block;
-  margin-right: 8px;
-}
-
-/* -----------------------------------------
-   Section title
------------------------------------------ */
-.section-title{
-  margin: 18px 0 10px;
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.section-title p{
-  margin:0;
-  color: var(--muted);
-}
-.section-title--tight{
-  margin: 8px 0 10px;
-}
-
-/* ✅ GRID auto-fit -> evita buits */
 .grid{
   display:grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(12, 1fr);
 }
 
-/* Cards */
 .card{
+  grid-column: span 6;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -257,7 +188,14 @@ input:focus, button:focus{
   box-shadow: var(--shadow);
   position: relative;
   overflow:hidden;
-  min-height: 0;
+  min-height: 110px;
+}
+
+@media (min-width: 700px){
+  .card{ grid-column: span 4; }
+}
+@media (min-width: 980px){
+  .card{ grid-column: span 3; }
 }
 
 .k{
@@ -265,7 +203,7 @@ input:focus, button:focus{
   align-items:baseline;
   justify-content:space-between;
   gap:10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .k h3{
   margin:0;
@@ -321,7 +259,31 @@ input:focus, button:focus{
 .delta.ok{ color: var(--ok); }
 .delta.bad{ color: var(--bad); }
 
-/* Tables */
+.dot{
+  width: 10px; height: 10px; border-radius: 999px;
+  background: var(--accent);
+  display:inline-block;
+  margin-right: 8px;
+}
+
+.section-title{
+  margin: 18px 0 10px;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.section-title h2{
+  margin:0;
+  font-size: var(--fs-2);
+  letter-spacing: -0.02em;
+}
+.section-title p{
+  margin:0;
+  color: var(--muted);
+}
+
 details{
   margin-top: 12px;
   background: var(--card);
@@ -374,6 +336,10 @@ th{
   th{ background: rgba(0,0,0,.06); }
 }
 
+.smallnote{
+  color: var(--muted2);
+  margin-top: 10px;
+}
 :focus-visible{
   outline: 3px solid rgba(96,165,250,.55);
   outline-offset: 3px;
@@ -384,61 +350,198 @@ th{
   font-style: italic;
 }
 
-/* -----------------------------------------
-   Vent (rosa)
------------------------------------------ */
-.wind-tall{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  justify-content:center;
-}
-
-.wind-rose-wrap{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
 .wind-rose{
-  width: 132px;
-  height: 132px;
+  width: 92px;
+  height: 92px;
   flex: 0 0 auto;
   opacity: .95;
 }
 
-.wind-rose text{
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  fill: rgba(0,0,0,.75);
+.wind-wrap{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
-@media (prefers-color-scheme: dark){
-  .wind-rose text{ fill: rgba(255,255,255,.75); }
+
+.wind-main{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.wind-dir{
+  font-size: var(--fs-4);
+  font-weight: 850;
+  letter-spacing: -0.03em;
+  margin: 0;
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+}
+
+.wind-sub{
+  color: var(--muted2);
+  font-size: var(--fs-0);
+}
+.wind-arrow{
+  font-size: var(--fs-3);
+}
+.wind-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  min-height: 96px;
+}
+
+.wind-left{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width: 0;
 }
 
 .wind-meta{
   color: var(--muted2);
   font-size: var(--fs-0);
   line-height: 1.35;
-  text-align: center;
 }
 
-/* -----------------------------------------
-   Desktop: cards altes (2 files) per Vent i Cabal
------------------------------------------ */
-@media (min-width: 980px){
-  .grid{
-    grid-auto-rows: 170px; /* ajustable */
-    align-items: stretch;
+.wind-deg{
+  display: block;
+  font-size: var(--fs-4);
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--text);
+}
+
+.wind-name{
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-1);
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: lowercase;
+  color: var(--muted);
+}
+
+.wind-rose{
+  width: 112px;
+  height: 112px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.wind-rose text{
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+.wind-rose svg{
+  width: 100%;
+  height: 100%;
+}
+
+.card .v{
+  font-size: var(--fs-3);
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.wind-block{
+  margin-top: 10px;
+  display:flex;
+  justify-content:center;
+}
+.wind-rose{ width: 120px; height: 120px; }
+
+/* =========================
+   Tecnolord header (NEW)
+   ========================= */
+
+.tl-header{
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255,255,255,.55);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (prefers-color-scheme: dark){
+  .tl-header{
+    background: rgba(10,14,20,.55);
+    border-bottom: 1px solid rgba(255,255,255,.10);
   }
-  .card{ height: 100%; }
-  .card--tall{ grid-row: span 2; }
-
-  /* rosa una mica més gran a desktop */
-  .wind-rose{ width: 140px; height: 140px; }
 }
 
-/* mòbil: alçada natural */
-@media (max-width: 979px){
-  .card{ height: auto; }
-  .wind-rose{ width: 120px; height: 120px; }
+.tl-header__inner{
+  width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between; /* extrems */
+  gap: 14px;
+  padding: 12px 18px;
+}
+
+.tl-brand{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  text-decoration:none;
+  color: var(--text);
+  min-width: 0;
+}
+
+.tl-logoWrap{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  flex: 0 0 auto;
+}
+
+.tl-logo{
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  display:block;
+}
+
+.tl-brandtext{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tl-title{
+  font-size: var(--fs-1);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.tl-subtitle{
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.1;
+}
+
+.tl-right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+/* dona aire sota header sticky */
+.wrap{
+  padding-top: 16px;
 }
