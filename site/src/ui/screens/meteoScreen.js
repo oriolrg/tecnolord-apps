@@ -97,12 +97,13 @@ export async function refreshMeteo(ui, store) {
       value: "",
       unit: "",
       badge: "Direcció",
+      className: "card--wind",
       subHtml: `
-        <div class="wind-tall">
-          <div class="wind-rose-wrap">
-            ${renderWindRoseSvg(arrowDeg, degTxt, abbr)}
-          </div>
-          <div class="wind-meta">${windSpeedHtml}${gustHtml}</div>
+        <div class="wind-block">
+          ${renderWindRoseSvg(arrowDeg, degTxt, abbr)}
+        </div>
+        <div class="wind-meta">
+          ${windSpeedHtml}${gustHtml}
         </div>
       `,
     });
