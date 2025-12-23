@@ -4,7 +4,7 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
   const safeAction = actionLabel || "Inicia sessió";
 
   // IMPORTANT: ruta robusta del logo
-  const safeIcon = resolveAssetUrl((icon || "assets/icons/favicon.svg").trim());
+  const safeIcon = resolveAssetUrl((icon || "/meteo/assets/icons/favicon.svg").trim());
 
   return `
     <header class="tl-header" role="banner">
