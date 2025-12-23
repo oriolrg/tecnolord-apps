@@ -88,9 +88,21 @@ export async function refreshMeteo(ui, store) {
       subHtml: `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}`,
     });
 
-    const cHum = card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Última lectura", subHtml: "" });
+    const cHum = card({
+      title: "Humitat",
+      value: hum == null ? "—" : Math.round(hum),
+      unit: "%",
+      badge: "Última lectura",
+      subHtml: "",
+    });
 
-    const cPress = card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` });
+    const cPress = card({
+      title: "Pressió (rel.)",
+      value: fmt1(pRel),
+      unit: "hPa",
+      badge: "Relativa",
+      subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}`,
+    });
 
     const cWind = card({
       title: fromTxt,
@@ -109,20 +121,19 @@ export async function refreshMeteo(ui, store) {
     });
     cWind.classList.add("card--tall");
 
-    const cRainDay = card({
-      title: "Pluja (dia)",
+    // ✅ PLUJA UNIFICADA
+    const cRain = card({
+      title: "Pluja",
       value: fmt1(rainDay),
       unit: "mm",
-      badge: "Acumulada",
-      subHtml: `${rainRate != null ? `Taxa: <strong>${fmt1(rainRate)} mm/h</strong>` : ""}${rain1h != null ? ` · 1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}`,
-    });
-
-    const cRainMonth = card({
-      title: "Pluja (mes)",
-      value: fmt1(rainMonth),
-      unit: "mm",
-      badge: "Acumulada",
-      subHtml: `${rainYear != null ? `Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}`,
+      badge: "Avui",
+      subHtml: `
+        ${rainRate != null ? `Taxa: <strong>${fmt1(rainRate)} mm/h</strong>` : ""}
+        ${rain1h != null ? ` · 1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}
+        ${(rainMonth != null || rainYear != null) ? `<span class="sep"></span>` : ""}
+        ${rainMonth != null ? `Mes: <strong>${fmt1(rainMonth)} mm</strong>` : ""}
+        ${rainYear != null ? ` · Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}
+      `,
     });
 
     const cUv = card({
@@ -133,8 +144,8 @@ export async function refreshMeteo(ui, store) {
       subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
     });
 
-    // Ordre: 3 normals + vent (alta) + 3 petites (s'omplen al seu costat)
-    ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRainDay, cRainMonth, cUv);
+    // Cards (ara pluja és una sola)
+    ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
 
     renderMeteoTable(ui.meteoTbody, rows);
   } catch (e) {
