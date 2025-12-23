@@ -506,6 +506,7 @@ th{
   justify-content:center;
   overflow:hidden;
   flex: 0 0 auto;
+  position: relative;
 }
 
 .tl-logo{
@@ -514,6 +515,24 @@ th{
   object-fit: cover;
   display:block;
 }
+
+.tl-logoFallback{
+  display: none;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: .02em;
+  color: var(--muted);
+}
+
+/* si la imatge falla */
+.tl-logoWrap.is-missing .tl-logoFallback{
+  display: inline-flex;
+}
+
 
 .tl-brandtext{
   display:flex;

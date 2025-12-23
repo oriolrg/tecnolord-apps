@@ -1,7 +1,7 @@
 export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {}) {
   const safeTitle = title || "Tecnolord";
   const safeSubtitle = subtitle || "";
-  const safeIcon = icon || "";
+  const safeIcon = (icon || "/assets/images/meteolord.png").trim();
   const safeAction = actionLabel || "Inicia sessió";
 
   return `
@@ -16,7 +16,8 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
                  height="44"
                  loading="eager"
                  decoding="async"
-                 onerror="this.style.display='none';" />
+                 onerror="this.closest('.tl-logoWrap')?.classList.add('is-missing'); this.remove();" />
+            <span class="tl-logoFallback" aria-hidden="true">TL</span>
           </span>
 
           <span class="tl-brandtext">
