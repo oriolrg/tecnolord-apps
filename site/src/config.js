@@ -2,7 +2,7 @@ export const CONFIG = {
   // App identity (header + PWA)
   appTitle: "MeteoLord",
   appSubtitle: "Tecnolord apps",
-  appIcon: "./assets/icons/icon-192.png",
+  appIcon: "/meteo/assets/icons/favicon-96x96.png",
   // IMPORTANT: incrementa aquesta versió quan publiquis canvis
   appVersion: "2025-12-23-01",
 

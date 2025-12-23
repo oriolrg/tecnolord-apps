@@ -3,9 +3,8 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
   const safeSubtitle = subtitle || "";
   const safeAction = actionLabel || "Inicia sessió";
 
-  // IMPORTANT: ruta ABSOLUTA fixa (ja has confirmat que existeix)
-  // No fem cap resolve, ni cache-buster
-  const safeIcon = (icon || "/meteo/assets/icons/favicon.svg").trim();
+  // fixa (tu has confirmat que existeix)
+  const safeIcon = (icon || "/meteo/assets/icons/favicon-96x96.png").trim();
 
   return `
     <header class="tl-header" role="banner">
@@ -13,27 +12,14 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
         <a class="tl-brand" href="/meteo/" aria-label="${escapeHtml(safeTitle)}">
           <span class="tl-logoWrap" aria-hidden="true">
             <img class="tl-logo"
+                 id="tlLogo"
                  src="${escapeAttr(safeIcon)}"
                  alt=""
                  width="44"
                  height="44"
                  loading="eager"
-                 decoding="async"
-                 onload="
-                   const w = this.closest('.tl-logoWrap');
-                   if (w) w.classList.remove('is-missing');
-                   const fb = this.parentElement?.querySelector('.tl-logoFallback');
-                   if (fb) fb.style.display='none';
-                   this.style.display='block';
-                 "
-                 onerror="
-                   const w = this.closest('.tl-logoWrap');
-                   if (w) w.classList.add('is-missing');
-                   const fb = this.parentElement?.querySelector('.tl-logoFallback');
-                   if (fb) fb.style.display='inline-flex';
-                   this.style.display='none';
-                 " />
-            <span class="tl-logoFallback" aria-hidden="true">TL</span>
+                 decoding="async" />
+            <span class="tl-logoFallback" id="tlLogoFallback" aria-hidden="true">TL</span>
           </span>
 
           <span class="tl-brandtext">
@@ -50,6 +36,33 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
       </div>
     </header>
   `;
+}
+
+export function wireTecnolordHeader(root = document) {
+  const img = root.querySelector("#tlLogo");
+  const fb = root.querySelector("#tlLogoFallback");
+  const wrap = img?.closest(".tl-logoWrap");
+
+  if (!img || !fb || !wrap) return;
+
+  const showFallback = () => {
+    wrap.classList.add("is-missing");
+    img.style.display = "none";
+    fb.style.display = "inline-flex";
+  };
+
+  const showImg = () => {
+    wrap.classList.remove("is-missing");
+    img.style.display = "block";
+    fb.style.display = "none";
+  };
+
+  img.addEventListener("load", showImg, { once: true });
+  img.addEventListener("error", showFallback, { once: true });
+
+  // Si ja està en cache i carregada
+  if (img.complete && img.naturalWidth > 0) showImg();
+  else if (img.complete && img.naturalWidth === 0) showFallback();
 }
 
 function escapeHtml(s) {

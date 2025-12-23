@@ -1,10 +1,10 @@
-import { CONFIG } from "../../config.js";
-import { createStore } from "../../state/store.js";
-import { $ } from "../dom.js";
-import { clamp } from "../format.js";
-import { refreshMeteo } from "./meteoScreen.js";
-import { refreshHidro } from "./hidroScreen.js";
-import { renderTecnolordHeader } from "../components/tecnolordHeader.js";
+import { CONFIG } from "../config.js";
+import { createStore } from "../state/store.js";
+import { $ } from "./dom.js";
+import { clamp } from "./format.js";
+import { refreshMeteo } from "./screens/meteoScreen.js";
+import { refreshHidro } from "./screens/hidroScreen.js";
+import { renderTecnolordHeader, wireTecnolordHeader } from "./components/tecnolordHeader.js";
 
 function readUrlParams(store) {
   const url = new URL(location.href);
@@ -14,7 +14,12 @@ function readUrlParams(store) {
 
   const patch = {};
   if (estFromUrl) patch.estacio = estFromUrl;
-  if (limFromUrl) patch.limit = String(clamp(parseInt(limFromUrl, 10) || CONFIG.defaultLimit, 1, CONFIG.maxLimit));
+
+  if (limFromUrl) {
+    const lim = clamp(parseInt(limFromUrl, 10) || CONFIG.defaultLimit, 1, CONFIG.maxLimit);
+    patch.limit = String(lim);
+  }
+
   if (codiFromUrl) patch.codiHidro = codiFromUrl;
 
   store.set(patch);
@@ -25,7 +30,7 @@ function buildUI(root, store) {
     ${renderTecnolordHeader({
       title: CONFIG.appTitle,
       subtitle: CONFIG.appSubtitle,
-      icon: CONFIG.appIcon,
+      icon: CONFIG.appIcon, // recomanat: "/meteo/assets/icons/favicon-96x96.png"
       actionLabel: "Inicia sessió",
     })}
 
@@ -34,20 +39,15 @@ function buildUI(root, store) {
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
         <span id="err" class="err" role="alert" aria-live="polite"></span>
-        <span id="err-h" class="err" role="alert" aria-live="polite"></span>
       </div>
 
+      <!-- METEO -->
       <div class="section-title">
         <p id="meteo-summary">—</p>
       </div>
 
-      <!-- GRID UNIFICAT: METEO + HIDRO cards -->
-      <div class="grid" id="cards">
-        <div id="cards-meteo" class="cards-group"></div>
-        <div id="cards-hidro" class="cards-group"></div>
-      </div>
+      <div class="grid" id="meteo-cards"></div>
 
-      <!-- METEO: taula últims registres -->
       <details>
         <summary>Últims registres (meteo) <span class="badge" id="meteo-count">0</span></summary>
         <div class="detail-body">
@@ -80,8 +80,14 @@ function buildUI(root, store) {
         </div>
       </details>
 
-      <!-- HIDRO: taula últims registres -->
-      <details style="margin-top:12px">
+      <!-- HIDRO -->
+      <div class="section-title" style="margin-top:22px">
+        <p id="hidro-summary">—</p>
+      </div>
+
+      <div class="grid" id="hidro-cards"></div>
+
+      <details>
         <summary>Últims registres (hidro) <span class="badge" id="hidro-count">0</span></summary>
         <div class="detail-body">
           <div class="table-wrap">
@@ -109,30 +115,21 @@ function buildUI(root, store) {
     // status
     last: $("#last", root),
     err: $("#err", root),
-    errH: $("#err-h", root),
 
-    // summary meteo
+    // meteo
     meteoSummary: $("#meteo-summary", root),
-
-    // unified grid + subcontainers
-    cards: $("#cards", root),
-    cardsMeteo: $("#cards-meteo", root),
-    cardsHidro: $("#cards-hidro", root),
-
-    // meteo (taula)
+    meteoCards: $("#meteo-cards", root),
     meteoCount: $("#meteo-count", root),
     meteoTbody: $("#tbl-meteo tbody", root),
 
-    // hidro (taula)
+    // hidro
+    hidroSummary: $("#hidro-summary", root),
+    hidroCards: $("#hidro-cards", root),
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
 
-    // placeholders (hidroSummary no el mostrem a home)
-    hidroSummary: null,
-
-    // will be assigned after buildUI
-    meteoCards: null,
-    hidroCards: null,
+    // optional error slot
+    errH: null,
   };
 }
 
@@ -142,9 +139,8 @@ export function initApp(root) {
 
   const ui = buildUI(root, store);
 
-  // IMPORTANT: assignem els contenidors reals de cards
-  ui.meteoCards = ui.cardsMeteo;
-  ui.hidroCards = ui.cardsHidro;
+  // 🔥 Fix robust del logo (sense inline handlers)
+  wireTecnolordHeader(root);
 
   let timer = null;
 
@@ -157,4 +153,9 @@ export function initApp(root) {
 
   refreshMeteo(ui, store);
   refreshHidro(ui, store);
+
+  // si mai necessites parar l'auto-refresh
+  return () => {
+    if (timer) clearInterval(timer);
+  };
 }
