@@ -29,6 +29,7 @@ export async function refreshHidro(ui, store) {
       return;
     }
 
+    // --- Identificació estacions clau ---
     const rowLlosa = pickRow(rows, [
       r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
       r => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
@@ -44,52 +45,70 @@ export async function refreshHidro(ui, store) {
       r => norm(r.codi).includes("valls"),
     ]);
 
-    const instantLlosa = rowLlosa?.instant ?? null;
+    // Capacitat pantà (si existeix)
     const cap = num(rowLlosa?.capacitat_pct);
 
+    // Sortida (preferentment la de la Llosa; si no, buscar "sortida")
     let sortida = num(rowLlosa?.cabal_m3s);
+    let instantSortida = rowLlosa?.instant ?? null;
+
     if (sortida == null) {
       const rowSortida = pickRow(rows, [
         r => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
         r => norm(r.codi).includes("sortida") && (norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")),
+        r => norm(r.nom).includes("sortida"),
+        r => norm(r.codi).includes("sortida"),
       ]);
       sortida = num(rowSortida?.cabal_m3s);
+      instantSortida = rowSortida?.instant ?? instantSortida;
     }
 
+    // Entrades (rius)
     const cabalCardener = num(rowCardener?.cabal_m3s);
     const cabalValls = num(rowValls?.cabal_m3s);
+
     const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
     const delta = (sortida == null ? null : (entradaTotal - sortida));
 
-    let deltaHtml = "";
+    // --- HTML de balanç ---
+    let balancHtml = "";
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
       const cls = delta >= 0 ? "ok" : "bad";
       const arrow = delta >= 0 ? "↑" : "↓";
-      const txt = delta >= 0 ? "Entrada > sortida" : "Sortida > entrada";
-      deltaHtml = `
+      const txt = delta >= 0 ? "S'està omplint" : "S'està buidant";
+      balancHtml = `
         <span class="sep"></span>
-        <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
+        <span>Entrada total: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
         <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
         <span class="delta ${cls}">${arrow} Balanç: ${fmt1(delta)} m³/s · ${txt}</span>
       `;
+    } else {
+      // si falta alguna peça, igualment mostrem el que tenim
+      const parts = [];
+      if (cabalCardener != null || cabalValls != null) parts.push(`Entrada total: <strong>${fmt1(entradaTotal)} m³/s</strong>`);
+      if (sortida != null) parts.push(`Sortida: <strong>${fmt1(sortida)} m³/s</strong>`);
+      balancHtml = parts.length ? `<span class="sep"></span><span>${parts.join(" · ")}</span>` : "";
     }
 
     if (ui.hidroCards) ui.hidroCards.innerHTML = "";
 
-    const cCabal = card({
-      title: "Cabal (balanç)",
-      value: sortida == null ? "—" : fmt1(sortida),
+    // --- CARD 1 (principal): Fluxos pantà (entrada + sortida + balanç) ---
+    // Valor gran = Entrada total (és el que vols prioritzar).
+    const cFluxos = card({
+      title: "Pantà (fluxos)",
+      value: (cabalCardener == null && cabalValls == null) ? "—" : fmt1(entradaTotal),
       unit: "m³/s",
-      badge: "Últim",
+      badge: "Entrada total",
       subHtml: `
-        ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
+        ${instantSortida ? `Hora: <strong>${fmtTime(instantSortida)}</strong>` : ""}
         ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
         ${cabalValls != null ? ` · Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ""}
-        ${deltaHtml}
+        ${balancHtml}
       `,
     });
-    cCabal.classList.add("card--tall");
+    cFluxos.classList.add("card--tall");
 
+    // --- CARD 2: Capacitat ---
     const cCap = card({
       title: "Capacitat",
       value: cap == null ? "—" : fmt1(cap),
@@ -98,6 +117,7 @@ export async function refreshHidro(ui, store) {
       subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
     });
 
+    // --- Cards “detall” (opcionals): rius individuals, al final ---
     const extras = [];
     if (cabalCardener != null) {
       extras.push(card({
@@ -118,9 +138,13 @@ export async function refreshHidro(ui, store) {
       }));
     }
 
-    if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, ...extras);
+    // ✅ Ordre nou (prioritat):
+    // 1) Fluxos (entrada+sortida+balanç)
+    // 2) Capacitat
+    // 3) Detall rius
+    if (ui.hidroCards) ui.hidroCards.append(cFluxos, cCap, ...extras);
 
-    // render taula si existeix
+    // Taula (si existeix a la pantalla actual)
     if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
   } catch (e) {
     if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
