@@ -1,10 +1,10 @@
-import { CONFIG } from "../config.js";
-import { createStore } from "../state/store.js";
-import { $ } from "./dom.js";
-import { clamp } from "./format.js";
-import { refreshMeteo } from "./screens/meteoScreen.js";
-import { refreshHidro } from "./screens/hidroScreen.js";
-import { renderTecnolordHeader, wireTecnolordHeader } from "./components/tecnolordHeader.js";
+import { CONFIG } from "../../config.js";
+import { createStore } from "../../state/store.js";
+import { $ } from "../dom.js";
+import { clamp } from "../format.js";
+import { refreshMeteo } from "./meteoScreen.js";
+import { refreshHidro } from "./hidroScreen.js";
+import { renderTecnolordHeader, wireTecnolordHeader } from "../components/tecnolordHeader.js";
 
 function readUrlParams(store) {
   const url = new URL(location.href);
@@ -30,7 +30,7 @@ function buildUI(root, store) {
     ${renderTecnolordHeader({
       title: CONFIG.appTitle,
       subtitle: CONFIG.appSubtitle,
-      icon: CONFIG.appIcon, // recomanat: "/meteo/assets/icons/favicon-96x96.png"
+      icon: CONFIG.appIcon,
       actionLabel: "Inicia sessió",
     })}
 
@@ -112,23 +112,19 @@ function buildUI(root, store) {
   `;
 
   return {
-    // status
     last: $("#last", root),
     err: $("#err", root),
 
-    // meteo
     meteoSummary: $("#meteo-summary", root),
     meteoCards: $("#meteo-cards", root),
     meteoCount: $("#meteo-count", root),
     meteoTbody: $("#tbl-meteo tbody", root),
 
-    // hidro
     hidroSummary: $("#hidro-summary", root),
     hidroCards: $("#hidro-cards", root),
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
 
-    // optional error slot
     errH: null,
   };
 }
@@ -139,8 +135,11 @@ export function initApp(root) {
 
   const ui = buildUI(root, store);
 
-  // 🔥 Fix robust del logo (sense inline handlers)
-  wireTecnolordHeader(root);
+  // Si existeix aquesta funció al teu header, perfecte.
+  // Si no existeix (undefined), comenta aquesta línia.
+  if (typeof wireTecnolordHeader === "function") {
+    wireTecnolordHeader(root);
+  }
 
   let timer = null;
 
@@ -154,7 +153,6 @@ export function initApp(root) {
   refreshMeteo(ui, store);
   refreshHidro(ui, store);
 
-  // si mai necessites parar l'auto-refresh
   return () => {
     if (timer) clearInterval(timer);
   };
