@@ -93,7 +93,7 @@ export async function refreshMeteo(ui, store) {
               ${renderWindRoseSvg(arrowDeg, degTxt, abbr)}
             </div>
             <div class="wind-meta">
-              ${windSpeed == null ? "Velocitat: <span class='na'>no disponible</span>" : `Velocitat: <strong>${windSpeed} m/s</strong>`}
+              ${windSpeed == null ? "Velocitat: <span class='na'>-</span>" : `Velocitat: <strong>${windSpeed} m/s</strong>`}
               ${gustShow ? ` · Ràfega: <strong>${gustShow} m/s</strong>` : ""}
             </div>
           </div>

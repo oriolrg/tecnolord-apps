@@ -4,6 +4,7 @@ import { $ } from "../dom.js";
 import { clamp } from "../format.js";
 import { refreshMeteo } from "./meteoScreen.js";
 import { refreshHidro } from "./hidroScreen.js";
+import { renderTecnolordHeader } from "../components/tecnolordHeader.js";
 
 function readUrlParams(store) {
   const url = new URL(location.href);
@@ -22,6 +23,12 @@ function readUrlParams(store) {
 function buildUI(root, store) {
   root.innerHTML = `
     <div class="wrap">
+      ${renderTecnolordHeader({
+        title: "MeteoLord",
+        iconHref: "/assets/icons/icon-192.png",
+        homeHref: "/",
+        rightHtml: `<button class="btn secondary" disabled title="Properament">Inicia sessió</button>`,
+      })}
 
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>

@@ -427,3 +427,74 @@ th{
   .card{ height: 100%; }
   .card--tall{ grid-row: span 2; }
 }
+/* ---------- Tecnolord shared header ---------- */
+.tl-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+
+  padding: 12px 14px;
+  margin: 0 0 12px;
+
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.tl-brand{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  text-decoration:none;
+  color: var(--text);
+  min-width: 0;
+}
+
+.tl-logo{
+  border-radius: 10px;
+  flex: 0 0 auto;
+  box-shadow: 0 6px 14px rgba(0,0,0,.12);
+}
+
+.tl-brandtext{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tl-title{
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  font-size: var(--fs-2);
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 58vw;
+}
+
+.tl-subtitle{
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+.tl-right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 520px){
+  .tl-subtitle{ display:none; }
+  .tl-header{ padding: 10px 12px; }
+  .tl-title{ max-width: 52vw; font-size: var(--fs-1); }
+}
