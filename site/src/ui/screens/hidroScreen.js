@@ -81,12 +81,6 @@ export async function refreshHidro(ui, store) {
       value: sortida == null ? "—" : fmt1(sortida),
       unit: "m³/s",
       badge: "Últim",
-      subHtml: `
-        ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
-        ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
-        ${cabalValls != null ? ` · Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ""}
-        ${deltaHtml}
-      `,
     });
     cCabal.classList.add("card--tall");
 
