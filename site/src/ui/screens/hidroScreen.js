@@ -59,19 +59,16 @@ export async function refreshHidro(ui, store) {
     const cabalCardener = num(rowCardener?.cabal_m3s);
     const cabalValls = num(rowValls?.cabal_m3s);
     const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
-    const delta = (sortida == null ? null : (entradaTotal - sortida));
+    const delta = sortida == null ? null : (entradaTotal - sortida);
 
-    let deltaHtml = "";
-    if (sortida != null && (cabalCardener != null || cabalValls != null)) {
-      const cls = delta >= 0 ? "ok" : "bad";
-      const arrow = delta >= 0 ? "↑" : "↓";
-      const txt = delta >= 0 ? "Entrada > sortida" : "Sortida > entrada";
-      deltaHtml = `
-        <span class="sep"></span>
-        <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
-        <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
-        <span class="delta ${cls}">${arrow} Balanç: ${fmt1(delta)} m³/s · ${txt}</span>
-      `;
+    // --- Estat simple: s'omple / es buida ---
+    let estatHtml = "";
+    if (delta != null) {
+      if (delta >= 0) {
+        estatHtml = `<span class="delta ok">↑ S’omple</span>`;
+      } else {
+        estatHtml = `<span class="delta bad">↓ Es buida</span>`;
+      }
     }
 
     if (ui.hidroCards) ui.hidroCards.innerHTML = "";
@@ -82,8 +79,8 @@ export async function refreshHidro(ui, store) {
       unit: "m³/s",
       badge: "Últim",
       subHtml: `
-        ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
         ${deltaHtml}
+        ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
       `,
     });
     cCabal.classList.add("card--tall");
