@@ -211,13 +211,22 @@ input:focus, button:focus{
   justify-content:center;
 }
 
+.wind-block{
+  width: 100%;
+  flex: 1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
 .wind-rose{
+  display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 1 / 1;
-  max-width: 320px;
-  opacity: .95;
+  max-width: none;   /* ✅ clau: treu el límit */
 }
+
 
 
 .card{

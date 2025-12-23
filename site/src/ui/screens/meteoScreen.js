@@ -36,22 +36,22 @@ export async function refreshMeteo(ui, store) {
     const pAbs = num(r0.pressio_abs_hpa ?? r0.pressure_abs_hpa);
     const uvi = num(r0.uvi);
     const solar = num(r0.solar_wm2);
+
     const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
-    const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
     const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
+    const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
     const rainMonth = num(r0.pluja_mes_mm ?? r0.rain_month_mm);
     const rainYear = num(r0.pluja_any_mm ?? r0.rain_year_mm);
+
     const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
 
-    // direcció normalitzada (0..359)
     const deg =
       wdir == null || Number.isNaN(wdir)
         ? null
         : ((wdir % 360) + 360) % 360;
 
-    // volem mostrar CAP ON VA el vent (invertim)
     const arrowDeg = deg == null ? null : (deg + 180) % 360;
 
     const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
@@ -121,16 +121,22 @@ export async function refreshMeteo(ui, store) {
     });
     cWind.classList.add("card--tall");
 
-    // ✅ PLUJA UNIFICADA
-    const cRain = card({
-      title: "Pluja",
+    // ✅ Pluja “ara” (millor per previsió/estat)
+    const cRainNow = card({
+      title: "Pluja ara",
+      value: rainRate == null ? "—" : fmt1(rainRate),
+      unit: "mm/h",
+      badge: "Taxa",
+      subHtml: `${rain1h != null ? `1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}`,
+    });
+
+    // ✅ Pluja acumulada (context)
+    const cRainAcc = card({
+      title: "Pluja acumulada",
       value: fmt1(rainDay),
       unit: "mm",
-      badge: "Avui",
+      badge: "Dia",
       subHtml: `
-        ${rainRate != null ? `Taxa: <strong>${fmt1(rainRate)} mm/h</strong>` : ""}
-        ${rain1h != null ? ` · 1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}
-        ${(rainMonth != null || rainYear != null) ? `<span class="sep"></span>` : ""}
         ${rainMonth != null ? `Mes: <strong>${fmt1(rainMonth)} mm</strong>` : ""}
         ${rainYear != null ? ` · Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}
       `,
@@ -144,8 +150,15 @@ export async function refreshMeteo(ui, store) {
       subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
     });
 
-    // Cards (ara pluja és una sola)
-    ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
+    ui.meteoCards.append(
+      cTemp,
+      cHum,
+      cPress,
+      cWind,
+      cRainNow,
+      cRainAcc,
+      cUv
+    );
 
     renderMeteoTable(ui.meteoTbody, rows);
   } catch (e) {
