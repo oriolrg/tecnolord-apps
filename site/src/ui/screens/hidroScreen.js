@@ -61,17 +61,16 @@ export async function refreshHidro(ui, store) {
     const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
     const delta = (sortida == null ? null : (entradaTotal - sortida));
 
+    // només “S’omple / Es buida”
     let deltaHtml = "";
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
       const cls = delta >= 0 ? "ok" : "bad";
-      const arrow = delta >= 0 ? "↑" : "↓";
       const txt = delta >= 0 ? "S’omple" : "Es buida";
-
       deltaHtml = `
         <span class="sep"></span>
         <span>Entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
         <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
-        <span class="delta ${cls}">${arrow} ${txt}</span>
+        <span class="delta ${cls}">${txt}</span>
       `;
     }
 
@@ -81,20 +80,22 @@ export async function refreshHidro(ui, store) {
       title: "Cabal (balanç)",
       value: sortida == null ? "—" : fmt1(sortida),
       unit: "m³/s",
-      badge: `${rowLlosa.nom}`,
+      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
       subHtml: `
         ${deltaHtml}
-        ${instantLlosa ? `<strong>${fmtTime(instantLlosa)}</strong>` : ""}
+        ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
       `,
     });
-    cCabal.classList.add("card--tall");
+
+    // ✅ fer-la “alta” com el vent per omplir blancs
+    cCabal.classList.add("card--tall", "card--wind");
 
     const cCap = card({
       title: "Capacitat",
       value: cap == null ? "—" : fmt1(cap),
       unit: "%",
-      badge: `${rowLlosa.nom}`,
-      subHtml: ``,
+      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
     });
 
     const extras = [];
@@ -119,7 +120,6 @@ export async function refreshHidro(ui, store) {
 
     if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, ...extras);
 
-    // render taula si existeix
     if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
   } catch (e) {
     if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
