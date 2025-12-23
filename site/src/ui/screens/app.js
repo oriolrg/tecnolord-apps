@@ -1,232 +1,148 @@
-import { CONFIG } from "./config.js";
+import { CONFIG } from "../../config.js";
+import { createStore } from "../../state/store.js";
+import { $ } from "../dom.js";
+import { clamp } from "../format.js";
 import { refreshMeteo } from "./meteoScreen.js";
 import { refreshHidro } from "./hidroScreen.js";
-import { loadStationOptions, loadHidroCodes } from "./services/optionsService.js";
-import { copyDashboardText } from "./utils/copy.js";
-import { renderTecnolordHeader } from "./tecnolordHeader.js";
+import { renderTecnolordHeader } from "../components/tecnolordHeader.js";
 
-const $ = (sel, root = document) => root.querySelector(sel);
+function readUrlParams(store) {
+  const url = new URL(location.href);
+  const estFromUrl = url.searchParams.get("estacio") || url.searchParams.get("station_id");
+  const limFromUrl = url.searchParams.get("limit");
+  const codiFromUrl = url.searchParams.get("codi_hidro") || url.searchParams.get("codi");
+
+  const patch = {};
+  if (estFromUrl) patch.estacio = estFromUrl;
+  if (limFromUrl) patch.limit = String(clamp(parseInt(limFromUrl, 10) || CONFIG.defaultLimit, 1, CONFIG.maxLimit));
+  if (codiFromUrl) patch.codiHidro = codiFromUrl;
+
+  store.set(patch);
+}
 
 function buildUI(root, store) {
   root.innerHTML = `
-${renderTecnolordHeader({ title: "Meteo & Hidro" })}
+    ${renderTecnolordHeader({
+      title: CONFIG.appTitle,
+      subtitle: CONFIG.appSubtitle,
+      icon: CONFIG.appIcon,
+      actionLabel: "Inicia sessió",
+    })}
 
-<div class="wrap">
-  <div class="status-row">
-    <span class="pill"><span class="dot"></span><span id="last">—</span></span>
-    <span id="err" class="err" role="alert" aria-live="polite"></span>
-  </div>
+    <div class="wrap">
 
-  <div class="top-tabs" role="tablist" aria-label="Navegació">
-    <button class="tab is-active" id="tab-data" type="button" role="tab" aria-controls="page-data" aria-selected="true">Dades</button>
-    <button class="tab" id="tab-tables" type="button" role="tab" aria-controls="page-tables" aria-selected="false">Taules</button>
-  </div>
+      <div class="status-row">
+        <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
+        <span id="err" class="err" role="alert" aria-live="polite"></span>
+      </div>
 
-  <div id="header-controls" class="header-controls">
-    <label class="f">
-      <span>Estació</span>
-      <select id="estacio"></select>
-    </label>
-    <label class="f">
-      <span>Límit</span>
-      <select id="limit">
-        <option value="24">24</option>
-        <option value="48" selected>48</option>
-        <option value="96">96</option>
-        <option value="192">192</option>
-      </select>
-    </label>
-    <label class="f f--inline">
-      <input id="auto" type="checkbox" checked />
-      <span>Auto</span>
-    </label>
-    <button id="btn-refresh" class="btn secondary" type="button">Actualitza</button>
-    <button id="btn-copy" class="btn" type="button">Copia</button>
-  </div>
+      <!-- METEO -->
+      <div class="section-title">
+        <p id="meteo-summary">—</p>
+      </div>
 
-  <section id="page-data" class="page" role="tabpanel" aria-labelledby="tab-data">
-    <div class="section-title"><h2>Meteo</h2></div>
-    <div class="grid" id="meteo-cards"></div>
+      <div class="grid" id="meteo-cards"></div>
 
-    <div class="section-title" style="margin-top:22px"><h2>Hidro</h2></div>
+      <details>
+        <summary>Últims registres (taula) <span class="badge" id="meteo-count">0</span></summary>
+        <div class="detail-body">
+          <div class="table-wrap">
+            <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Temp (°C)</th>
+                  <th>Sensació (°C)</th>
+                  <th>Rosada (°C)</th>
+                  <th>Hum (%)</th>
+                  <th>Pressió rel (hPa)</th>
+                  <th>Pressió abs (hPa)</th>
+                  <th>UVI</th>
+                  <th>Solar (W/m²)</th>
+                  <th>Taxa pluja (mm/h)</th>
+                  <th>Pluja dia</th>
+                  <th>Pluja 1h</th>
+                  <th>Pluja mes</th>
+                  <th>Pluja any</th>
+                  <th>Vent (m/s)</th>
+                  <th>Ràfega (m/s)</th>
+                  <th>Dir (°)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
 
-    <div id="hidro-controls" class="hidro-controls">
-      <label class="f">
-        <span>Codi</span>
-        <select id="codi-hidro"></select>
-      </label>
-      <button id="btn-hidro" class="btn secondary" type="button">Canvia</button>
-      <span id="err-h" class="err" role="alert" aria-live="polite"></span>
+      <!-- HIDRO -->
+      <div class="section-title" style="margin-top:22px">
+        <p id="hidro-summary">—</p>
+      </div>
+
+      <div class="grid" id="hidro-cards"></div>
+
+      <details>
+        <summary>Últims registres (taula) <span class="badge" id="hidro-count">0</span></summary>
+        <div class="detail-body">
+          <div class="table-wrap">
+            <table id="tbl-hidro" aria-label="Taula d'hidrologia">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Codi</th>
+                  <th>Nom</th>
+                  <th>Tipus</th>
+                  <th>Cabal (m³/s)</th>
+                  <th>Capacitat (%)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+
     </div>
+  `;
 
-    <div class="grid" id="hidro-cards"></div>
-  </section>
+  return {
+    // status
+    last: $("#last", root),
+    err: $("#err", root),
 
-  <section id="page-tables" class="page" role="tabpanel" aria-labelledby="tab-tables" hidden>
-    <div class="section-title"><h2>Taula Meteo</h2></div>
-    <div class="table-wrap">
-      <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
-        <thead>
-          <tr>
-            <th>Hora</th>
-            <th>Temp (°C)</th>
-            <th>Sensació (°C)</th>
-            <th>Rosada (°C)</th>
-            <th>Hum (%)</th>
-            <th>Pressió rel (hPa)</th>
-            <th>Pressió abs (hPa)</th>
-            <th>UVI</th>
-            <th>Solar (W/m²)</th>
-            <th>Taxa pluja (mm/h)</th>
-            <th>Pluja dia</th>
-            <th>Pluja 1h</th>
-            <th>Pluja mes</th>
-            <th>Pluja any</th>
-            <th>Vent (m/s)</th>
-            <th>Ràfega (m/s)</th>
-            <th>Dir (°)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    // meteo
+    meteoSummary: $("#meteo-summary", root),
+    meteoCards: $("#meteo-cards", root),
+    meteoCount: $("#meteo-count", root),
+    meteoTbody: $("#tbl-meteo tbody", root),
 
-    <div class="section-title" style="margin-top:22px"><h2>Taula Hidro</h2></div>
-    <div class="table-wrap">
-      <table id="tbl-hidro" aria-label="Taula d'hidrologia">
-        <thead>
-          <tr>
-            <th>Hora</th>
-            <th>Codi</th>
-            <th>Nom</th>
-            <th>Tipus</th>
-            <th>Cabal (m³/s)</th>
-            <th>Capacitat (%)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-</div>
-`.trim();
+    // hidro
+    hidroSummary: $("#hidro-summary", root),
+    hidroCards: $("#hidro-cards", root),
+    hidroCount: $("#hidro-count", root),
+    hidroTbody: $("#tbl-hidro tbody", root),
 
-  // Resta: options -> store -> refrescos
-  const estacioSel = $("#estacio", root);
-  const limitSel = $("#limit", root);
-
-  // Població d'opcions
-  loadStationOptions(estacioSel, store);
-  const hidroSel = $("#codi-hidro", root);
-  loadHidroCodes(hidroSel, store);
+    // optional error slot
+    errH: null,
+  };
 }
 
 export function initApp(root) {
-  const store = {
-    estacio: CONFIG.DEFAULT_STATION,
-    limit: CONFIG.DEFAULT_LIMIT,
-    auto: true,
-    hidroCode: CONFIG.DEFAULT_HIDRO_CODE
-  };
+  const store = createStore();
+  readUrlParams(store);
 
-  buildUI(root, store);
-
-  const ui = {
-    tabData: $("#tab-data", root),
-    tabTables: $("#tab-tables", root),
-    pageData: $("#page-data", root),
-    pageTables: $("#page-tables", root),
-    last: $("#last", root),
-    err: $("#err", root),    meteoCards: $("#meteo-cards", root),
-    tblMeteo: $("#tbl-meteo tbody", root),
-    estacio: $("#estacio", root),
-    limit: $("#limit", root),
-    auto: $("#auto", root),
-    btnRefresh: $("#btn-refresh", root),
-    btnCopy: $("#btn-copy", root),
-    hidroCards: $("#hidro-cards", root),
-    codiHidro: $("#codi-hidro", root),
-    btnHidro: $("#btn-hidro", root),
-    errH: $("#err-h", root)
-  };
-
-  function setRoute(route) {
-    const isTables = route === "tables";
-    ui.pageTables.hidden = !isTables;
-    ui.pageData.hidden = isTables;
-
-    ui.tabTables.setAttribute("aria-selected", String(isTables));
-    ui.tabData.setAttribute("aria-selected", String(!isTables));
-    ui.tabTables.classList.toggle("is-active", isTables);
-    ui.tabData.classList.toggle("is-active", !isTables);
-  }
-
-  function currentRoute() {
-    const h = (location.hash || "").replace(/^#\/?/, "");
-    if (h.startsWith("taules") || h.startsWith("tables")) return "tables";
-    return "data";
-  }
-
-  ui.tabData.addEventListener("click", () => { location.hash = "#/dades"; });
-  ui.tabTables.addEventListener("click", () => { location.hash = "#/taules"; });
-  window.addEventListener("hashchange", () => setRoute(currentRoute()));
-  setRoute(currentRoute());
-
-  // Defaults
-  ui.estacio.value = store.estacio;
-  ui.limit.value = String(store.limit);
-  ui.auto.checked = store.auto;
-  ui.codiHidro.value = store.hidroCode;
+  const ui = buildUI(root, store);
 
   let timer = null;
 
-  async function doRefresh() {
-    await Promise.all([
-      refreshMeteo(ui, store),
-      refreshHidro(ui, store)
-    ]);
+  if (store.get().auto) {
+    timer = setInterval(async () => {
+      await refreshMeteo(ui, store);
+      await refreshHidro(ui, store);
+    }, CONFIG.autoRefreshMs);
   }
 
-  function startAuto() {
-    stopAuto();
-    timer = setInterval(doRefresh, CONFIG.REFRESH_MS);
-  }
-
-  function stopAuto() {
-    if (timer) clearInterval(timer);
-    timer = null;
-  }
-
-  ui.estacio.addEventListener("change", async () => {
-    store.estacio = ui.estacio.value;
-    await doRefresh();
-  });
-
-  ui.limit.addEventListener("change", async () => {
-    store.limit = Number(ui.limit.value);
-    await doRefresh();
-  });
-
-  ui.auto.addEventListener("change", () => {
-    store.auto = ui.auto.checked;
-    if (store.auto) startAuto();
-    else stopAuto();
-  });
-
-  ui.btnRefresh.addEventListener("click", doRefresh);
-
-  ui.btnCopy.addEventListener("click", () => {
-    copyDashboardText(root);
-  });
-
-  ui.btnHidro.addEventListener("click", async () => {
-    store.hidroCode = ui.codiHidro.value;
-    await doRefresh();
-  });
-
-  // primera càrrega
-  doRefresh();
-  if (store.auto) startAuto();
-
-  return () => stopAuto();
+  refreshMeteo(ui, store);
+  refreshHidro(ui, store);
 }
