@@ -69,7 +69,7 @@ export async function refreshHidro(ui, store) {
 
       deltaHtml = `
         <span class="sep"></span>
-        <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
+        <span>Entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
         <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
         <span class="delta ${cls}">${arrow} ${txt}</span>
       `;
@@ -81,10 +81,10 @@ export async function refreshHidro(ui, store) {
       title: "Cabal (balanç)",
       value: sortida == null ? "—" : fmt1(sortida),
       unit: "m³/s",
-      badge: "Últim",
+      badge: `${rowLlosa.nom}`,
       subHtml: `
         ${deltaHtml}
-        ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
+        ${instantLlosa ? `<strong>${fmtTime(instantLlosa)}</strong>` : ""}
       `,
     });
     cCabal.classList.add("card--tall");
@@ -93,8 +93,8 @@ export async function refreshHidro(ui, store) {
       title: "Capacitat",
       value: cap == null ? "—" : fmt1(cap),
       unit: "%",
-      badge: "Últim",
-      subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
+      badge: `${rowLlosa.nom}`,
+      subHtml: ``,
     });
 
     const extras = [];
@@ -104,7 +104,7 @@ export async function refreshHidro(ui, store) {
         value: fmt1(cabalCardener),
         unit: "m³/s",
         badge: "Riu",
-        subHtml: rowCardener?.instant ? `Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : "",
+        subHtml: rowCardener?.instant ? `<strong>${fmtTime(rowCardener.instant)}</strong>` : "",
       }));
     }
     if (cabalValls != null) {
@@ -113,7 +113,7 @@ export async function refreshHidro(ui, store) {
         value: fmt1(cabalValls),
         unit: "m³/s",
         badge: "Riu",
-        subHtml: rowValls?.instant ? `Hora: <strong>${fmtTime(rowValls.instant)}</strong>` : "",
+        subHtml: rowValls?.instant ? `<strong>${fmtTime(rowValls.instant)}</strong>` : "",
       }));
     }
 
