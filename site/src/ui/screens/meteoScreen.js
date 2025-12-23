@@ -40,8 +40,8 @@ export async function refreshMeteo(ui, store) {
     const solar = num(r0.solar_wm2);
 
     // PLUJA
-    const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);     // intensitat (mm/h) -> VALOR GRAN
-    const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm); // diari -> secundari fort
+    const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph); // mm/h
+    const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm); // mm
     const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
     const rainWeek = num(r0.pluja_setmana_mm ?? r0.rain_week_mm);
     const rainEvent = num(r0.pluja_event_mm ?? r0.rain_event_mm);
@@ -58,7 +58,6 @@ export async function refreshMeteo(ui, store) {
         ? null
         : ((wdir % 360) + 360) % 360;
 
-    // mostrar CAP ON VA el vent (invertim)
     const arrowDeg = deg == null ? null : (deg + 180) % 360;
 
     const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
@@ -75,7 +74,7 @@ export async function refreshMeteo(ui, store) {
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
     ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
 
-    // --- VENT: sempre mostrar, amb — si és null ---
+    // --- VENT: sempre mostrar (— si null) ---
     const windVal = (wind == null || Number.isNaN(wind)) ? "—" : fmt1(wind);
     const gustVal = (gust == null || Number.isNaN(gust)) ? "—" : fmt1(gust);
 
@@ -84,20 +83,22 @@ export async function refreshMeteo(ui, store) {
       · Ràfega: <strong>${gustVal} m/s</strong>
     `;
 
-    // --- PLUJA: valor gran = taxa (mm/h), secundari fort = dia, resta secundaris ---
+    // --- PLUJA: valor gran = taxa (mm/h) o — (sense cap fallback) ---
     const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
     const rainMainUnit = "mm/h";
 
     const plujaLines = [];
-    // secundari fort: dia
-    plujaLines.push(`Dia: <strong>${(rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay)} mm</strong>`);
 
-    // secundaris: només si existeixen
-    if (rain1h != null) plujaLines.push(`<span class="muted">1h: ${fmt1(rain1h)} mm</span>`);
-    if (rainWeek != null) plujaLines.push(`<span class="muted">Setmana: ${fmt1(rainWeek)} mm</span>`);
-    if (rainEvent != null) plujaLines.push(`<span class="muted">Event: ${fmt1(rainEvent)} mm</span>`);
-    if (rainMonth != null) plujaLines.push(`<span class="muted">Mes: ${fmt1(rainMonth)} mm</span>`);
-    if (rainYear != null) plujaLines.push(`<span class="muted">Any: ${fmt1(rainYear)} mm</span>`);
+    // Dia (sempre la línia, encara que sigui —)
+    const dayTxt = (rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay);
+    plujaLines.push(`Dia: <strong>${dayTxt} mm</strong>`);
+
+    // Secundaris (només si existeixen)
+    if (rain1h != null && !Number.isNaN(rain1h)) plujaLines.push(`<span class="muted">1h: ${fmt1(rain1h)} mm</span>`);
+    if (rainWeek != null && !Number.isNaN(rainWeek)) plujaLines.push(`<span class="muted">Setmana: ${fmt1(rainWeek)} mm</span>`);
+    if (rainEvent != null && !Number.isNaN(rainEvent)) plujaLines.push(`<span class="muted">Event: ${fmt1(rainEvent)} mm</span>`);
+    if (rainMonth != null && !Number.isNaN(rainMonth)) plujaLines.push(`<span class="muted">Mes: ${fmt1(rainMonth)} mm</span>`);
+    if (rainYear != null && !Number.isNaN(rainYear)) plujaLines.push(`<span class="muted">Any: ${fmt1(rainYear)} mm</span>`);
 
     ui.meteoCards.innerHTML = "";
 
@@ -157,7 +158,6 @@ export async function refreshMeteo(ui, store) {
       subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
     });
 
-    // Ordre
     ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
 
     renderMeteoTable(ui.meteoTbody, rows);

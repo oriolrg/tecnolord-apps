@@ -1,7 +1,7 @@
 export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {}) {
   const safeTitle = title || "Tecnolord";
   const safeSubtitle = subtitle || "";
-  const safeIcon = (icon || "./assets/images/meteolord.png").trim();
+  const safeIcon = (icon || "./assets/icons/favicon.svg").trim();
   const safeAction = actionLabel || "Inicia sessió";
 
   return `
