@@ -34,6 +34,7 @@ function buildUI(root, store) {
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
         <span id="err" class="err" role="alert" aria-live="polite"></span>
+        <span id="err-h" class="err" role="alert" aria-live="polite"></span>
       </div>
 
       <div class="section-title">
@@ -46,9 +47,9 @@ function buildUI(root, store) {
         <div id="cards-hidro" class="cards-group"></div>
       </div>
 
-      <!-- A la home mantenim només la taula meteo (hidro anirà a una altra screen) -->
+      <!-- METEO: taula últims registres -->
       <details>
-        <summary>Últims registres (taula) <span class="badge" id="meteo-count">0</span></summary>
+        <summary>Últims registres (meteo) <span class="badge" id="meteo-count">0</span></summary>
         <div class="detail-body">
           <div class="table-wrap">
             <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
@@ -79,6 +80,28 @@ function buildUI(root, store) {
         </div>
       </details>
 
+      <!-- HIDRO: taula últims registres -->
+      <details style="margin-top:12px">
+        <summary>Últims registres (hidro) <span class="badge" id="hidro-count">0</span></summary>
+        <div class="detail-body">
+          <div class="table-wrap">
+            <table id="tbl-hidro" aria-label="Taula d'hidrologia">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Codi</th>
+                  <th>Nom</th>
+                  <th>Tipus</th>
+                  <th>Cabal (m³/s)</th>
+                  <th>Capacitat (%)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+
     </div>
   `;
 
@@ -86,6 +109,7 @@ function buildUI(root, store) {
     // status
     last: $("#last", root),
     err: $("#err", root),
+    errH: $("#err-h", root),
 
     // summary meteo
     meteoSummary: $("#meteo-summary", root),
@@ -95,17 +119,16 @@ function buildUI(root, store) {
     cardsMeteo: $("#cards-meteo", root),
     cardsHidro: $("#cards-hidro", root),
 
-    // meteo
+    // meteo (taula)
     meteoCount: $("#meteo-count", root),
     meteoTbody: $("#tbl-meteo tbody", root),
 
-    // hidro placeholders (home no els fa servir)
-    hidroSummary: null,
-    hidroCount: null,
-    hidroTbody: null,
+    // hidro (taula)
+    hidroCount: $("#hidro-count", root),
+    hidroTbody: $("#tbl-hidro tbody", root),
 
-    // errors
-    errH: null,
+    // placeholders (hidroSummary no el mostrem a home)
+    hidroSummary: null,
 
     // will be assigned after buildUI
     meteoCards: null,

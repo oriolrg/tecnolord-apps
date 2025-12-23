@@ -24,13 +24,10 @@ export async function refreshHidro(ui, store) {
     if (ui.hidroCount) ui.hidroCount.textContent = String(rows.length);
 
     if (!rows.length) {
-      if (ui.hidroSummary) ui.hidroSummary.textContent = "Sense registres.";
       if (ui.hidroCards) ui.hidroCards.innerHTML = "";
       if (ui.hidroTbody) ui.hidroTbody.innerHTML = "";
       return;
     }
-
-    if (ui.hidroSummary) ui.hidroSummary.textContent = `${rows.length} registres`;
 
     const rowLlosa = pickRow(rows, [
       r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
@@ -121,10 +118,9 @@ export async function refreshHidro(ui, store) {
       }));
     }
 
-    // Ordre: cabal (alta) + resta
     if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, ...extras);
 
-    // Taula només si existeix (a la home no hi és)
+    // render taula si existeix
     if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
   } catch (e) {
     if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
