@@ -100,7 +100,7 @@ export async function refreshHidro(ui, store) {
     const extras = [];
     if (cabalCardener != null) {
       extras.push(card({
-        title: "Entrada",
+        title: "Cabal",
         value: fmt1(cabalCardener),
         unit: "m³/s",
         badge: "Riu Cardener",
@@ -109,7 +109,7 @@ export async function refreshHidro(ui, store) {
     }
     if (cabalValls != null) {
       extras.push(card({
-        title: "Entrada",
+        title: "Cabal",
         value: fmt1(cabalValls),
         unit: "m³/s",
         badge: "Riu de Valls",
