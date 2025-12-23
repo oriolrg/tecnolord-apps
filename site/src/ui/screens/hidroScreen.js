@@ -61,7 +61,7 @@ export async function refreshHidro(ui, store) {
     const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
     const delta = (sortida == null ? null : (entradaTotal - sortida));
 
-    // només “S’omple / Es buida”
+    // només “S’omple / Es buida” + entrada/sortida
     let deltaHtml = "";
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
       const cls = delta >= 0 ? "ok" : "bad";
@@ -76,6 +76,7 @@ export async function refreshHidro(ui, store) {
 
     if (ui.hidroCards) ui.hidroCards.innerHTML = "";
 
+    // 1) CABAL (ALT)
     const cCabal = card({
       title: "Cabal (balanç)",
       value: sortida == null ? "—" : fmt1(sortida),
@@ -86,10 +87,9 @@ export async function refreshHidro(ui, store) {
         ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
       `,
     });
-
-    // ✅ fer-la “alta” com el vent per omplir blancs
     cCabal.classList.add("card--tall", "card--wind");
 
+    // 2) CAPACITAT (ALT també, per omplir el buit central)
     const cCap = card({
       title: "Capacitat",
       value: cap == null ? "—" : fmt1(cap),
@@ -97,28 +97,29 @@ export async function refreshHidro(ui, store) {
       badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
       subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
     });
+    cCap.classList.add("card--tall", "card--wind");
 
-    const extras = [];
+    // 3) ENTRADES AGRUPADES (una sola card)
+    const entradesParts = [];
     if (cabalCardener != null) {
-      extras.push(card({
-        title: "Cabal",
-        value: fmt1(cabalCardener),
-        unit: "m³/s",
-        badge: "Riu Cardener",
-        subHtml: rowCardener?.instant ? `<strong>${fmtTime(rowCardener.instant)}</strong>` : "",
-      }));
+      entradesParts.push(`Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>${rowCardener?.instant ? ` · <span class="muted">${fmtTime(rowCardener.instant)}</span>` : ""}`);
     }
     if (cabalValls != null) {
-      extras.push(card({
-        title: "Cabal",
-        value: fmt1(cabalValls),
-        unit: "m³/s",
-        badge: "Riu de Valls",
-        subHtml: rowValls?.instant ? `<strong>${fmtTime(rowValls.instant)}</strong>` : "",
-      }));
+      entradesParts.push(`Valls: <strong>${fmt1(cabalValls)} m³/s</strong>${rowValls?.instant ? ` · <span class="muted">${fmtTime(rowValls.instant)}</span>` : ""}`);
     }
 
-    if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, ...extras);
+    const cEntrades = card({
+      title: "Entrades (rius)",
+      value: (cabalCardener == null && cabalValls == null) ? "—" : fmt1(entradaTotal),
+      unit: "m³/s",
+      badge: "Total",
+      subHtml: entradesParts.length
+        ? entradesParts.join(`<span class="sep"></span>`)
+        : "",
+    });
+
+    // Ordre: cabal alt + capacitat alta + entrades
+    if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, cEntrades);
 
     if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
   } catch (e) {
