@@ -4,7 +4,7 @@ import { $ } from "../dom.js";
 import { clamp } from "../format.js";
 import { refreshMeteo } from "./meteoScreen.js";
 import { refreshHidro } from "./hidroScreen.js";
-import { renderTecnolordHeader, wireTecnolordHeader } from "../components/tecnolordHeader.js";
+import { renderTecnolordHeader, wireTecnolordHeader } from "../tecnolordHeader.js";
 
 function readUrlParams(store) {
   const url = new URL(location.href);
