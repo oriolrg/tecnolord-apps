@@ -1,131 +1,84 @@
-import { card } from "../components/card.js";
-import { fmtTime, num, fmt1, clamp, norm } from "../format.js";
-import { fetchHidro } from "../../services/hidroService.js";
-import { renderHidroTable } from "../components/tableHidro.js";
+import { CONFIG } from "./config.js";
+import { createCard } from "./card.js";
+import { renderHidroTable } from "./tableHidro.js";
+import { fetchHidro } from "./services/hidroService.js";
+import { fmtTime, fmt1 } from "./utils/format.js";
 
-function pickRow(rows, predicates) {
-  for (const pred of predicates) {
-    const found = rows.find(pred);
-    if (found) return found;
-  }
-  return null;
+function pickRow(rows, code) {
+  return rows?.find((r) => String(r?.codi) === String(code)) || null;
 }
 
 export async function refreshHidro(ui, store) {
-  if (ui.errH) ui.errH.textContent = "";
-
-  const s = store.get();
-  const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
-  const codi = (s.codiHidro || "").trim();
-
   try {
-    const rows = await fetchHidro({ codi, limit });
+    ui.errH.textContent = "";
+    const rows = await fetchHidro(store.hidroCode, CONFIG.HIDRO_LIMIT);
 
-    ui.hidroCount.textContent = String(rows.length);
+    const last = rows?.[0];
+    const lastTime = last?.hora ? fmtTime(last.hora) : "—";
 
-    if (!rows.length) {
-      ui.hidroSummary.textContent = "Sense registres.";
-      ui.hidroCards.innerHTML = "";
-      ui.hidroTbody.innerHTML = "";
-      return;
-    }
+    const rowSortida = pickRow(rows, store.hidroCode);
+    const rowCardener = pickRow(rows, CONFIG.HIDRO_CARDENER);
+    const rowValls = pickRow(rows, CONFIG.HIDRO_VALLS);
+    const rowLlosa = pickRow(rows, CONFIG.HIDRO_LLOSA);
 
-    ui.hidroSummary.textContent = `${rows.length} registres`;
+    const sortida = rowSortida?.cabal != null ? rowSortida.cabal : null;
+    const inCardener = rowCardener?.cabal != null ? rowCardener.cabal : null;
+    const inValls = rowValls?.cabal != null ? rowValls.cabal : null;
 
-    const rowLlosa = pickRow(rows, [
-      r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
-      r => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
-    ]);
+    const totalEntrada =
+      (inCardener ?? 0) + (inValls ?? 0);
 
-    const rowCardener = pickRow(rows, [
-      r => norm(r.nom).includes("cardener"),
-      r => norm(r.codi).includes("cardener"),
-    ]);
-
-    const rowValls = pickRow(rows, [
-      r => norm(r.nom).includes("valls"),
-      r => norm(r.codi).includes("valls"),
-    ]);
-
-    const instantLlosa = rowLlosa?.instant ?? null;
-    const cap = num(rowLlosa?.capacitat_pct);
-
-    let sortida = num(rowLlosa?.cabal_m3s);
-    if (sortida == null) {
-      const rowSortida = pickRow(rows, [
-        r => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
-        r => norm(r.codi).includes("sortida") && (norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")),
-      ]);
-      sortida = num(rowSortida?.cabal_m3s);
-    }
-
-    const cabalCardener = num(rowCardener?.cabal_m3s);
-    const cabalValls = num(rowValls?.cabal_m3s);
-    const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
-    const delta = (sortida == null ? null : (entradaTotal - sortida));
+    let delta = null;
+    if (sortida != null) delta = totalEntrada - sortida;
 
     let deltaHtml = "";
-    if (sortida != null && (cabalCardener != null || cabalValls != null)) {
-      const cls = delta >= 0 ? "ok" : "bad";
-      const arrow = delta >= 0 ? "↑" : "↓";
-      const txt = delta >= 0 ? "Entrada > sortida" : "Sortida > entrada";
-      deltaHtml = `
-        <span class="sep"></span>
-        <span>Total entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
-        <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
-        <span class="delta ${cls}">${arrow} Balanç: ${fmt1(delta)} m³/s · ${txt}</span>
-      `;
+    if (delta != null) {
+      const sign = delta >= 0 ? "+" : "";
+      deltaHtml = `<br/><span class="muted">Balanç:</span> <strong>${sign}${fmt1(delta)} m³/s</strong>`;
     }
 
-    ui.hidroCards.innerHTML = "";
+    const cards = [];
 
-    const cCabal = card({
-      title: "Cabal (balanç)",
-      value: sortida == null ? "—" : fmt1(sortida),
-      unit: "m³/s",
-      badge: "Últim",
-      subHtml: `
-        ${instantLlosa ? `Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
-        ${cabalCardener != null ? ` · Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>` : ""}
-        ${cabalValls != null ? ` · Valls: <strong>${fmt1(cabalValls)} m³/s</strong>` : ""}
-        ${deltaHtml}
-      `,
-    });
-    cCabal.classList.add("card--tall");
+    cards.push(
+      createCard({
+        title: "Cabal (balanç)",
+        value: sortida == null ? "—" : `${fmt1(sortida)} m³/s`,
+        sub: lastTime === "—" ? "" : "",
+        subHtml: `
+          ${rowLlosa && rowLlosa["capacitat_pct"] != null ? `Capacitat: <strong>${fmt1(rowLlosa["capacitat_pct"])}%</strong>` : ""}
+          ${rowLlosa && rowLlosa["nom"] ? `<br/>Estació: <strong>${rowLlosa["nom"]}</strong>` : ""}
+          ${deltaHtml}
+          <br/>Total entrada: <strong>${fmt1(totalEntrada)} m³/s</strong>
+          <br/>Sortida: <strong>${sortida == null ? "—" : fmt1(sortida)} m³/s</strong>
+        `,
+        icon: "water"
+      })
+    );
 
-    const cCap = card({
-      title: "Capacitat",
-      value: cap == null ? "—" : fmt1(cap),
-      unit: "%",
-      badge: "Últim",
-      subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
-    });
-
-    const extras = [];
-    if (cabalCardener != null) {
-      extras.push(card({
+    cards.push(
+      createCard({
         title: "Cardener (entrada)",
-        value: fmt1(cabalCardener),
-        unit: "m³/s",
-        badge: "Riu",
-        subHtml: rowCardener?.instant ? `Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : "",
-      }));
-    }
-    if (cabalValls != null) {
-      extras.push(card({
+        value: inCardener == null ? "—" : `${fmt1(inCardener)} m³/s`,
+        sub: rowCardener?.nom ? rowCardener.nom : "",
+        icon: "river"
+      })
+    );
+
+    cards.push(
+      createCard({
         title: "Valls (entrada)",
-        value: fmt1(cabalValls),
-        unit: "m³/s",
-        badge: "Riu",
-        subHtml: rowValls?.instant ? `Hora: <strong>${fmtTime(rowValls.instant)}</strong>` : "",
-      }));
-    }
+        value: inValls == null ? "—" : `${fmt1(inValls)} m³/s`,
+        sub: rowValls?.nom ? rowValls.nom : "",
+        icon: "river"
+      })
+    );
 
-    // Ordre: cabal (alta) + resta
-    ui.hidroCards.append(cCabal, cCap, ...extras);
+    ui.hidroCards.innerHTML = cards.join("");
 
-    renderHidroTable(ui.hidroTbody, rows);
+    if (ui.tblHidro) renderHidroTable(ui.tblHidro, rows);
   } catch (e) {
-    if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
+    ui.errH.textContent = e?.message || String(e);
+    ui.hidroCards.innerHTML = "";
+    if (ui.tblHidro) ui.tblHidro.innerHTML = "";
   }
 }
