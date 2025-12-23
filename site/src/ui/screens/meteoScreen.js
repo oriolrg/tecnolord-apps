@@ -1,7 +1,5 @@
 import { card } from "../components/card.js";
-import { fmtTime, num, fmt1, clamp, degToCompass, degToArrow, windAbbr16, windFromCa } from "../format.js";
-import { windNameCa } from "../format.js";
-
+import { fmtTime, num, fmt1, clamp, windAbbr16, windFromCa, windNameCa } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
 import { renderMeteoTable } from "../components/tableMeteo.js";
 
@@ -36,23 +34,20 @@ export async function refreshMeteo(ui, store) {
     const pAbs = num(r0.pressio_abs_hpa ?? r0.pressure_abs_hpa);
     const uvi = num(r0.uvi);
     const solar = num(r0.solar_wm2);
+
     const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
     const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
     const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
     const rainMonth = num(r0.pluja_mes_mm ?? r0.rain_month_mm);
     const rainYear = num(r0.pluja_any_mm ?? r0.rain_year_mm);
+
     const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
 
-    // direcció normalitzada (0..359)
-    const deg =
-      wdir == null || Number.isNaN(wdir)
-        ? null
-        : ((wdir % 360) + 360) % 360;
-
-    // volem mostrar CAP ON VA el vent (invertim)
-    const arrowDeg = deg == null ? null : (deg + 180) % 360;
+    // wdir és “d’on ve”, volem mostrar “cap on va”
+    const deg = (wdir == null || Number.isNaN(wdir)) ? null : ((wdir % 360) + 360) % 360;
+    const arrowDeg = deg == null ? null : (deg + 180 + 180) % 360;
 
     const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
     const abbr = deg == null ? "—" : windAbbr16(deg);
@@ -68,72 +63,53 @@ export async function refreshMeteo(ui, store) {
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
     ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
 
-    const windSpeedHtml =
-      wind == null
-        ? "Velocitat: -"
-        : `Velocitat: <strong>${fmt1(wind)} m/s</strong>`;
-
-    const gustHtml =
-      gust != null && !Number.isNaN(gust) && gust > 0 && (wind == null || Math.abs(gust - wind) > 0.05)
-        ? ` · Ràfega: <strong>${fmt1(gust)} m/s</strong>`
-        : "";
+    const windSpeed = wind == null ? null : fmt1(wind);
+    const gustShow = (gust != null && !Number.isNaN(gust) && gust > 0 && (wind == null || Math.abs(gust - wind) > 0.05))
+      ? fmt1(gust)
+      : null;
 
     ui.meteoCards.innerHTML = "";
+    ui.meteoCards.append(
+      card({
+        title: "Temperatura",
+        value: fmt1(temp_c),
+        unit: "°C",
+        badge: "Última lectura",
+        subHtml: `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}`,
+      }),
+      card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Última lectura", subHtml: "" }),
+      card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` }),
 
-    const cTemp = card({
-      title: "Temperatura",
-      value: fmt1(temp_c),
-      unit: "°C",
-      badge: "Última lectura",
-      subHtml: `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}`,
-    });
-
-    const cHum = card({ title: "Humitat", value: hum == null ? "—" : Math.round(hum), unit: "%", badge: "Última lectura", subHtml: "" });
-
-    const cPress = card({ title: "Pressió (rel.)", value: fmt1(pRel), unit: "hPa", badge: "Relativa", subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}` });
-
-    const cWind = card({
-      title: fromTxt,
-      value: "",
-      unit: "",
-      badge: "Direcció",
-      subHtml: `
-        <div class="wind-tall">
-          <div class="wind-rose-wrap">
-            ${renderWindRoseSvg(arrowDeg, degTxt, abbr)}
+      // ⭐ Vent ocupa 2 files en desktop
+      card({
+        title: fromTxt,
+        value: "",
+        unit: "",
+        badge: "Direcció",
+        className: "card--tall",
+        subHtml: `
+          <div class="wind-tall">
+            <div class="wind-rose-wrap">
+              ${renderWindRoseSvg(arrowDeg, degTxt, abbr)}
+            </div>
+            <div class="wind-meta">
+              ${windSpeed == null ? "Velocitat: <span class='na'>-</span>" : `Velocitat: <strong>${windSpeed} m/s</strong>`}
+              ${gustShow ? ` · Ràfega: <strong>${gustShow} m/s</strong>` : ""}
+            </div>
           </div>
-          <div class="wind-meta">${windSpeedHtml}${gustHtml}</div>
-        </div>
-      `,
-    });
-    cWind.classList.add("card--tall");
+        `,
+      }),
 
-    const cRainDay = card({
-      title: "Pluja (dia)",
-      value: fmt1(rainDay),
-      unit: "mm",
-      badge: "Acumulada",
-      subHtml: `${rainRate != null ? `Taxa: <strong>${fmt1(rainRate)} mm/h</strong>` : ""}${rain1h != null ? ` · 1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}`,
-    });
-
-    const cRainMonth = card({
-      title: "Pluja (mes)",
-      value: fmt1(rainMonth),
-      unit: "mm",
-      badge: "Acumulada",
-      subHtml: `${rainYear != null ? `Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}`,
-    });
-
-    const cUv = card({
-      title: "UV",
-      value: uvi == null ? "—" : Math.round(uvi),
-      unit: "",
-      badge: "Índex",
-      subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
-    });
-
-    // Ordre: 3 normals + vent (alta) + 3 petites (s'omplen al seu costat)
-    ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRainDay, cRainMonth, cUv);
+      card({
+        title: "Pluja (dia)",
+        value: fmt1(rainDay),
+        unit: "mm",
+        badge: "Acumulada",
+        subHtml: `${rainRate != null ? `Taxa: <strong>${fmt1(rainRate)} mm/h</strong>` : ""}${rain1h != null ? ` · 1h: <strong>${fmt1(rain1h)} mm</strong>` : ""}`,
+      }),
+      card({ title: "Pluja (mes)", value: fmt1(rainMonth), unit: "mm", badge: "Acumulada", subHtml: `${rainYear != null ? `Any: <strong>${fmt1(rainYear)} mm</strong>` : ""}` }),
+      card({ title: "UV", value: uvi == null ? "—" : Math.round(uvi), unit: "", badge: "Índex", subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}` }),
+    );
 
     renderMeteoTable(ui.meteoTbody, rows);
   } catch (e) {
@@ -158,14 +134,14 @@ function renderWindRoseSvg(arrowDeg, centerTextTop, centerTextBottom) {
         </g>
       `}
 
-      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
-      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800">${centerTextTop || ""}</text>
-      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8">${centerTextBottom || ""}</text>
+      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.75)"></circle>
+      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="900" fill="rgba(0,0,0,.78)">${centerTextTop || ""}</text>
+      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" fill="rgba(0,0,0,.55)">${centerTextBottom || ""}</text>
     </g>
 
-    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
-    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
-    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
-    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
+    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="900">N</text>
+    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="900">E</text>
+    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="900">S</text>
+    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="900">W</text>
   </svg>`;
 }
