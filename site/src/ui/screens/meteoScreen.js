@@ -1,5 +1,5 @@
 import { card } from "../components/card.js";
-import { fmtTime, num, fmt1, clamp, degToCompass, degToArrow, windAbbr16, windFromCa } from "../format.js";
+import { num, fmt1, clamp, windAbbr16, windFromCa } from "../format.js";
 import { windNameCa } from "../format.js";
 
 import { fetchMeteo } from "../../services/meteoService.js";
@@ -39,7 +39,7 @@ export async function refreshMeteo(ui, store) {
     const uvi = num(r0.uvi);
     const solar = num(r0.solar_wm2);
 
-    // Pluja
+    // PLUJA (incloent EVENT)
     const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
     const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
     const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
@@ -48,7 +48,7 @@ export async function refreshMeteo(ui, store) {
     const rainMonth = num(r0.pluja_mes_mm ?? r0.rain_month_mm);
     const rainYear = num(r0.pluja_any_mm ?? r0.rain_year_mm);
 
-    // Vent
+    // VENT
     const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
@@ -84,35 +84,50 @@ export async function refreshMeteo(ui, store) {
     }
     const windMetaHtml = windParts.length ? windParts.join(" · ") : "";
 
-    // --- PLUJA: 3 blocs forecast-oriented, només si hi ha valor ---
-    const plujaBlocks = [];
+    // --- PLUJA: línies només si hi ha valor ---
+    const plujaLines = [];
 
-    // Pluja 1h (predictiu)
+    // 1h (i taxa si existeix)
     if (rainRate != null || rain1h != null) {
       const parts = [];
       if (rainRate != null) parts.push(`Taxa: <strong>${fmt1(rainRate)} mm/h</strong>`);
       if (rain1h != null) parts.push(`1h: <strong>${fmt1(rain1h)} mm</strong>`);
-      plujaBlocks.push(parts.join(" · "));
+      plujaLines.push(parts.join(" · "));
     }
 
-    // Pluja dia
-    if (rainDay != null) {
-      plujaBlocks.push(`Dia: <strong>${fmt1(rainDay)} mm</strong>`);
-    }
+    // dia
+    if (rainDay != null) plujaLines.push(`Dia: <strong>${fmt1(rainDay)} mm</strong>`);
 
-    // Context: setmana o event (si no hi ha setmana)
-    const ctxVal = (rainWeek != null) ? { label: "Setmana", v: rainWeek } :
-                   (rainEvent != null) ? { label: "Event", v: rainEvent } :
-                   null;
-    if (ctxVal) {
-      plujaBlocks.push(`${ctxVal.label}: <strong>${fmt1(ctxVal.v)} mm</strong>`);
-    }
+    // context: setmana i event (si existeixen, mostrem tots dos)
+    if (rainWeek != null) plujaLines.push(`Setmana: <strong>${fmt1(rainWeek)} mm</strong>`);
+    if (rainEvent != null) plujaLines.push(`Event: <strong>${fmt1(rainEvent)} mm</strong>`);
 
-    // Extra (opcional) mes/any si hi són
-    const extraAcc = [];
-    if (rainMonth != null) extraAcc.push(`Mes: <strong>${fmt1(rainMonth)} mm</strong>`);
-    if (rainYear != null) extraAcc.push(`Any: <strong>${fmt1(rainYear)} mm</strong>`);
-    if (extraAcc.length) plujaBlocks.push(extraAcc.join(" · "));
+    // mes / any
+    if (rainMonth != null) plujaLines.push(`Mes: <strong>${fmt1(rainMonth)} mm</strong>`);
+    if (rainYear != null) plujaLines.push(`Any: <strong>${fmt1(rainYear)} mm</strong>`);
+
+    // Valor gran de pluja (perquè quedi “aprofitat”)
+    let rainMainValue = "—";
+    let rainMainUnit = "";
+    let rainBadge = "Forecast";
+
+    if (rain1h != null) {
+      rainMainValue = fmt1(rain1h);
+      rainMainUnit = "mm";
+      rainBadge = "1h";
+    } else if (rainDay != null) {
+      rainMainValue = fmt1(rainDay);
+      rainMainUnit = "mm";
+      rainBadge = "Dia";
+    } else if (rainWeek != null) {
+      rainMainValue = fmt1(rainWeek);
+      rainMainUnit = "mm";
+      rainBadge = "Setmana";
+    } else if (rainEvent != null) {
+      rainMainValue = fmt1(rainEvent);
+      rainMainUnit = "mm";
+      rainBadge = "Event";
+    }
 
     ui.meteoCards.innerHTML = "";
 
@@ -155,14 +170,15 @@ export async function refreshMeteo(ui, store) {
     });
     cWind.classList.add("card--tall");
 
-    // ✅ Card Pluja “intel·ligent” (només mostra el que existeix)
+    // ✅ PLUJA (ara alta i amb event)
     const cRain = card({
       title: "Pluja",
-      value: "—",
-      unit: "",
-      badge: "Forecast",
-      subHtml: plujaBlocks.length ? plujaBlocks.join(`<span class="sep"></span>`) : "Sense dades de pluja",
+      value: rainMainValue,
+      unit: rainMainUnit,
+      badge: rainBadge,
+      subHtml: plujaLines.length ? plujaLines.join(`<span class="sep"></span>`) : "Sense dades de pluja",
     });
+    cRain.classList.add("card--tall");
 
     const cUv = card({
       title: "UV",
@@ -172,7 +188,7 @@ export async function refreshMeteo(ui, store) {
       subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
     });
 
-    // Ordre (mantinc el que ja tens)
+    // Recol·locació: pluja alta abans d'UV per omplir millor
     ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
 
     renderMeteoTable(ui.meteoTbody, rows);
