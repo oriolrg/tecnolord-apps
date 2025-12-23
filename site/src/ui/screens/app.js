@@ -22,21 +22,16 @@ function readUrlParams(store) {
 
 function buildUI(root, store) {
   root.innerHTML = `
-    <div class="wrap">
-      ${renderTecnolordHeader({
-        title: "MeteoLord",
-        iconHref: "/assets/icons/icon-192.png",
-        homeHref: "/",
-        rightHtml: `<button class="btn secondary" disabled title="Properament">Inicia sessió</button>`,
-      })}
+    <div id="tl-header-slot"></div>
 
+    <div class="wrap">
       <div class="status-row">
         <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
       <!-- METEO -->
-      <div class="section-title">
+      <div class="section-title section-title--tight">
         <p id="meteo-summary">—</p>
       </div>
 
@@ -75,7 +70,7 @@ function buildUI(root, store) {
       </details>
 
       <!-- HIDRO -->
-      <div class="section-title" style="margin-top:22px">
+      <div class="section-title section-title--tight" style="margin-top:22px">
         <p id="hidro-summary">—</p>
       </div>
 
@@ -101,9 +96,12 @@ function buildUI(root, store) {
           </div>
         </div>
       </details>
-
     </div>
   `;
+
+  // Header (full width)
+  const headerSlot = $("#tl-header-slot", root);
+  headerSlot.innerHTML = renderTecnolordHeader(CONFIG.ui);
 
   return {
     // status
@@ -122,7 +120,7 @@ function buildUI(root, store) {
     hidroCount: $("#hidro-count", root),
     hidroTbody: $("#tbl-hidro tbody", root),
 
-    // optional error slot (si algun dia el tornes a posar)
+    // optional error slot
     errH: null,
   };
 }

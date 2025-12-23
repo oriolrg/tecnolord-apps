@@ -1,21 +1,32 @@
-export function renderTecnolordHeader({
-  title = "Tecnolord",
-  iconHref = "/assets/icons/icon-192.png",
-  homeHref = "/",
-  rightHtml = `<button class="btn secondary" disabled title="Properament">Inicia sessió</button>`,
-} = {}) {
+export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {}) {
+  const safeTitle = title || "Tecnolord";
+  const safeSubtitle = subtitle || "";
+  const safeIcon = icon || "";
+  const safeAction = actionLabel || "Inicia sessió";
+
   return `
     <header class="tl-header" role="banner">
-      <a class="tl-brand" href="${homeHref}" aria-label="Torna a Tecnolord">
-        <img class="tl-logo" src="${iconHref}" alt="" width="36" height="36" />
-        <div class="tl-brandtext">
-          <div class="tl-title">${escapeHtml(title)}</div>
-          <div class="tl-subtitle">Tecnolord apps</div>
-        </div>
-      </a>
+      <div class="tl-header__inner">
+        <a class="tl-brand" href="/" aria-label="${escapeHtml(safeTitle)}">
+          <img class="tl-logo"
+               src="${escapeAttr(safeIcon)}"
+               alt=""
+               width="44"
+               height="44"
+               loading="eager"
+               decoding="async"
+               onerror="this.style.display='none';" />
+          <div class="tl-brandtext">
+            <div class="tl-title">${escapeHtml(safeTitle)}</div>
+            ${safeSubtitle ? `<div class="tl-subtitle">${escapeHtml(safeSubtitle)}</div>` : ""}
+          </div>
+        </a>
 
-      <div class="tl-right" aria-label="Compte">
-        ${rightHtml}
+        <div class="tl-right">
+          <button class="btn secondary" type="button" aria-label="${escapeAttr(safeAction)}">
+            ${escapeHtml(safeAction)}
+          </button>
+        </div>
       </div>
     </header>
   `;
@@ -28,4 +39,7 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+function escapeAttr(s) {
+  return escapeHtml(s).replaceAll("`", "&#096;");
 }

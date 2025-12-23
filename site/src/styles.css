@@ -54,50 +54,98 @@ body{
   padding: 18px 14px 70px;
 }
 
-/* Header (si el tens encara) */
-header{
-  display:flex;
-  flex-wrap:wrap;
-  gap:12px;
-  align-items:flex-end;
-  justify-content:space-between;
-  margin-bottom: 14px;
+/* -----------------------------------------
+   Tecnolord shared header (FULL WIDTH)
+----------------------------------------- */
+.tl-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  width: 100%;
+  margin: 0 0 12px;
+
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow);
 }
 
-.brand{
+.tl-header__inner{
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 12px 14px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.tl-brand{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  text-decoration:none;
+  color: var(--text);
+  min-width: 0;
+}
+
+.tl-logo{
+  border-radius: 10px;
+  flex: 0 0 auto;
+  box-shadow: 0 6px 14px rgba(0,0,0,.12);
+  background: rgba(255,255,255,.15);
+  border: 1px solid var(--line);
+}
+
+.tl-brandtext{
   display:flex;
   flex-direction:column;
-  gap:6px;
-  min-width: 260px;
+  gap: 2px;
+  min-width: 0;
 }
 
-.title{
-  font-size: var(--fs-3);
+.tl-title{
+  font-weight: 850;
   letter-spacing: -0.02em;
-  margin:0;
+  font-size: var(--fs-2);
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 58vw;
 }
 
-.subtitle{
-  margin:0;
+.tl-subtitle{
   color: var(--muted);
-  font-size: var(--fs-1);
+  font-size: 12px;
+  line-height: 1.1;
 }
 
+.tl-right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 520px){
+  .tl-subtitle{ display:none; }
+  .tl-header__inner{ padding: 10px 12px; }
+  .tl-title{ max-width: 52vw; font-size: var(--fs-1); }
+}
+
+/* -----------------------------------------
+   Controls / UI base
+----------------------------------------- */
 .panel{
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 14px;
-}
-
-.controls{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:center;
-  justify-content:flex-end;
-  min-width: 320px;
 }
 
 label{
@@ -143,13 +191,6 @@ input:focus, button:focus{
   background: rgba(255,255,255,.06);
 }
 
-.tog{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  user-select:none;
-}
-
 .pill{
   display:inline-flex;
   align-items:center;
@@ -181,6 +222,9 @@ input:focus, button:focus{
   margin-right: 8px;
 }
 
+/* -----------------------------------------
+   Section title
+----------------------------------------- */
 .section-title{
   margin: 18px 0 10px;
   display:flex;
@@ -189,17 +233,15 @@ input:focus, button:focus{
   gap:10px;
   flex-wrap:wrap;
 }
-.section-title h2{
-  margin:0;
-  font-size: var(--fs-2);
-  letter-spacing: -0.02em;
-}
 .section-title p{
   margin:0;
   color: var(--muted);
 }
+.section-title--tight{
+  margin: 8px 0 10px;
+}
 
-/* ✅ GRID AUTO-FIT: elimina buits quan hi ha 3 cards, 5 cards, etc. */
+/* ✅ GRID auto-fit -> evita buits */
 .grid{
   display:grid;
   gap: 12px;
@@ -215,7 +257,7 @@ input:focus, button:focus{
   box-shadow: var(--shadow);
   position: relative;
   overflow:hidden;
-  min-height: 0; /* important: no forcem alçades */
+  min-height: 0;
 }
 
 .k{
@@ -223,7 +265,7 @@ input:focus, button:focus{
   align-items:baseline;
   justify-content:space-between;
   gap:10px;
-  margin-bottom: 8px; /* una mica més compacte */
+  margin-bottom: 8px;
 }
 .k h3{
   margin:0;
@@ -279,6 +321,7 @@ input:focus, button:focus{
 .delta.ok{ color: var(--ok); }
 .delta.bad{ color: var(--bad); }
 
+/* Tables */
 details{
   margin-top: 12px;
   background: var(--card);
@@ -331,11 +374,6 @@ th{
   th{ background: rgba(0,0,0,.06); }
 }
 
-.smallnote{
-  color: var(--muted2);
-  margin-top: 10px;
-}
-
 :focus-visible{
   outline: 3px solid rgba(96,165,250,.55);
   outline-offset: 3px;
@@ -346,11 +384,20 @@ th{
   font-style: italic;
 }
 
-/* Vent */
-.wind-block{
-  margin-top: 10px;
+/* -----------------------------------------
+   Vent (rosa)
+----------------------------------------- */
+.wind-tall{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  justify-content:center;
+}
+
+.wind-rose-wrap{
   display:flex;
   justify-content:center;
+  align-items:center;
 }
 
 .wind-rose{
@@ -368,133 +415,30 @@ th{
   .wind-rose text{ fill: rgba(255,255,255,.75); }
 }
 
-/* El value “14° · NNE” no ha de ser gegant com abans (però només si tens cards especials pots afinar més) */
-.card .v{
-  font-size: var(--fs-3);
-  font-weight: 850;
-  line-height: 1.1;
+.wind-meta{
+  color: var(--muted2);
+  font-size: var(--fs-0);
+  line-height: 1.35;
+  text-align: center;
 }
-/* =========================================================
-   LAYOUT DESKTOP: una card pot ocupar 2 files (Vent)
-   ========================================================= */
 
+/* -----------------------------------------
+   Desktop: cards altes (2 files) per Vent i Cabal
+----------------------------------------- */
 @media (min-width: 980px){
-  /* fa que cada “fila” tingui alçada consistent */
   .grid{
-    grid-auto-rows: 170px; /* ajusta si vols més/menys */
+    grid-auto-rows: 170px; /* ajustable */
     align-items: stretch;
   }
+  .card{ height: 100%; }
+  .card--tall{ grid-row: span 2; }
 
-  /* totes les cards omplen l'alçada de la cel·la */
-  .card{
-    height: 100%;
-  }
-
-  /* card alta (2 files) */
-  .card--tall{
-    grid-row: span 2;
-  }
-
-  /* Vent: que quedi centrat i sense buits estranys */
-  .wind-tall{
-    height: calc(100% - 38px); /* resta aprox el header intern de la card */
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    justify-content: center;
-  }
-
-  .wind-rose-wrap{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  /* rosa més gran dins la card alta */
-  .wind-rose{
-    width: 140px;
-    height: 140px;
-  }
+  /* rosa una mica més gran a desktop */
+  .wind-rose{ width: 140px; height: 140px; }
 }
 
-/* mòbil: alçada natural, una sota l'altra */
+/* mòbil: alçada natural */
 @media (max-width: 979px){
   .card{ height: auto; }
   .wind-rose{ width: 120px; height: 120px; }
-}
-@media (min-width: 980px){
-  .grid{ grid-auto-rows: 170px; align-items: stretch; }
-  .card{ height: 100%; }
-  .card--tall{ grid-row: span 2; }
-}
-/* ---------- Tecnolord shared header ---------- */
-.tl-header{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-
-  padding: 12px 14px;
-  margin: 0 0 12px;
-
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-.tl-brand{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  text-decoration:none;
-  color: var(--text);
-  min-width: 0;
-}
-
-.tl-logo{
-  border-radius: 10px;
-  flex: 0 0 auto;
-  box-shadow: 0 6px 14px rgba(0,0,0,.12);
-}
-
-.tl-brandtext{
-  display:flex;
-  flex-direction:column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.tl-title{
-  font-weight: 850;
-  letter-spacing: -0.02em;
-  font-size: var(--fs-2);
-  line-height: 1.05;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 58vw;
-}
-
-.tl-subtitle{
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.1;
-}
-
-.tl-right{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  flex: 0 0 auto;
-}
-
-@media (max-width: 520px){
-  .tl-subtitle{ display:none; }
-  .tl-header{ padding: 10px 12px; }
-  .tl-title{ max-width: 52vw; font-size: var(--fs-1); }
 }

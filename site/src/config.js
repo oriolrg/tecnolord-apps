@@ -9,4 +9,11 @@ export const CONFIG = {
 
   // ⬇️ nou
   showHidroFilter: false,
+  // UI shared (Tecnolord)
+  ui: {
+    title: "MeteoLord",
+    subtitle: "Tecnolord apps",
+    icon: "/assets/images/meteolord.png", // posa-hi el path on serveixis la icona
+    actionLabel: "Inicia sessió",
+  },
 };
