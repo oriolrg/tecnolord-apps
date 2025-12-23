@@ -21,16 +21,16 @@ export async function refreshHidro(ui, store) {
   try {
     const rows = await fetchHidro({ codi, limit });
 
-    ui.hidroCount.textContent = String(rows.length);
+    if (ui.hidroCount) ui.hidroCount.textContent = String(rows.length);
 
     if (!rows.length) {
-      ui.hidroSummary.textContent = "Sense registres.";
-      ui.hidroCards.innerHTML = "";
-      ui.hidroTbody.innerHTML = "";
+      if (ui.hidroSummary) ui.hidroSummary.textContent = "Sense registres.";
+      if (ui.hidroCards) ui.hidroCards.innerHTML = "";
+      if (ui.hidroTbody) ui.hidroTbody.innerHTML = "";
       return;
     }
 
-    ui.hidroSummary.textContent = `${rows.length} registres`;
+    if (ui.hidroSummary) ui.hidroSummary.textContent = `${rows.length} registres`;
 
     const rowLlosa = pickRow(rows, [
       r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
@@ -77,7 +77,7 @@ export async function refreshHidro(ui, store) {
       `;
     }
 
-    ui.hidroCards.innerHTML = "";
+    if (ui.hidroCards) ui.hidroCards.innerHTML = "";
 
     const cCabal = card({
       title: "Cabal (balanç)",
@@ -122,9 +122,10 @@ export async function refreshHidro(ui, store) {
     }
 
     // Ordre: cabal (alta) + resta
-    ui.hidroCards.append(cCabal, cCap, ...extras);
+    if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, ...extras);
 
-    renderHidroTable(ui.hidroTbody, rows);
+    // Taula només si existeix (a la home no hi és)
+    if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
   } catch (e) {
     if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
   }

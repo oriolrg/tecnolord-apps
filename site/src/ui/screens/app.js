@@ -36,13 +36,17 @@ function buildUI(root, store) {
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
-      <!-- METEO -->
       <div class="section-title">
         <p id="meteo-summary">—</p>
       </div>
 
-      <div class="grid" id="meteo-cards"></div>
+      <!-- GRID UNIFICAT: METEO + HIDRO cards -->
+      <div class="grid" id="cards">
+        <div id="cards-meteo" class="cards-group"></div>
+        <div id="cards-hidro" class="cards-group"></div>
+      </div>
 
+      <!-- A la home mantenim només la taula meteo (hidro anirà a una altra screen) -->
       <details>
         <summary>Últims registres (taula) <span class="badge" id="meteo-count">0</span></summary>
         <div class="detail-body">
@@ -75,34 +79,6 @@ function buildUI(root, store) {
         </div>
       </details>
 
-      <!-- HIDRO -->
-      <div class="section-title" style="margin-top:22px">
-        <p id="hidro-summary">—</p>
-      </div>
-
-      <div class="grid" id="hidro-cards"></div>
-
-      <details>
-        <summary>Últims registres (taula) <span class="badge" id="hidro-count">0</span></summary>
-        <div class="detail-body">
-          <div class="table-wrap">
-            <table id="tbl-hidro" aria-label="Taula d'hidrologia">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Codi</th>
-                  <th>Nom</th>
-                  <th>Tipus</th>
-                  <th>Cabal (m³/s)</th>
-                  <th>Capacitat (%)</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </details>
-
     </div>
   `;
 
@@ -111,20 +87,29 @@ function buildUI(root, store) {
     last: $("#last", root),
     err: $("#err", root),
 
-    // meteo
+    // summary meteo
     meteoSummary: $("#meteo-summary", root),
-    meteoCards: $("#meteo-cards", root),
+
+    // unified grid + subcontainers
+    cards: $("#cards", root),
+    cardsMeteo: $("#cards-meteo", root),
+    cardsHidro: $("#cards-hidro", root),
+
+    // meteo
     meteoCount: $("#meteo-count", root),
     meteoTbody: $("#tbl-meteo tbody", root),
 
-    // hidro
-    hidroSummary: $("#hidro-summary", root),
-    hidroCards: $("#hidro-cards", root),
-    hidroCount: $("#hidro-count", root),
-    hidroTbody: $("#tbl-hidro tbody", root),
+    // hidro placeholders (home no els fa servir)
+    hidroSummary: null,
+    hidroCount: null,
+    hidroTbody: null,
 
-    // optional error slot
+    // errors
     errH: null,
+
+    // will be assigned after buildUI
+    meteoCards: null,
+    hidroCards: null,
   };
 }
 
@@ -133,6 +118,10 @@ export function initApp(root) {
   readUrlParams(store);
 
   const ui = buildUI(root, store);
+
+  // IMPORTANT: assignem els contenidors reals de cards
+  ui.meteoCards = ui.cardsMeteo;
+  ui.hidroCards = ui.cardsHidro;
 
   let timer = null;
 

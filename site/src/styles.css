@@ -605,3 +605,8 @@ th{
 .wrap{
   padding-top: 16px;
 }
+/* Permet que els subcontenidors del grid no trenquin el layout.
+   Les cards dins segueixen sent grid items. */
+.cards-group{
+  display: contents;
+}
