@@ -169,7 +169,7 @@ export async function refreshMeteo(ui, store) {
  */
 function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
   const arrow = degFrom == null ? "" : `
-    <g transform="rotate(${degFrom}) translate(0,-40)">
+    <g transform="rotate(${degFrom}+180) translate(0,-40)">
       <!-- tip a la vora; cos cap al centre -->
       <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
     </g>
