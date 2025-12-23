@@ -1,10 +1,12 @@
+const FORCED_ICON = "/meteo/assets/icons/favicon-96x96.png"; // <-- posa aquí el que vulguis
+
 export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {}) {
   const safeTitle = title || "Tecnolord";
   const safeSubtitle = subtitle || "";
   const safeAction = actionLabel || "Inicia sessió";
 
-  // fixa (tu has confirmat que existeix)
-  const safeIcon = (icon || "/meteo/assets/icons/favicon-96x96.png").trim();
+  // Render: posem un src qualsevol, però després el forcem via wireTecnolordHeader()
+  const initialIcon = (icon || FORCED_ICON).trim();
 
   return `
     <header class="tl-header" role="banner">
@@ -13,7 +15,7 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
           <span class="tl-logoWrap" aria-hidden="true">
             <img class="tl-logo"
                  id="tlLogo"
-                 src="${escapeAttr(safeIcon)}"
+                 src="${escapeAttr(initialIcon)}"
                  alt=""
                  width="44"
                  height="44"
@@ -45,6 +47,9 @@ export function wireTecnolordHeader(root = document) {
 
   if (!img || !fb || !wrap) return;
 
+  // 🔥 FORÇA el src aquí, passi el que passi a config/appIcon
+  img.src = FORCED_ICON;
+
   const showFallback = () => {
     wrap.classList.add("is-missing");
     img.style.display = "none";
@@ -60,7 +65,7 @@ export function wireTecnolordHeader(root = document) {
   img.addEventListener("load", showImg, { once: true });
   img.addEventListener("error", showFallback, { once: true });
 
-  // Si ja està en cache i carregada
+  // Si ja està carregada (cache), aplica estat
   if (img.complete && img.naturalWidth > 0) showImg();
   else if (img.complete && img.naturalWidth === 0) showFallback();
 }
