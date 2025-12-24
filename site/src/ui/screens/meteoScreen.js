@@ -6,9 +6,6 @@ import { windNameCa } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
 import { fetchHidro } from "../../services/hidroService.js";
 
-import { renderMeteoTable } from "../components/tableMeteo.js";
-import { renderHidroTable } from "../components/tableHidro.js";
-
 // Helpers HIDRO
 function pickRow(rows, predicates) {
   for (const pred of predicates) {
@@ -18,39 +15,27 @@ function pickRow(rows, predicates) {
   return null;
 }
 
-// --- VISTA: CARDS METEO + CARDS HIDRO (SEGUIDES) ---
-// IMPORTANT: aquest screen NO pinta les taules (les pintarà hidroScreen)
 export async function refreshMeteo(ui, store) {
-  // errors
   if (ui.err) ui.err.textContent = "";
   if (ui.errH) ui.errH.textContent = "";
 
   const s = store.get();
-
-  // inputs
   const estacio = (s.estacio || "").trim();
   const codi = (s.codiHidro || "").trim();
   const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
 
   try {
+    // en aquest screen carreguem meteo + hidro per poder pintar totes les cards
     const [meteoRows, hidroRows] = await Promise.all([
       fetchMeteo({ estacio, limit }),
       fetchHidro({ codi, limit }),
     ]);
 
-    // counts (si existeixen)
+    // --- METEO CARDS ---
     if (ui.meteoCount) ui.meteoCount.textContent = String(meteoRows.length);
-    if (ui.hidroCount) ui.hidroCount.textContent = String(hidroRows.length);
 
-    // neteja
     if (ui.meteoCards) ui.meteoCards.innerHTML = "";
-    if (ui.hidroCards) ui.hidroCards.innerHTML = "";
 
-    // taules (aquest screen no les pinta)
-    if (ui.meteoTbody) ui.meteoTbody.innerHTML = "";
-    if (ui.hidroTbody) ui.hidroTbody.innerHTML = "";
-
-    // ---------- METEO CARDS ----------
     if (!meteoRows.length) {
       if (ui.meteoSummary) ui.meteoSummary.textContent = "Meteo: Sense registres.";
       if (ui.last) ui.last.textContent = "Sense dades";
@@ -101,9 +86,13 @@ export async function refreshMeteo(ui, store) {
         `${Math.round(ageSec / 3600)} h`;
 
       if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
-      if (ui.meteoSummary) ui.meteoSummary.textContent = estacio ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres` : `Meteo · ${meteoRows.length} registres`;
+      if (ui.meteoSummary) {
+        ui.meteoSummary.textContent = estacio
+          ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres`
+          : `Meteo · ${meteoRows.length} registres`;
+      }
 
-      // EXTREMES DEL DIA (segons data de l’última lectura)
+      // EXTREMES DEL DIA
       const d0 = new Date(instant);
       const y0 = d0.getFullYear();
       const m0 = d0.getMonth();
@@ -140,7 +129,7 @@ export async function refreshMeteo(ui, store) {
         · Ràfega: <strong>${gustVal} m/s</strong>
       `;
 
-      // pluja lines
+      // pluja
       const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
       const rainMainUnit = "mm/h";
 
@@ -215,11 +204,19 @@ export async function refreshMeteo(ui, store) {
       if (ui.meteoCards) ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
     }
 
-    // ---------- HIDRO CARDS ----------
+    // --- HIDRO CARDS ---
+    if (ui.hidroCount) ui.hidroCount.textContent = String(hidroRows.length);
+
+    if (ui.hidroCards) ui.hidroCards.innerHTML = "";
+
     if (!hidroRows.length) {
       if (ui.hidroSummary) ui.hidroSummary.textContent = "Hidro: Sense registres.";
     } else {
-      if (ui.hidroSummary) ui.hidroSummary.textContent = codi ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres` : `Hidro · ${hidroRows.length} registres`;
+      if (ui.hidroSummary) {
+        ui.hidroSummary.textContent = codi
+          ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres`
+          : `Hidro · ${hidroRows.length} registres`;
+      }
 
       const rowLlosa = pickRow(hidroRows, [
         r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
@@ -309,12 +306,11 @@ export async function refreshMeteo(ui, store) {
       if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, cEntrades);
     }
   } catch (e) {
-    if (ui.err) ui.err.textContent = "Error meteo/hidro (cards): " + (e.message || e);
+    if (ui.err) ui.err.textContent = "Error cards: " + (e.message || e);
   }
 }
 
 function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
-  // Fletxa sobre el cercle blau, als graus del vent, apuntant cap al centre
   const arrow = deg == null ? "" : `
     <g transform="rotate(${deg}) translate(0,-46) rotate(180)">
       <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
@@ -324,20 +320,16 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
   return `
   <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
     <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
-
     <g transform="translate(50 50)">
       <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
       <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
       <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
       <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
-
       ${arrow}
-
       <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
       <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800">${centerTextTop || ""}</text>
       <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8">${centerTextBottom || ""}</text>
     </g>
-
     <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
     <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
     <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
