@@ -30,6 +30,11 @@ export async function refreshHidro(ui, store) {
         ? (estacio ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres` : `Meteo · ${meteoRows.length} registres`)
         : "Meteo: Sense registres.";
     }
+    if (ui.hidroSummary) {
+      ui.hidroSummary.textContent = hidroRows.length
+        ? (codi ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres` : `Hidro · ${hidroRows.length} registres`)
+        : "Hidro: Sense registres.";
+    }
 
     // pinta taules (i només taules)
     if (ui.meteoTbody) renderMeteoTable(ui.meteoTbody, meteoRows);

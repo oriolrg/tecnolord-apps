@@ -86,7 +86,11 @@ export async function refreshMeteo(ui, store) {
         `${Math.round(ageSec / 3600)} h`;
 
       if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
-
+      if (ui.meteoSummary) {
+        ui.meteoSummary.textContent = estacio
+          ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres`
+          : `Meteo · ${meteoRows.length} registres`;
+      }
 
       // EXTREMES DEL DIA
       const d0 = new Date(instant);
