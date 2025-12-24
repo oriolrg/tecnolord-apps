@@ -1,130 +1,57 @@
-import { card } from "../components/card.js";
-import { fmtTime, num, fmt1, clamp, norm } from "../format.js";
+// hidroScreen.js
+import { clamp } from "../format.js";
+import { fetchMeteo } from "../../services/meteoService.js";
 import { fetchHidro } from "../../services/hidroService.js";
+import { renderMeteoTable } from "../components/tableMeteo.js";
 import { renderHidroTable } from "../components/tableHidro.js";
 
-function pickRow(rows, predicates) {
-  for (const pred of predicates) {
-    const found = rows.find(pred);
-    if (found) return found;
-  }
-  return null;
-}
-
+// --- VISTA: TAULA METEO + TAULA HIDRO (SEGUIDES) ---
+// IMPORTANT: aquest screen NO pinta les cards (les pinta meteoScreen)
 export async function refreshHidro(ui, store) {
+  if (ui.err) ui.err.textContent = "";
   if (ui.errH) ui.errH.textContent = "";
 
   const s = store.get();
-  const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
+
+  const estacio = (s.estacio || "").trim();
   const codi = (s.codiHidro || "").trim();
+  const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
 
   try {
-    const rows = await fetchHidro({ codi, limit });
-
-    if (ui.hidroCount) ui.hidroCount.textContent = String(rows.length);
-
-    if (!rows.length) {
-      if (ui.hidroCards) ui.hidroCards.innerHTML = "";
-      if (ui.hidroTbody) ui.hidroTbody.innerHTML = "";
-      if (ui.meteoTbody) ui.meteoTbody.innerHTML = "";
-      return;
-    }
-
-    const rowLlosa = pickRow(rows, [
-      r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
-      r => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
+    const [meteoRows, hidroRows] = await Promise.all([
+      fetchMeteo({ estacio, limit }),
+      fetchHidro({ codi, limit }),
     ]);
 
-    const rowCardener = pickRow(rows, [
-      r => norm(r.nom).includes("cardener"),
-      r => norm(r.codi).includes("cardener"),
-    ]);
+    // counts (si existeixen)
+    if (ui.meteoCount) ui.meteoCount.textContent = String(meteoRows.length);
+    if (ui.hidroCount) ui.hidroCount.textContent = String(hidroRows.length);
 
-    const rowValls = pickRow(rows, [
-      r => norm(r.nom).includes("valls"),
-      r => norm(r.codi).includes("valls"),
-    ]);
-
-    const instantLlosa = rowLlosa?.instant ?? null;
-    const cap = num(rowLlosa?.capacitat_pct);
-
-    let sortida = num(rowLlosa?.cabal_m3s);
-    if (sortida == null) {
-      const rowSortida = pickRow(rows, [
-        r => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
-        r => norm(r.codi).includes("sortida") && (norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")),
-      ]);
-      sortida = num(rowSortida?.cabal_m3s);
-    }
-
-    const cabalCardener = num(rowCardener?.cabal_m3s);
-    const cabalValls = num(rowValls?.cabal_m3s);
-    const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
-    const delta = (sortida == null ? null : (entradaTotal - sortida));
-
-    // només “S’omple / Es buida” + entrada/sortida
-    let deltaHtml = "";
-    if (sortida != null && (cabalCardener != null || cabalValls != null)) {
-      const cls = delta >= 0 ? "ok" : "bad";
-      const txt = delta >= 0 ? "S’omple" : "Es buida";
-      deltaHtml = `
-        <span class="sep"></span>
-        <span>Entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
-        <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
-        <span class="delta ${cls}">${txt}</span>
-      `;
-    }
-
+    // neteja cards (aquest screen no en pinta)
+    if (ui.meteoCards) ui.meteoCards.innerHTML = "";
     if (ui.hidroCards) ui.hidroCards.innerHTML = "";
 
-    // 1) CABAL (ALT)
-    const cCabal = card({
-      title: "Cabal (balanç)",
-      value: sortida == null ? "—" : fmt1(sortida),
-      unit: "m³/s",
-      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
-      subHtml: `
-        ${deltaHtml}
-        ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
-      `,
-    });
-    cCabal.classList.add("card--tall", "card--wind");
+    // neteja tbodies
+    if (ui.meteoTbody) ui.meteoTbody.innerHTML = "";
+    if (ui.hidroTbody) ui.hidroTbody.innerHTML = "";
 
-    // 2) CAPACITAT (ALT també, per omplir el buit central)
-    const cCap = card({
-      title: "Capacitat",
-      value: cap == null ? "—" : fmt1(cap),
-      unit: "%",
-      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
-      subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
-    });
-    cCap.classList.add("card--tall", "card--wind");
-
-    // 3) ENTRADES AGRUPADES (una sola card)
-    const entradesParts = [];
-    if (cabalCardener != null) {
-      entradesParts.push(`Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>${rowCardener?.instant ? ` · <span class="muted">${fmtTime(rowCardener.instant)}</span>` : ""}`);
+    // summary texts (opcional)
+    if (ui.meteoSummary) {
+      ui.meteoSummary.textContent = meteoRows.length
+        ? (estacio ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres` : `Meteo · ${meteoRows.length} registres`)
+        : "Meteo: Sense registres.";
     }
-    if (cabalValls != null) {
-      entradesParts.push(`Valls: <strong>${fmt1(cabalValls)} m³/s</strong>${rowValls?.instant ? ` · <span class="muted">${fmtTime(rowValls.instant)}</span>` : ""}`);
+    if (ui.hidroSummary) {
+      ui.hidroSummary.textContent = hidroRows.length
+        ? (codi ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres` : `Hidro · ${hidroRows.length} registres`)
+        : "Hidro: Sense registres.";
     }
 
-    const cEntrades = card({
-      title: "Entrades (rius)",
-      value: (cabalCardener == null && cabalValls == null) ? "—" : fmt1(entradaTotal),
-      unit: "m³/s",
-      badge: "Total",
-      subHtml: entradesParts.length
-        ? entradesParts.join(`<span class="sep"></span>`)
-        : "",
-    });
-
-    // Ordre: cabal alt + capacitat alta + entrades
-    if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, cEntrades);
-
-    if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
-    if (ui.meteoTbody) renderMeteoTable(ui.meteoTbody, rows);
+    // pinta taules seguides
+    if (ui.meteoTbody && meteoRows.length) renderMeteoTable(ui.meteoTbody, meteoRows);
+    if (ui.hidroTbody && hidroRows.length) renderHidroTable(ui.hidroTbody, hidroRows);
   } catch (e) {
-    if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
+    // un sol lloc d’error (per no duplicar)
+    if (ui.err) ui.err.textContent = "Error meteo/hidro (taules): " + (e.message || e);
   }
 }
