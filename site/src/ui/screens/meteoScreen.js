@@ -3,6 +3,7 @@ import { num, fmt1, clamp, windAbbr16, windFromCa } from "../format.js";
 import { windNameCa } from "../format.js";
 
 import { fetchMeteo } from "../../services/meteoService.js";
+import { renderMeteoTable } from "../components/tableMeteo.js";
 
 export async function refreshMeteo(ui, store) {
   ui.err.textContent = "";
@@ -71,34 +72,34 @@ export async function refreshMeteo(ui, store) {
 
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
     ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
-  
-    // --- TEMP: min/max del dia (segons dia local) ---
-    const todayKey = new Date().toDateString();
+
+    // --- EXTREMES DEL DIA (temp_c): min / max (ignora nulls) ---
+    const d0 = new Date(instant);
+    const y0 = d0.getFullYear();
+    const m0 = d0.getMonth();
+    const day0 = d0.getDate();
+
     let tMin = null;
     let tMax = null;
 
     for (const r of rows) {
-      const at = r.instant ?? r.at;
-      if (!at) continue;
-
-      const d = new Date(at);
-      if (d.toDateString() !== todayKey) continue;
-
       const t = num(r.temp_c ?? r.temperature);
       if (t == null || Number.isNaN(t)) continue;
 
-      if (tMin == null || t < tMin) tMin = t;
-      if (tMax == null || t > tMax) tMax = t;
+      const ts = r.instant ?? r.at;
+      if (!ts) continue;
+
+      const d = new Date(ts);
+      if (d.getFullYear() !== y0 || d.getMonth() !== m0 || d.getDate() !== day0) continue;
+
+      tMin = tMin == null ? t : Math.min(tMin, t);
+      tMax = tMax == null ? t : Math.max(tMax, t);
     }
 
-    const minMaxHtml =
-      (tMin != null || tMax != null)
-        ? `<div style="margin-top:6px;">
-             ${tMax != null ? `<span style="color:rgba(239,68,68,.95); font-weight:800;">Màx: ${fmt1(tMax)} °C</span>` : ""}
-             ${(tMax != null && tMin != null) ? ` <span style="opacity:.6;">·</span> ` : ""}
-             ${tMin != null ? `<span style="color:rgba(59,130,246,.95); font-weight:800;">Mín: ${fmt1(tMin)} °C</span>` : ""}
-           </div>`
-        : "";
+    const extremesHtml =
+      (tMin == null && tMax == null)
+        ? ""
+        : ` · <span class="temp-max">Màx: ${tMax == null ? "—" : fmt1(tMax)} °C</span> · <span class="temp-min">Mín: ${tMin == null ? "—" : fmt1(tMin)} °C</span>`;
 
     // --- VENT: sempre mostrar (— si null) ---
     const windVal = (wind == null || Number.isNaN(wind)) ? "—" : fmt1(wind);
@@ -114,6 +115,7 @@ export async function refreshMeteo(ui, store) {
     const rainMainUnit = "mm/h";
 
     const plujaLines = [];
+
     const dayTxt = (rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay);
     plujaLines.push(`Dia: <strong>${dayTxt} mm</strong>`);
 
@@ -130,11 +132,10 @@ export async function refreshMeteo(ui, store) {
       value: fmt1(temp_c),
       unit: "°C",
       badge: "Última lectura",
-      subHtml: `
-        ${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}
-        ${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}
-        ${minMaxHtml}
-      `,
+      subHtml:
+        `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : "Sensació: <strong>—</strong>"}`
+        + `${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : " · Rosada: <strong>—</strong>"}`
+        + `${extremesHtml}`,
     });
 
     const cHum = card({
@@ -187,29 +188,23 @@ export async function refreshMeteo(ui, store) {
 
     ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
 
-    
+    renderMeteoTable(ui.meteoTbody, rows);
   } catch (e) {
     ui.err.textContent = "Error meteo: " + (e.message || e);
   }
 }
 
 function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
-  const R = 46;
-  const tipInset = 1.5;
-  const halfBase = 5.5;
-  const length = 13.5;
-
-  const arrowPoly = `0,0 ${-halfBase},${length} 0,${length - 3.5} ${halfBase},${length}`;
-
+  // Fletxa sobre el cercle blau, als graus del vent, apuntant cap al centre
   const arrow = deg == null ? "" : `
-    <g transform="rotate(${deg}) translate(0,${-(R - tipInset)}) rotate(180)">
-      <polygon points="${arrowPoly}" fill="rgba(239,68,68,.95)"/>
+    <g transform="rotate(${deg}) translate(0,-46) rotate(180)">
+      <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
     </g>
   `;
 
   return `
   <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
-    <circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
+    <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
 
     <g transform="translate(50 50)">
       <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
