@@ -161,15 +161,41 @@ export async function refreshMeteo(ui, store) {
     ui.err.textContent = "Error meteo: " + (e.message || e);
   }
 }
-
-/**
- * Fletxa vermella:
- * - POSICIÓ: es col·loca exactament als graus degFrom (d'on ve el vent)
- * - ORIENTACIÓ: apunta cap al centre (cap on va, en el sentit "from -> to")
- */
+// fletxa vermella apunta cap al centre del cercle blau des de la posició degFrom, son les dades del vent, va situat sobre el cercle blau i apuntant cap al centre
 function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
   const arrow = degFrom == null ? "" : `
-    <g transform="rotate(${degFrom}+180) translate(0,-40)">
+    <g transform="rotate(${degFrom}) translate(0,-40)">
+      <!-- tip a la vora; cos cap al centre -->
+      <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
+    </g>
+  `;
+  return `
+  <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
+    <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
+    <g transform="translate(50 50)">
+      <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
+      <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
+      <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
+      <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
+      ${arrow}
+      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
+      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800">${centerTextTop || ""}</text>
+      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8">${centerTextBottom || ""}</text>
+    </g>
+    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
+    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
+    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
+    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
+  </svg>`;
+}
+/**
+ * Fletxa vermella:
+ * - POSICIÓ: es col·loca exactament als graus degFrom sobre el cercle blau (d'on ve el vent)
+ * - ORIENTACIÓ: apunta cap al centre 
+
+function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
+  const arrow = degFrom == null ? "" : `
+    <g transform="rotate(${degFrom}) translate(0,-40)">
       <!-- tip a la vora; cos cap al centre -->
       <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
     </g>
@@ -198,3 +224,4 @@ function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
     <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
   </svg>`;
 }
+ */
