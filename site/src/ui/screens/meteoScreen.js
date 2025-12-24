@@ -163,13 +163,19 @@ export async function refreshMeteo(ui, store) {
 }
 // fletxa vermella apunta cap al centre del cercle blau des de la posició degFrom, son les dades del vent, va situat sobre el cercle blau i apuntant cap al centre
 function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
-  // Volem la fletxa SOBRE el cercle i apuntant CAP AL CENTRE.
-  // - Rotate(deg): col·loca l'eix "amunt" al grau correcte
-  // - Translate(0,-46): porta la fletxa al perímetre (aprox r=46)
-  // - Rotate(180): fa que apunti cap avall -> cap al centre
+  // Ajustos visuals
+  const R = 46;          // radi del cercle blau
+  const tipInset = 1.5;  // entra 1-2px dins del cercle perquè quedi "clavada" al traç
+  const halfBase = 5.5;  // ample mig de la base
+  const length = 13.5;   // llargada cap al centre
+
+  // Triangle amb la PUNTA a (0,0) i el cos cap avall (+y)
+  // Després, amb rotate(180) apuntarà cap al centre.
+  const arrowPoly = `0,0 ${-halfBase},${length} 0,${length - 3.5} ${halfBase},${length}`;
+
   const arrow = deg == null ? "" : `
-    <g transform="rotate(${deg}) translate(0,-46) rotate(180)">
-      <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
+    <g transform="rotate(${deg}) translate(0,${-(R - tipInset)}) rotate(180)">
+      <polygon points="${arrowPoly}" fill="rgba(239,68,68,.95)"/>
     </g>
   `;
 
