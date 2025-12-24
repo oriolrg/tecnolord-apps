@@ -3,7 +3,6 @@ import { num, fmt1, clamp, windAbbr16, windFromCa } from "../format.js";
 import { windNameCa } from "../format.js";
 
 import { fetchMeteo } from "../../services/meteoService.js";
-import { renderMeteoTable } from "../components/tableMeteo.js";
 
 export async function refreshMeteo(ui, store) {
   ui.err.textContent = "";
