@@ -2,8 +2,8 @@ import { CONFIG } from "../../config.js";
 import { createStore } from "../../state/store.js";
 import { $ } from "../dom.js";
 import { clamp } from "../format.js";
-import { refreshMeteo } from "./meteoScreen.js";
-import { refreshHidro } from "./hidroScreen.js";
+import { refreshMeteo } from "./meteoScreen.js"; // pinta CARDS (meteo + hidro)
+import { refreshHidro } from "./hidroScreen.js"; // pinta TAULES (meteo + hidro)
 import { renderTecnolordHeader } from "../components/tecnolordHeader.js";
 
 function readUrlParams(store) {
@@ -41,14 +41,20 @@ function buildUI(root) {
         <span id="err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
-      <!-- METEO -->
+      <!-- CARDS: METEO -->
       <div class="section-title">
         <p id="meteo-summary">—</p>
       </div>
-
       <div class="grid" id="meteo-cards"></div>
 
-      <details>
+      <!-- CARDS: HIDRO -->
+      <div class="section-title" style="margin-top:22px">
+        <p id="hidro-summary">—</p>
+      </div>
+      <div class="grid" id="hidro-cards"></div>
+
+      <!-- TAULES (després de totes les cards) -->
+      <details style="margin-top:22px">
         <summary>Últims registres (meteo) <span class="badge" id="meteo-count">0</span></summary>
         <div class="detail-body">
           <div class="table-wrap">
@@ -79,13 +85,6 @@ function buildUI(root) {
           </div>
         </div>
       </details>
-
-      <!-- HIDRO -->
-      <div class="section-title" style="margin-top:22px">
-        <p id="hidro-summary">—</p>
-      </div>
-
-      <div class="grid" id="hidro-cards"></div>
 
       <details>
         <summary>Últims registres (hidro) <span class="badge" id="hidro-count">0</span></summary>
@@ -139,8 +138,8 @@ export function initApp(root) {
 
   if (store.get().auto) {
     timer = setInterval(async () => {
-      await refreshMeteo(ui, store);
-      await refreshHidro(ui, store);
+      await refreshMeteo(ui, store); // cards
+      await refreshHidro(ui, store); // taules
     }, CONFIG.autoRefreshMs);
   }
 
