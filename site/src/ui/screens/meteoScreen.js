@@ -72,7 +72,7 @@ export async function refreshMeteo(ui, store) {
 
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
     ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
-
+  
     // --- TEMP: min/max del dia (segons dia local) ---
     const todayKey = new Date().toDateString();
     let tMin = null;
@@ -188,7 +188,7 @@ export async function refreshMeteo(ui, store) {
 
     ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
 
-    renderMeteoTable(ui.meteoTbody, rows);
+    
   } catch (e) {
     ui.err.textContent = "Error meteo: " + (e.message || e);
   }

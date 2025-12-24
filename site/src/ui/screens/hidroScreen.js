@@ -26,6 +26,7 @@ export async function refreshHidro(ui, store) {
     if (!rows.length) {
       if (ui.hidroCards) ui.hidroCards.innerHTML = "";
       if (ui.hidroTbody) ui.hidroTbody.innerHTML = "";
+      if (ui.meteoTbody) ui.meteoTbody.innerHTML = "";
       return;
     }
 
@@ -122,6 +123,7 @@ export async function refreshHidro(ui, store) {
     if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, cEntrades);
 
     if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, rows);
+    if (ui.meteoTbody) renderMeteoTable(ui.meteoTbody, rows);
   } catch (e) {
     if (ui.errH) ui.errH.textContent = "Error hidro: " + (e.message || e);
   }
