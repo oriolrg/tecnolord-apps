@@ -53,7 +53,7 @@ export async function refreshMeteo(ui, store) {
     const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
     const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
 
-    // 0..359 (direcció D'ON VE el vent)
+    // 0..359
     const deg =
       wdir == null || Number.isNaN(wdir)
         ? null
@@ -73,7 +73,35 @@ export async function refreshMeteo(ui, store) {
     ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
     ui.meteoSummary.textContent = estacio ? `Estació: ${estacio} · ${rows.length} registres` : `${rows.length} registres`;
 
-    // VENT: sempre mostrar (— si null)
+    // --- TEMP: min/max del dia (segons dia local) ---
+    const todayKey = new Date().toDateString();
+    let tMin = null;
+    let tMax = null;
+
+    for (const r of rows) {
+      const at = r.instant ?? r.at;
+      if (!at) continue;
+
+      const d = new Date(at);
+      if (d.toDateString() !== todayKey) continue;
+
+      const t = num(r.temp_c ?? r.temperature);
+      if (t == null || Number.isNaN(t)) continue;
+
+      if (tMin == null || t < tMin) tMin = t;
+      if (tMax == null || t > tMax) tMax = t;
+    }
+
+    const minMaxHtml =
+      (tMin != null || tMax != null)
+        ? `<div style="margin-top:6px;">
+             ${tMax != null ? `<span style="color:rgba(239,68,68,.95); font-weight:800;">Màx: ${fmt1(tMax)} °C</span>` : ""}
+             ${(tMax != null && tMin != null) ? ` <span style="opacity:.6;">·</span> ` : ""}
+             ${tMin != null ? `<span style="color:rgba(59,130,246,.95); font-weight:800;">Mín: ${fmt1(tMin)} °C</span>` : ""}
+           </div>`
+        : "";
+
+    // --- VENT: sempre mostrar (— si null) ---
     const windVal = (wind == null || Number.isNaN(wind)) ? "—" : fmt1(wind);
     const gustVal = (gust == null || Number.isNaN(gust)) ? "—" : fmt1(gust);
 
@@ -82,7 +110,7 @@ export async function refreshMeteo(ui, store) {
       · Ràfega: <strong>${gustVal} m/s</strong>
     `;
 
-    // PLUJA: valor gran = taxa (mm/h) o —
+    // --- PLUJA: valor gran = taxa (mm/h) o — ---
     const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
     const rainMainUnit = "mm/h";
 
@@ -103,7 +131,11 @@ export async function refreshMeteo(ui, store) {
       value: fmt1(temp_c),
       unit: "°C",
       badge: "Última lectura",
-      subHtml: `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}`,
+      subHtml: `
+        ${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : ""}
+        ${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : ""}
+        ${minMaxHtml}
+      `,
     });
 
     const cHum = card({
@@ -161,16 +193,13 @@ export async function refreshMeteo(ui, store) {
     ui.err.textContent = "Error meteo: " + (e.message || e);
   }
 }
-// fletxa vermella apunta cap al centre del cercle blau des de la posició degFrom, son les dades del vent, va situat sobre el cercle blau i apuntant cap al centre
-function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
-  // Ajustos visuals
-  const R = 46;          // radi del cercle blau
-  const tipInset = 1.5;  // entra 1-2px dins del cercle perquè quedi "clavada" al traç
-  const halfBase = 5.5;  // ample mig de la base
-  const length = 13.5;   // llargada cap al centre
 
-  // Triangle amb la PUNTA a (0,0) i el cos cap avall (+y)
-  // Després, amb rotate(180) apuntarà cap al centre.
+function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
+  const R = 46;
+  const tipInset = 1.5;
+  const halfBase = 5.5;
+  const length = 13.5;
+
   const arrowPoly = `0,0 ${-halfBase},${length} 0,${length - 3.5} ${halfBase},${length}`;
 
   const arrow = deg == null ? "" : `
@@ -181,7 +210,7 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
 
   return `
   <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
-    <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
+    <circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
 
     <g transform="translate(50 50)">
       <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
@@ -200,40 +229,5 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
     <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
     <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
     <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
-  </svg>`;/**
- * Fletxa vermella:
- * - POSICIÓ: es col·loca exactament als graus degFrom sobre el cercle blau (d'on ve el vent)
- * - ORIENTACIÓ: apunta cap al centre 
-
-function renderWindRoseSvg(degFrom, centerTextTop, centerTextBottom) {
-  const arrow = degFrom == null ? "" : `
-    <g transform="rotate(${degFrom}) translate(0,-40)">
-      <!-- tip a la vora; cos cap al centre -->
-      <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
-    </g>
-  `;
-
-  return `
-  <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
-    <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
-
-    <g transform="translate(50 50)">
-      <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
-      <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
-      <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
-      <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
-
-      ${arrow}
-
-      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
-      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800">${centerTextTop || ""}</text>
-      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8">${centerTextBottom || ""}</text>
-    </g>
-
-    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
-    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
-    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
-    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
-  </svg>`;*/
+  </svg>`;
 }
- 
