@@ -28,7 +28,10 @@ function formatHourLabel(d) {
 
 /**
  * points: [{ t: Date, y: number }]
- * opts: { title, unit, lineColor }
+ * opts:
+ *  - unit?: string (només s'usa si no dones formatY i vols unitat al tick)
+ *  - lineColor?: string
+ *  - formatY?: (v:number)=>string   // IMPORTANT per pressió
  */
 export function renderLineChart(canvas, points, opts = {}) {
   const ctx = hiDpi(canvas);
@@ -36,10 +39,8 @@ export function renderLineChart(canvas, points, opts = {}) {
   const W = canvas.clientWidth || 300;
   const H = canvas.clientHeight || 160;
 
-  // Clear
   ctx.clearRect(0, 0, W, H);
 
-  // Empty
   if (!points || points.length < 2) {
     ctx.globalAlpha = 0.75;
     ctx.font = "600 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -48,11 +49,6 @@ export function renderLineChart(canvas, points, opts = {}) {
     ctx.globalAlpha = 1;
     return;
   }
-
-  const padL = 44;
-  const padR = 12;
-  const padT = 10;
-  const padB = 26;
 
   const xs = points.map(p => p.t.getTime());
   const ys = points.map(p => p.y);
@@ -66,17 +62,35 @@ export function renderLineChart(canvas, points, opts = {}) {
   yMin = yr.min;
   yMax = yr.max;
 
+  const padR = 12;
+  const padT = 10;
+  const padB = 26;
+
+  // Labels Y (min/mid/max) + padding esquerre dinàmic
+  const fmtY = typeof opts.formatY === "function"
+    ? opts.formatY
+    : (v) => {
+        const base = Math.round(v * 10) / 10;
+        return `${base}${opts.unit ? " " + opts.unit : ""}`;
+      };
+
+  ctx.font = "600 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  const yLabelTexts = [fmtY(yMax), fmtY((yMin + yMax) / 2), fmtY(yMin)];
+  let maxW = 0;
+  for (const t of yLabelTexts) maxW = Math.max(maxW, ctx.measureText(t).width);
+
+  const padL = Math.min(Math.max(36, Math.ceil(maxW + 14)), 74); // 36..74 px
+
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
 
   const xScale = (x) => padL + ((x - xMin) / (xMax - xMin)) * plotW;
   const yScale = (y) => padT + (1 - (y - yMin) / (yMax - yMin)) * plotH;
 
-  // Grid + axes (sense colors específiques, usem l’opacitat)
+  // Grid
   ctx.globalAlpha = 0.22;
   ctx.lineWidth = 1;
 
-  // Horizontal grid (3 línies)
   for (let i = 0; i <= 3; i++) {
     const y = padT + (plotH * i) / 3;
     ctx.beginPath();
@@ -85,7 +99,7 @@ export function renderLineChart(canvas, points, opts = {}) {
     ctx.stroke();
   }
 
-  // Vertical ticks per hores (cada 2h aprox)
+  // X grid ticks (cada 2h)
   const start = new Date(xMin);
   start.setMinutes(0, 0, 0);
   const end = new Date(xMax);
@@ -99,12 +113,10 @@ export function renderLineChart(canvas, points, opts = {}) {
     ctx.lineTo(x, padT + plotH);
     ctx.stroke();
   }
-
   ctx.globalAlpha = 1;
 
-  // Y labels (min/mid/max)
+  // Y labels
   ctx.globalAlpha = 0.75;
-  ctx.font = "600 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
 
@@ -115,11 +127,10 @@ export function renderLineChart(canvas, points, opts = {}) {
   ];
 
   for (const it of yLabels) {
-    const txt = `${Math.round(it.v * 10) / 10}${opts.unit ? " " + opts.unit : ""}`;
-    ctx.fillText(txt, padL - 8, it.y);
+    ctx.fillText(fmtY(it.v), padL - 8, it.y);
   }
 
-  // X labels (cada 2h)
+  // X labels
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   for (let d = new Date(start); d <= end; d.setHours(d.getHours() + hourStep)) {
@@ -130,9 +141,8 @@ export function renderLineChart(canvas, points, opts = {}) {
 
   // Line
   ctx.lineWidth = 2;
-  ctx.strokeStyle = opts.lineColor || "#60a5fa"; // blau del teu accent
+  ctx.strokeStyle = opts.lineColor || "#60a5fa";
   ctx.beginPath();
-
   for (let i = 0; i < points.length; i++) {
     const px = xScale(points[i].t.getTime());
     const py = yScale(points[i].y);
@@ -141,7 +151,7 @@ export function renderLineChart(canvas, points, opts = {}) {
   }
   ctx.stroke();
 
-  // Dots (últim punt)
+  // Last point dot
   const last = points[points.length - 1];
   ctx.beginPath();
   ctx.arc(xScale(last.t.getTime()), yScale(last.y), 3.2, 0, Math.PI * 2);
@@ -150,7 +160,6 @@ export function renderLineChart(canvas, points, opts = {}) {
 }
 
 /**
- * Helper per construir punts a partir de rows meteo del teu model.
  * getter: (row) => number|null
  */
 export function buildDaySeries(rows, getter) {
@@ -162,7 +171,6 @@ export function buildDaySeries(rows, getter) {
     if (y == null) continue;
     pts.push({ t: new Date(ts), y });
   }
-  // important: ascendent
   pts.sort((a, b) => a.t.getTime() - b.t.getTime());
   return pts;
 }

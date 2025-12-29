@@ -7,6 +7,7 @@ import { fetchMeteo } from "../../services/meteoService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
 
+
 function buildMeteoUI(root) {
   root.innerHTML = `
     <div class="wrap">
@@ -229,12 +230,33 @@ async function refreshMeteo(ui, store) {
       badge: "Índex",
       subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
     });
+    
+    function attachChart(cardEl, id) {
+      const sub = cardEl.querySelector(".sub");
+      if (!sub) return null;
+
+      const wrap = document.createElement("div");
+      wrap.style.marginTop = "10px";
+
+      const canvas = document.createElement("canvas");
+      canvas.id = id;
+      canvas.style.width = "100%";
+      canvas.style.height = "140px";
+
+      wrap.appendChild(canvas);
+      sub.appendChild(wrap);
+      return canvas;
+    }
+
+    const cvTemp = attachChart(cTemp, "chart-temp");
+    const cvPress = attachChart(cPress, "chart-press");
+    const cvRain = attachChart(cRain, "chart-rain");
 
     // IMPORTANT: append DOM nodes (NO strings)
     if (ui.cards) ui.cards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
         // --- Charts (només dades del dia en curs) ---
-    const t0 = r0.instant ?? r0.at;
-    if (t0) {
+        const t0 = r0.instant ?? r0.at;
+    if (t0 && (cvTemp || cvPress || cvRain)) {
       const d0 = new Date(t0);
       const y0 = d0.getFullYear();
       const m0 = d0.getMonth();
@@ -251,10 +273,30 @@ async function refreshMeteo(ui, store) {
       const pressPts = buildDaySeries(todayRows, (r) => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa));
       const rainPts = buildDaySeries(todayRows, (r) => num(r.pluja_diaria_mm ?? r.rain_daily_mm ?? r.rain_mm));
 
-      if (ui.chartTemp) renderLineChart(ui.chartTemp, tempPts, { unit: "°C", lineColor: "#60a5fa" });
-      if (ui.chartPress) renderLineChart(ui.chartPress, pressPts, { unit: "hPa", lineColor: "#60a5fa" });
-      if (ui.chartRain) renderLineChart(ui.chartRain, rainPts, { unit: "mm", lineColor: "#60a5fa" });
+      if (cvTemp) {
+        renderLineChart(cvTemp, tempPts, {
+          unit: "°C",
+          lineColor: "#60a5fa",
+          formatY: (v) => (Math.round(v * 10) / 10).toString(), // 1 decimal, sense unitat al tick
+        });
+      }
+
+      if (cvPress) {
+        renderLineChart(cvPress, pressPts, {
+          lineColor: "#60a5fa",
+          formatY: (v) => String(Math.round(v)), // pressió: enter i curt (1008, 1012…)
+        });
+      }
+
+      if (cvRain) {
+        renderLineChart(cvRain, rainPts, {
+          unit: "mm",
+          lineColor: "#60a5fa",
+          formatY: (v) => (Math.round(v * 10) / 10).toString(), // curt
+        });
+      }
     }
+
 
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
