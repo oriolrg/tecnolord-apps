@@ -716,3 +716,22 @@ th{
     font-size: 12px;
   }
 }
+/* Mòbil vertical: 1 sola columna + millor centrament (excepte cards de vent) */
+@media (max-width: 560px) and (orientation: portrait){
+  .card{
+    grid-column: span 12;
+  }
+
+  .card:not(.card--wind) .k{
+    justify-content: center;
+    text-align: center;
+  }
+  .card:not(.card--wind) .v{
+    justify-content: center;
+    text-align: center;
+  }
+  .card:not(.card--wind) .sub{
+    justify-content: center;
+    text-align: center;
+  }
+}

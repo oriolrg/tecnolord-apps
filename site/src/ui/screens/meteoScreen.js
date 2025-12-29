@@ -4,6 +4,8 @@ import { card } from "../components/card.js";
 import { num, fmt1, clamp, windAbbr16, windFromCa, fmtTime } from "../format.js";
 import { windNameCa } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
+import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
+
 
 function buildMeteoUI(root) {
   root.innerHTML = `
@@ -19,6 +21,30 @@ function buildMeteoUI(root) {
       </div>
 
       <div class="grid" id="meteo-cards"></div>
+
+      <div class="panel" style="margin-top:14px;">
+        <div class="section-title" style="margin:0 0 10px;">
+          <h2 style="font-size: var(--fs-1);">Evolució d’avui</h2>
+          <p id="charts-note">Temperatura, pressió i pluja acumulada</p>
+        </div>
+
+        <div class="grid" style="gap:12px; grid-auto-rows: minmax(180px, auto);">
+          <div class="card" style="grid-column: span 12; min-height: 200px;">
+            <div class="k"><h3>Temperatura</h3><span class="badge">°C</span></div>
+            <canvas id="chart-temp" style="width:100%; height:160px;"></canvas>
+          </div>
+
+          <div class="card" style="grid-column: span 12; min-height: 200px;">
+            <div class="k"><h3>Pressió (rel.)</h3><span class="badge">hPa</span></div>
+            <canvas id="chart-press" style="width:100%; height:160px;"></canvas>
+          </div>
+
+          <div class="card" style="grid-column: span 12; min-height: 200px;">
+            <div class="k"><h3>Pluja acumulada</h3><span class="badge">mm</span></div>
+            <canvas id="chart-rain" style="width:100%; height:160px;"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -27,8 +53,13 @@ function buildMeteoUI(root) {
     err: $("#meteo-err", root),
     summary: $("#meteo-summary", root),
     cards: $("#meteo-cards", root),
+
+    chartTemp: $("#chart-temp", root),
+    chartPress: $("#chart-press", root),
+    chartRain: $("#chart-rain", root),
   };
 }
+
 
 async function refreshMeteo(ui, store) {
   if (ui.err) ui.err.textContent = "";
@@ -201,6 +232,30 @@ async function refreshMeteo(ui, store) {
 
     // IMPORTANT: append DOM nodes (NO strings)
     if (ui.cards) ui.cards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
+        // --- Charts (només dades del dia en curs) ---
+    const t0 = r0.instant ?? r0.at;
+    if (t0) {
+      const d0 = new Date(t0);
+      const y0 = d0.getFullYear();
+      const m0 = d0.getMonth();
+      const day0 = d0.getDate();
+
+      const todayRows = meteoRows.filter((r) => {
+        const ts = r.instant ?? r.at;
+        if (!ts) return false;
+        const d = new Date(ts);
+        return d.getFullYear() === y0 && d.getMonth() === m0 && d.getDate() === day0;
+      });
+
+      const tempPts = buildDaySeries(todayRows, (r) => num(r.temp_c ?? r.temperature));
+      const pressPts = buildDaySeries(todayRows, (r) => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa));
+      const rainPts = buildDaySeries(todayRows, (r) => num(r.pluja_diaria_mm ?? r.rain_daily_mm ?? r.rain_mm));
+
+      if (ui.chartTemp) renderLineChart(ui.chartTemp, tempPts, { unit: "°C", lineColor: "#60a5fa" });
+      if (ui.chartPress) renderLineChart(ui.chartPress, pressPts, { unit: "hPa", lineColor: "#60a5fa" });
+      if (ui.chartRain) renderLineChart(ui.chartRain, rainPts, { unit: "mm", lineColor: "#60a5fa" });
+    }
+
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
   }
