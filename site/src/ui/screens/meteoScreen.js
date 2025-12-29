@@ -16,7 +16,7 @@ function buildMeteoUI(root) {
           <span id="meteo-last" class="meteo-last">—</span>
         </h2>
         <span id="meteo-err" class="err" role="alert" aria-live="polite"></span>
-        <p id="meteo-summary">—</p>
+        <p id="meteo-summary"></p>
       </div>
 
       <div class="grid" id="meteo-cards"></div>
@@ -172,15 +172,16 @@ async function refreshMeteo(ui, store) {
     const yearTxt = (rainYear == null || Number.isNaN(rainYear)) ? null : fmt1(rainYear);
 
     const moreParts = [];
-    if (weekTxt) moreParts.push(`Setmana: <strong>${weekTxt} mm</strong>`);
     if (eventTxt) moreParts.push(`Event: <strong>${eventTxt} mm</strong>`);
-    if (monthTxt) moreParts.push(`Mes: <strong>${monthTxt} mm</strong>`);
+    if (h1Txt !== "—") moreParts.push(`Hora: <strong>${h1Txt} mm</strong>`);
+    if (weekTxt) moreParts.push(`Setmana: <strong>${weekTxt} mm</strong>`);
     if (yearTxt) moreParts.push(`Any: <strong>${yearTxt} mm</strong>`);
+
 
     const moreHtml = moreParts.length
       ? `
         <details class="tl-details" style="margin-top:8px;">
-          <summary>Més acumulats</summary>
+          <summary>Més detalls</summary>
           <div class="tl-details__body">
             ${moreParts.join(`<span class="dot-sep">·</span>`)}
           </div>
@@ -188,20 +189,22 @@ async function refreshMeteo(ui, store) {
       `
       : "";
 
+    const monthInlineTxt = (rainMonth == null || Number.isNaN(rainMonth)) ? "—" : fmt1(rainMonth);
+
     const cRain = card({
       title: "Pluja",
       value: rainMainValue,
       unit: rainMainUnit,
-      //badge: "Avui",
       subHtml: `
         <div class="meta-row">
           <span>Dia: <strong>${dayTxt} mm</strong></span>
           <span class="dot-sep">·</span>
-          <span>1h: <strong>${h1Txt} mm</strong></span>
+          <span>Mes: <strong>${monthInlineTxt} mm</strong></span>
         </div>
         ${moreHtml}
       `,
     });
+
 
     // 4) Pressió
     const cPress = card({
