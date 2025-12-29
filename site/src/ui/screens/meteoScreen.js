@@ -10,12 +10,16 @@ function buildMeteoUI(root) {
   root.innerHTML = `
     <div class="wrap">
       <div class="status-row">
-        <span class="pill"><span class="dot"></span><span id="meteo-last">Sense dades encara</span></span>
         <span id="meteo-err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
       <div class="section-title">
-        <h2>Meteo</h2>
+        <div class="title-row">
+          <h2>
+            Meteo
+            <span class="last-inline" id="meteo-last">Sense dades encara</span>
+          </h2>
+        </div>
         <p id="meteo-summary">—</p>
       </div>
 
@@ -30,6 +34,7 @@ function buildMeteoUI(root) {
     cards: $("#meteo-cards", root),
   };
 }
+
 
 async function refreshMeteo(ui, store) {
   if (ui.err) ui.err.textContent = "";

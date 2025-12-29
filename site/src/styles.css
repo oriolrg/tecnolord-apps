@@ -770,3 +770,16 @@ th{
 .card--wind .wind-meta{
   text-align: center;
 }
+/* Meteo header: "Dades actualitzades..." al costat del títol */
+.section-title h2{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.last-inline{
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: .72;
+}
