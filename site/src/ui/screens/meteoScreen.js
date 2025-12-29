@@ -6,8 +6,6 @@ import { windNameCa } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
-
-
 function buildMeteoUI(root) {
   root.innerHTML = `
     <div class="wrap">
@@ -30,9 +28,13 @@ function buildMeteoUI(root) {
     err: $("#meteo-err", root),
     summary: $("#meteo-summary", root),
     cards: $("#meteo-cards", root),
+
+    // (ja no els uses perquè els canvases es creen dins de les cards)
+    chartTemp: $("#chart-temp", root),
+    chartPress: $("#chart-press", root),
+    chartRain: $("#chart-rain", root),
   };
 }
-
 
 async function refreshMeteo(ui, store) {
   if (ui.err) ui.err.textContent = "";
@@ -132,18 +134,7 @@ async function refreshMeteo(ui, store) {
       · Ràfega: <strong>${gustVal} m/s</strong>
     `;
 
-    const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
-    const rainMainUnit = "mm/h";
-
-    const plujaLines = [];
-    const dayTxt = (rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay);
-    plujaLines.push(`Dia: <strong>${dayTxt} mm</strong>`);
-    if (rain1h != null && !Number.isNaN(rain1h)) plujaLines.push(`<span class="muted">1h: ${fmt1(rain1h)} mm</span>`);
-    if (rainWeek != null && !Number.isNaN(rainWeek)) plujaLines.push(`<span class="muted">Setmana: ${fmt1(rainWeek)} mm</span>`);
-    if (rainEvent != null && !Number.isNaN(rainEvent)) plujaLines.push(`<span class="muted">Event: ${fmt1(rainEvent)} mm</span>`);
-    if (rainMonth != null && !Number.isNaN(rainMonth)) plujaLines.push(`<span class="muted">Mes: ${fmt1(rainMonth)} mm</span>`);
-    if (rainYear != null && !Number.isNaN(rainYear)) plujaLines.push(`<span class="muted">Any: ${fmt1(rainYear)} mm</span>`);
-
+    // --- Cards ---
     const cTemp = card({
       title: "Temperatura",
       value: fmt1(temp_c),
@@ -186,14 +177,49 @@ async function refreshMeteo(ui, store) {
     });
     cWind.classList.add("card--tall");
 
+    // --- Pluja (card compacta, més coherent amb la resta) ---
+    const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
+    const rainMainUnit = "mm/h";
+
+    const dayTxt = (rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay);
+    const h1Txt = (rain1h == null || Number.isNaN(rain1h)) ? "—" : fmt1(rain1h);
+
+    const weekTxt = (rainWeek == null || Number.isNaN(rainWeek)) ? null : fmt1(rainWeek);
+    const eventTxt = (rainEvent == null || Number.isNaN(rainEvent)) ? null : fmt1(rainEvent);
+    const monthTxt = (rainMonth == null || Number.isNaN(rainMonth)) ? null : fmt1(rainMonth);
+    const yearTxt = (rainYear == null || Number.isNaN(rainYear)) ? null : fmt1(rainYear);
+
+    const moreParts = [];
+    if (weekTxt) moreParts.push(`Setmana: <strong>${weekTxt} mm</strong>`);
+    if (eventTxt) moreParts.push(`Event: <strong>${eventTxt} mm</strong>`);
+    if (monthTxt) moreParts.push(`Mes: <strong>${monthTxt} mm</strong>`);
+    if (yearTxt) moreParts.push(`Any: <strong>${yearTxt} mm</strong>`);
+
+    const moreHtml = moreParts.length
+      ? `
+        <details class="tl-details" style="margin-top:8px;">
+          <summary>Més acumulats</summary>
+          <div class="tl-details__body">
+            ${moreParts.join(`<span class="dot-sep">·</span>`)}
+          </div>
+        </details>
+      `
+      : "";
+
     const cRain = card({
       title: "Pluja",
       value: rainMainValue,
       unit: rainMainUnit,
-      badge: "Taxa",
-      subHtml: plujaLines.join(`<span class="sep"></span>`),
+      badge: "Avui",
+      subHtml: `
+        <div class="meta-row">
+          <span>Dia: <strong>${dayTxt} mm</strong></span>
+          <span class="dot-sep">·</span>
+          <span>1h: <strong>${h1Txt} mm</strong></span>
+        </div>
+        ${moreHtml}
+      `,
     });
-    cRain.classList.add("card--tall");
 
     const cUv = card({
       title: "UV",
@@ -202,7 +228,7 @@ async function refreshMeteo(ui, store) {
       badge: "Índex",
       subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
     });
-    
+
     function attachChart(cardEl, id) {
       const sub = cardEl.querySelector(".sub");
       if (!sub) return null;
@@ -225,22 +251,22 @@ async function refreshMeteo(ui, store) {
     const cvRain = attachChart(cRain, "chart-rain");
     const cvHum = attachChart(cHum, "chart-hum");
 
-
     // IMPORTANT: append DOM nodes (NO strings)
     if (ui.cards) ui.cards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
-        // --- Charts (només dades del dia en curs) ---
-        const t0 = r0.instant ?? r0.at;
+
+    // --- Charts (només dades del dia en curs) ---
+    const t0 = r0.instant ?? r0.at;
     if (t0 && (cvTemp || cvPress || cvRain || cvHum)) {
-      const d0 = new Date(t0);
-      const y0 = d0.getFullYear();
-      const m0 = d0.getMonth();
-      const day0 = d0.getDate();
+      const dd0 = new Date(t0);
+      const yy0 = dd0.getFullYear();
+      const mm0 = dd0.getMonth();
+      const dayy0 = dd0.getDate();
 
       const todayRows = meteoRows.filter((r) => {
         const ts = r.instant ?? r.at;
         if (!ts) return false;
         const d = new Date(ts);
-        return d.getFullYear() === y0 && d.getMonth() === m0 && d.getDate() === day0;
+        return d.getFullYear() === yy0 && d.getMonth() === mm0 && d.getDate() === dayy0;
       });
 
       const tempPts = buildDaySeries(todayRows, (r) => num(r.temp_c ?? r.temperature));
@@ -248,19 +274,18 @@ async function refreshMeteo(ui, store) {
       const rainPts = buildDaySeries(todayRows, (r) => num(r.pluja_diaria_mm ?? r.rain_daily_mm ?? r.rain_mm));
       const humPts = buildDaySeries(todayRows, (r) => num(r.humitat_pct ?? r.humidity));
 
-
       if (cvTemp) {
         renderLineChart(cvTemp, tempPts, {
           unit: "°C",
           lineColor: "#60a5fa",
-          formatY: (v) => (Math.round(v * 10) / 10).toString(), // 1 decimal, sense unitat al tick
+          formatY: (v) => (Math.round(v * 10) / 10).toString(),
         });
       }
 
       if (cvPress) {
         renderLineChart(cvPress, pressPts, {
           lineColor: "#60a5fa",
-          formatY: (v) => String(Math.round(v)), // pressió: enter i curt (1008, 1012…)
+          formatY: (v) => String(Math.round(v)),
         });
       }
 
@@ -268,18 +293,17 @@ async function refreshMeteo(ui, store) {
         renderLineChart(cvRain, rainPts, {
           unit: "mm",
           lineColor: "#60a5fa",
-          formatY: (v) => (Math.round(v * 10) / 10).toString(), // curt
+          formatY: (v) => (Math.round(v * 10) / 10).toString(),
         });
       }
+
       if (cvHum) {
         renderLineChart(cvHum, humPts, {
           lineColor: "#60a5fa",
-          formatY: (v) => String(Math.round(v)), // 0 decimals (40, 55, 72...)
+          formatY: (v) => String(Math.round(v)),
         });
       }
-
     }
-
 
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
