@@ -50,10 +50,9 @@ body{
 .wrap{
   max-width: 1180px;
   margin: 0 auto;
-  padding: 18px 14px 70px;
+  padding: 18px 14px 100px; /* més marge inferior per al menú */
 }
 
-/* (el teu CSS existent) */
 header{
   display:flex;
   flex-wrap:wrap;
@@ -181,7 +180,6 @@ input:focus, button:focus{
   grid-auto-flow: dense;
 }
 
-/* Vent */
 .card--wind{
   grid-row: span 1;
 }
@@ -212,23 +210,13 @@ input:focus, button:focus{
   justify-content:center;
 }
 
-.wind-block{
-  width: 100%;
-  flex: 1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
 .wind-rose{
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 1 / 1;
-  max-width: none;   /* ✅ clau: treu el límit */
+  max-width: none;
 }
-
-
 
 .card{
   grid-column: span 6;
@@ -506,10 +494,6 @@ th{
 }
 .wind-rose{ width: 120px; height: 120px; }
 
-/* =========================
-   Tecnolord header (NEW)
-   ========================= */
-
 .tl-header{
   width: 100%;
   position: sticky;
@@ -532,7 +516,7 @@ th{
   width: 100%;
   display:flex;
   align-items:center;
-  justify-content:space-between; /* extrems */
+  justify-content:space-between;
   gap: 14px;
   padding: 12px 18px;
 }
@@ -579,11 +563,9 @@ th{
   color: var(--muted);
 }
 
-/* si la imatge falla */
 .tl-logoWrap.is-missing .tl-logoFallback{
   display: inline-flex;
 }
-
 
 .tl-brandtext{
   display:flex;
@@ -611,24 +593,120 @@ th{
   gap: 10px;
 }
 
-/* dona aire sota header sticky */
 .wrap{
   padding-top: 16px;
 }
-/* Permet que els subcontenidors del grid no trenquin el layout.
-   Les cards dins segueixen sent grid items. */
+
 .cards-group{
   display: contents;
 }
 .muted{
-  opacity: .7;
+  opacity: .80;
 }
-/* --- Fix llegibilitat: evita textos massa transparents --- */
-.muted { opacity: .80; }        /* abans massa baix */
-.sub { opacity: 1; }            /* si tens .sub amb opacity baix, això ho neutralitza */
-.wind-meta { opacity: .90; }    /* text del vent més llegible */
-.sep { opacity: .70; }          /* separador més visible */
+.sub { opacity: 1; }
+.wind-meta { opacity: .90; }
+.sep { opacity: .70; }
 
-/* --- Màx / Mín temperatura --- */
 .temp-max { color: rgba(239,68,68,.95); font-weight: 800; }
 .temp-min { color: rgba(59,130,246,.95); font-weight: 800; }
+
+/* =========================
+   MENÚ NAVEGACIÓ INFERIOR
+   ========================= */
+
+.bottom-nav{
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: rgba(255,255,255,.75);
+  border-top: 1px solid rgba(0,0,0,.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 8px 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+}
+
+@media (prefers-color-scheme: dark){
+  .bottom-nav{
+    background: rgba(10,14,20,.75);
+    border-top: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.35);
+  }
+}
+
+.bottom-nav__inner{
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.nav-btn{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  min-width: 70px;
+  flex: 1;
+  max-width: 120px;
+}
+
+.nav-btn:hover{
+  background: rgba(96,165,250,.12);
+  color: var(--text);
+}
+
+.nav-btn.active{
+  background: rgba(96,165,250,.18);
+  color: var(--accent);
+}
+
+.nav-btn__icon{
+  font-size: 24px;
+  line-height: 1;
+}
+
+.nav-btn__label{
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+/* Screens: per defecte amagats */
+.screen{
+  display: none;
+}
+
+.screen.active{
+  display: block;
+}
+
+/* Ajust responsive per tablets/desktop */
+@media (min-width: 768px){
+  .nav-btn{
+    min-width: 90px;
+    padding: 10px 20px;
+  }
+  
+  .nav-btn__icon{
+    font-size: 26px;
+  }
+  
+  .nav-btn__label{
+    font-size: 12px;
+  }
+}
