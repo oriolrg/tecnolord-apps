@@ -28,11 +28,6 @@ function buildMeteoUI(root) {
     err: $("#meteo-err", root),
     summary: $("#meteo-summary", root),
     cards: $("#meteo-cards", root),
-
-    // (ja no els uses perquè els canvases es creen dins de les cards)
-    chartTemp: $("#chart-temp", root),
-    chartPress: $("#chart-press", root),
-    chartRain: $("#chart-rain", root),
   };
 }
 
@@ -134,34 +129,9 @@ async function refreshMeteo(ui, store) {
       · Ràfega: <strong>${gustVal} m/s</strong>
     `;
 
-    // --- Cards ---
-    const cTemp = card({
-      title: "Temperatura",
-      value: fmt1(temp_c),
-      unit: "°C",
-      badge: "Última lectura",
-      subHtml:
-        `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : "Sensació: <strong>—</strong>"}`
-        + `${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : " · Rosada: <strong>—</strong>"}`
-        + `${extremesHtml}`,
-    });
+    // --- Cards (ordre prioritari) ---
 
-    const cHum = card({
-      title: "Humitat",
-      value: hum == null ? "—" : Math.round(hum),
-      unit: "%",
-      badge: "Última lectura",
-      subHtml: `<span class="muted">Evolució d’avui</span>`,
-    });
-
-    const cPress = card({
-      title: "Pressió (rel.)",
-      value: fmt1(pRel),
-      unit: "hPa",
-      badge: "Relativa",
-      subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}`,
-    });
-
+    // 1) Vent (compacte: NO ocupa 2 files)
     const cWind = card({
       title: fromTxt,
       value: "",
@@ -175,9 +145,21 @@ async function refreshMeteo(ui, store) {
         <div class="wind-meta">${windMetaHtml}</div>
       `,
     });
-    cWind.classList.add("card--tall");
+    // Important: NO fem .card--tall aquí
 
-    // --- Pluja (card compacta, més coherent amb la resta) ---
+    // 2) Temperatura
+    const cTemp = card({
+      title: "Temperatura",
+      value: fmt1(temp_c),
+      unit: "°C",
+      badge: "Última lectura",
+      subHtml:
+        `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : "Sensació: <strong>—</strong>"}`
+        + `${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : " · Rosada: <strong>—</strong>"}`
+        + `${extremesHtml}`,
+    });
+
+    // 3) Pluja (compacta + “Més” plegable)
     const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
     const rainMainUnit = "mm/h";
 
@@ -221,6 +203,25 @@ async function refreshMeteo(ui, store) {
       `,
     });
 
+    // 4) Pressió
+    const cPress = card({
+      title: "Pressió (rel.)",
+      value: fmt1(pRel),
+      unit: "hPa",
+      badge: "Relativa",
+      subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}`,
+    });
+
+    // 5) Humitat
+    const cHum = card({
+      title: "Humitat",
+      value: hum == null ? "—" : Math.round(hum),
+      unit: "%",
+      badge: "Última lectura",
+      subHtml: `<span class="muted">Evolució d’avui</span>`,
+    });
+
+    // 6) UV
     const cUv = card({
       title: "UV",
       value: uvi == null ? "—" : Math.round(uvi),
@@ -246,13 +247,14 @@ async function refreshMeteo(ui, store) {
       return canvas;
     }
 
+    // Charts a les cards que toquen (vent i UV no en tenen ara)
     const cvTemp = attachChart(cTemp, "chart-temp");
-    const cvPress = attachChart(cPress, "chart-press");
     const cvRain = attachChart(cRain, "chart-rain");
+    const cvPress = attachChart(cPress, "chart-press");
     const cvHum = attachChart(cHum, "chart-hum");
 
-    // IMPORTANT: append DOM nodes (NO strings)
-    if (ui.cards) ui.cards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
+    // Append final en l’ordre desitjat
+    if (ui.cards) ui.cards.append(cWind, cTemp, cRain, cPress, cHum, cUv);
 
     // --- Charts (només dades del dia en curs) ---
     const t0 = r0.instant ?? r0.at;
