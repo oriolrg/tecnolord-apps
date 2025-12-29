@@ -2,9 +2,11 @@ import { CONFIG } from "../../config.js";
 import { createStore } from "../../state/store.js";
 import { $ } from "../dom.js";
 import { clamp } from "../format.js";
-import { refreshMeteo } from "./meteoScreen.js"; // pinta CARDS (meteo + hidro)
-import { refreshHidro } from "./hidroScreen.js"; // pinta TAULES (meteo + hidro)
 import { renderTecnolordHeader } from "../components/tecnolordHeader.js";
+import { renderBottomNav } from "../components/bottomNav.js";
+import { initMeteoScreen } from "./meteoScreen.js";
+import { initCabalsScreen } from "./cabalsScreen.js";
+import { initHistoricsScreen } from "./historicsScreen.js";
 
 function readUrlParams(store) {
   const url = new URL(location.href);
@@ -34,98 +36,54 @@ function buildUI(root) {
       actionLabel: "Inicia sessió",
     })}
 
-    <div class="wrap">
-
-      <div class="status-row">
-        <span class="pill"><span class="dot"></span><span id="last">Sense dades encara</span></span>
-        <span id="err" class="err" role="alert" aria-live="polite"></span>
-      </div>
-
-      <!-- CARDS: METEO -->
-      <div class="section-title">
-        <p id="meteo-summary">—</p>
-      </div>
-      <div class="grid" id="meteo-cards"></div>
-
-      <!-- CARDS: HIDRO -->
-      <div class="section-title" style="margin-top:22px">
-        <p id="hidro-summary">—</p>
-      </div>
-      <div class="grid" id="hidro-cards"></div>
-
-      <!-- TAULES (després de totes les cards) -->
-      <details style="margin-top:22px">
-        <summary>Últims registres (meteo) <span class="badge" id="meteo-count">0</span></summary>
-        <div class="detail-body">
-          <div class="table-wrap">
-            <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Temp (°C)</th>
-                  <th>Sensació (°C)</th>
-                  <th>Rosada (°C)</th>
-                  <th>Hum (%)</th>
-                  <th>Pressió rel (hPa)</th>
-                  <th>Pressió abs (hPa)</th>
-                  <th>UVI</th>
-                  <th>Solar (W/m²)</th>
-                  <th>Taxa pluja (mm/h)</th>
-                  <th>Pluja dia</th>
-                  <th>Pluja 1h</th>
-                  <th>Pluja mes</th>
-                  <th>Pluja any</th>
-                  <th>Vent (m/s)</th>
-                  <th>Ràfega (m/s)</th>
-                  <th>Dir (°)</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </details>
-
-      <details>
-        <summary>Últims registres (hidro) <span class="badge" id="hidro-count">0</span></summary>
-        <div class="detail-body">
-          <div class="table-wrap">
-            <table id="tbl-hidro" aria-label="Taula d'hidrologia">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Codi</th>
-                  <th>Nom</th>
-                  <th>Tipus</th>
-                  <th>Cabal (m³/s)</th>
-                  <th>Capacitat (%)</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </details>
-
+    <div id="screen-meteo" class="screen active">
+      <!-- Contingut de Meteo -->
     </div>
+
+    <div id="screen-cabals" class="screen">
+      <!-- Contingut de Cabals -->
+    </div>
+
+    <div id="screen-historics" class="screen">
+      <!-- Contingut d'Històrics -->
+    </div>
+
+    ${renderBottomNav()}
   `;
 
   return {
-    last: $("#last", root),
-    err: $("#err", root),
-
-    meteoSummary: $("#meteo-summary", root),
-    meteoCards: $("#meteo-cards", root),
-    meteoCount: $("#meteo-count", root),
-    meteoTbody: $("#tbl-meteo tbody", root),
-
-    hidroSummary: $("#hidro-summary", root),
-    hidroCards: $("#hidro-cards", root),
-    hidroCount: $("#hidro-count", root),
-    hidroTbody: $("#tbl-hidro tbody", root),
-
-    errH: null,
+    screenMeteo: $("#screen-meteo", root),
+    screenCabals: $("#screen-cabals", root),
+    screenHistorics: $("#screen-historics", root),
+    navButtons: root.querySelectorAll(".nav-btn"),
   };
+}
+
+function switchScreen(screenId, ui) {
+  // Amagar totes les pantalles
+  ui.screenMeteo.classList.remove("active");
+  ui.screenCabals.classList.remove("active");
+  ui.screenHistorics.classList.remove("active");
+
+  // Mostrar la pantalla seleccionada
+  const screens = {
+    meteo: ui.screenMeteo,
+    cabals: ui.screenCabals,
+    historics: ui.screenHistorics,
+  };
+
+  if (screens[screenId]) {
+    screens[screenId].classList.add("active");
+  }
+
+  // Actualitzar botons actius
+  ui.navButtons.forEach((btn) => {
+    if (btn.dataset.screen === screenId) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
 }
 
 export function initApp(root) {
@@ -134,19 +92,25 @@ export function initApp(root) {
 
   const ui = buildUI(root);
 
-  let timer = null;
+  // Inicialitzar cada pantalla
+  const cleanupMeteo = initMeteoScreen(ui.screenMeteo, store);
+  const cleanupCabals = initCabalsScreen(ui.screenCabals, store);
+  const cleanupHistorics = initHistoricsScreen(ui.screenHistorics, store);
 
-  if (store.get().auto) {
-    timer = setInterval(async () => {
-      await refreshMeteo(ui, store); // cards
-      await refreshHidro(ui, store); // taules
-    }, CONFIG.autoRefreshMs);
-  }
+  // Event listeners per als botons de navegació
+  ui.navButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const screenId = btn.dataset.screen;
+      switchScreen(screenId, ui);
+    });
+  });
 
-  refreshMeteo(ui, store);
-  refreshHidro(ui, store);
+  // Pantalla per defecte: Meteo
+  switchScreen("meteo", ui);
 
   return () => {
-    if (timer) clearInterval(timer);
+    cleanupMeteo();
+    cleanupCabals();
+    cleanupHistorics();
   };
 }

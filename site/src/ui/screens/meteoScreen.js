@@ -1,43 +1,83 @@
-// meteoScreen.js
+import { CONFIG } from "../../config.js";
+import { $ } from "../dom.js";
 import { card } from "../components/card.js";
 import { num, fmt1, clamp, windAbbr16, windFromCa, fmtTime, norm } from "../format.js";
 import { windNameCa } from "../format.js";
-
 import { fetchMeteo } from "../../services/meteoService.js";
-import { fetchHidro } from "../../services/hidroService.js";
+import { renderMeteoTable } from "../components/tableMeteo.js";
 
-// Helpers HIDRO
-function pickRow(rows, predicates) {
-  for (const pred of predicates) {
-    const found = rows.find(pred);
-    if (found) return found;
-  }
-  return null;
+function buildMeteoUI(root) {
+  root.innerHTML = `
+    <div class="wrap">
+      <div class="status-row">
+        <span class="pill"><span class="dot"></span><span id="meteo-last">Sense dades encara</span></span>
+        <span id="meteo-err" class="err" role="alert" aria-live="polite"></span>
+      </div>
+
+      <div class="section-title">
+        <p id="meteo-summary">—</p>
+      </div>
+      <div class="grid" id="meteo-cards"></div>
+
+      <details style="margin-top:22px">
+        <summary>Últims registres (meteo) <span class="badge" id="meteo-count">0</span></summary>
+        <div class="detail-body">
+          <div class="table-wrap">
+            <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Temp (°C)</th>
+                  <th>Sensació (°C)</th>
+                  <th>Rosada (°C)</th>
+                  <th>Hum (%)</th>
+                  <th>Pressió rel (hPa)</th>
+                  <th>Pressió abs (hPa)</th>
+                  <th>UVI</th>
+                  <th>Solar (W/m²)</th>
+                  <th>Taxa pluja (mm/h)</th>
+                  <th>Pluja dia</th>
+                  <th>Pluja 1h</th>
+                  <th>Pluja mes</th>
+                  <th>Pluja any</th>
+                  <th>Vent (m/s)</th>
+                  <th>Ràfega (m/s)</th>
+                  <th>Dir (°)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+  `;
+
+  return {
+    last: $("#meteo-last", root),
+    err: $("#meteo-err", root),
+    summary: $("#meteo-summary", root),
+    cards: $("#meteo-cards", root),
+    count: $("#meteo-count", root),
+    tbody: $("#tbl-meteo tbody", root),
+  };
 }
 
-export async function refreshMeteo(ui, store) {
+async function refreshMeteo(ui, store) {
   if (ui.err) ui.err.textContent = "";
-  if (ui.errH) ui.errH.textContent = "";
 
   const s = store.get();
   const estacio = (s.estacio || "").trim();
-  const codi = (s.codiHidro || "").trim();
   const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
 
   try {
-    // en aquest screen carreguem meteo + hidro per poder pintar totes les cards
-    const [meteoRows, hidroRows] = await Promise.all([
-      fetchMeteo({ estacio, limit }),
-      fetchHidro({ codi, limit }),
-    ]);
+    const meteoRows = await fetchMeteo({ estacio, limit });
 
-    // --- METEO CARDS ---
-    if (ui.meteoCount) ui.meteoCount.textContent = String(meteoRows.length);
-
-    if (ui.meteoCards) ui.meteoCards.innerHTML = "";
+    if (ui.count) ui.count.textContent = String(meteoRows.length);
+    if (ui.cards) ui.cards.innerHTML = "";
 
     if (!meteoRows.length) {
-      if (ui.meteoSummary) ui.meteoSummary.textContent = "Meteo: Sense registres.";
+      if (ui.summary) ui.summary.textContent = "Meteo: Sense registres.";
       if (ui.last) ui.last.textContent = "Sense dades";
     } else {
       const r0 = meteoRows[0];
@@ -54,7 +94,6 @@ export async function refreshMeteo(ui, store) {
       const uvi = num(r0.uvi);
       const solar = num(r0.solar_wm2);
 
-      // PLUJA
       const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
       const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
       const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
@@ -63,22 +102,16 @@ export async function refreshMeteo(ui, store) {
       const rainMonth = num(r0.pluja_mes_mm ?? r0.rain_month_mm);
       const rainYear = num(r0.pluja_any_mm ?? r0.rain_year_mm);
 
-      // VENT
       const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
       const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
       const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
 
-      const deg =
-        wdir == null || Number.isNaN(wdir)
-          ? null
-          : ((wdir % 360) + 360) % 360;
-
+      const deg = wdir == null || Number.isNaN(wdir) ? null : ((wdir % 360) + 360) % 360;
       const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
       const abbr = deg == null ? "—" : windAbbr16(deg);
       const name = deg == null ? "" : windNameCa(deg);
       const fromTxt = deg == null ? "Vent" : `Vent del ${windFromCa(deg)} (${name})`;
 
-      // age
       const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
       const ageTxt =
         ageSec < 60 ? `${ageSec} s` :
@@ -86,13 +119,12 @@ export async function refreshMeteo(ui, store) {
         `${Math.round(ageSec / 3600)} h`;
 
       if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
-      if (ui.meteoSummary) {
-        ui.meteoSummary.textContent = estacio
+      if (ui.summary) {
+        ui.summary.textContent = estacio
           ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres`
           : `Meteo · ${meteoRows.length} registres`;
       }
 
-      // EXTREMES DEL DIA
       const d0 = new Date(instant);
       const y0 = d0.getFullYear();
       const m0 = d0.getMonth();
@@ -120,7 +152,6 @@ export async function refreshMeteo(ui, store) {
           ? ""
           : ` · <span class="temp-max">Màx: ${tMax == null ? "—" : fmt1(tMax)} °C</span> · <span class="temp-min">Mín: ${tMin == null ? "—" : fmt1(tMin)} °C</span>`;
 
-      // vent meta
       const windVal = (wind == null || Number.isNaN(wind)) ? "—" : fmt1(wind);
       const gustVal = (gust == null || Number.isNaN(gust)) ? "—" : fmt1(gust);
 
@@ -129,7 +160,6 @@ export async function refreshMeteo(ui, store) {
         · Ràfega: <strong>${gustVal} m/s</strong>
       `;
 
-      // pluja
       const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
       const rainMainUnit = "mm/h";
 
@@ -201,112 +231,12 @@ export async function refreshMeteo(ui, store) {
         subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
       });
 
-      if (ui.meteoCards) ui.meteoCards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
+      if (ui.cards) ui.cards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
     }
 
-    // --- HIDRO CARDS ---
-    if (ui.hidroCount) ui.hidroCount.textContent = String(hidroRows.length);
-
-    if (ui.hidroCards) ui.hidroCards.innerHTML = "";
-
-    if (!hidroRows.length) {
-      if (ui.hidroSummary) ui.hidroSummary.textContent = "Hidro: Sense registres.";
-    } else {
-      if (ui.hidroSummary) {
-        ui.hidroSummary.textContent = codi
-          ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres`
-          : `Hidro · ${hidroRows.length} registres`;
-      }
-
-      const rowLlosa = pickRow(hidroRows, [
-        r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
-        r => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
-      ]);
-
-      const rowCardener = pickRow(hidroRows, [
-        r => norm(r.nom).includes("cardener"),
-        r => norm(r.codi).includes("cardener"),
-      ]);
-
-      const rowValls = pickRow(hidroRows, [
-        r => norm(r.nom).includes("valls"),
-        r => norm(r.codi).includes("valls"),
-      ]);
-
-      const instantLlosa = rowLlosa?.instant ?? null;
-      const cap = num(rowLlosa?.capacitat_pct);
-
-      let sortida = num(rowLlosa?.cabal_m3s);
-      if (sortida == null) {
-        const rowSortida = pickRow(hidroRows, [
-          r => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
-          r => norm(r.codi).includes("sortida") && (norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")),
-        ]);
-        sortida = num(rowSortida?.cabal_m3s);
-      }
-
-      const cabalCardener = num(rowCardener?.cabal_m3s);
-      const cabalValls = num(rowValls?.cabal_m3s);
-      const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
-      const delta = (sortida == null ? null : (entradaTotal - sortida));
-
-      let deltaHtml = "";
-      if (sortida != null && (cabalCardener != null || cabalValls != null)) {
-        const cls = delta >= 0 ? "ok" : "bad";
-        const txt = delta >= 0 ? "S’omple" : "Es buida";
-        deltaHtml = `
-          <span class="sep"></span>
-          <span>Entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
-          <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
-          <span class="delta ${cls}">${txt}</span>
-        `;
-      }
-
-      const cCabal = card({
-        title: "Cabal (balanç)",
-        value: sortida == null ? "—" : fmt1(sortida),
-        unit: "m³/s",
-        badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
-        subHtml: `
-          ${deltaHtml}
-          ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
-        `,
-      });
-      cCabal.classList.add("card--tall", "card--wind");
-
-      const cCap = card({
-        title: "Capacitat",
-        value: cap == null ? "—" : fmt1(cap),
-        unit: "%",
-        badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
-        subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
-      });
-      cCap.classList.add("card--tall", "card--wind");
-
-      const entradesParts = [];
-      if (cabalCardener != null) {
-        entradesParts.push(
-          `Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>${rowCardener?.instant ? ` · <span class="muted">${fmtTime(rowCardener.instant)}</span>` : ""}`
-        );
-      }
-      if (cabalValls != null) {
-        entradesParts.push(
-          `Valls: <strong>${fmt1(cabalValls)} m³/s</strong>${rowValls?.instant ? ` · <span class="muted">${fmtTime(rowValls.instant)}</span>` : ""}`
-        );
-      }
-
-      const cEntrades = card({
-        title: "Entrades (rius)",
-        value: (cabalCardener == null && cabalValls == null) ? "—" : fmt1(entradaTotal),
-        unit: "m³/s",
-        badge: "Total",
-        subHtml: entradesParts.length ? entradesParts.join(`<span class="sep"></span>`) : "",
-      });
-
-      if (ui.hidroCards) ui.hidroCards.append(cCabal, cCap, cEntrades);
-    }
+    if (ui.tbody) renderMeteoTable(ui.tbody, meteoRows);
   } catch (e) {
-    if (ui.err) ui.err.textContent = "Error cards: " + (e.message || e);
+    if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
   }
 }
 
@@ -335,4 +265,19 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
     <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
     <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
   </svg>`;
+}
+
+export function initMeteoScreen(root, store) {
+  const ui = buildMeteoUI(root);
+
+  let timer = null;
+  if (store.get().auto) {
+    timer = setInterval(() => refreshMeteo(ui, store), CONFIG.autoRefreshMs);
+  }
+
+  refreshMeteo(ui, store);
+
+  return () => {
+    if (timer) clearInterval(timer);
+  };
 }
