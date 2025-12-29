@@ -760,3 +760,13 @@ th{
   gap:8px;
   flex-wrap:wrap;
 }
+/* Card vent: centrat com la resta (sense tocar les altres cards) */
+.card--wind .k,
+.card--wind .v,
+.card--wind .sub{
+  justify-content: center;
+  text-align: center;
+}
+.card--wind .wind-meta{
+  text-align: center;
+}

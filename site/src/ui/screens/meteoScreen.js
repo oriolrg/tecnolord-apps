@@ -329,15 +329,17 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
       <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
       ${arrow}
       <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
-      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800">${centerTextTop || ""}</text>
-      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8">${centerTextBottom || ""}</text>
+      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor">${centerTextTop || ""}</text>
+      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8" fill="currentColor">${centerTextBottom || ""}</text>
     </g>
-    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
-    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
-    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
-    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
+
+    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor">N</text>
+    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor">E</text>
+    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor">S</text>
+    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor">W</text>
   </svg>`;
 }
+
 
 export function initMeteoScreen(root, store) {
   const ui = buildMeteoUI(root);
