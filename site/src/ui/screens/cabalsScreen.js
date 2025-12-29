@@ -46,81 +46,117 @@ async function refreshCabals(ui, store) {
 
   try {
     const hidroRows = await fetchHidro({ codi, limit });
-
     if (ui.cards) ui.cards.innerHTML = "";
 
-    if (!hidroRows || !hidroRows.length) {
-      if (ui.last) ui.last.textContent = "Sense registres.";
-      if (ui.summary) ui.summary.textContent = codi ? `Codi: ${codi} · Sense dades` : "Sense dades";
+    if (!hidroRows.length) {
+      if (ui.summary) ui.summary.textContent = "Hidro: Sense registres.";
+      if (ui.last) ui.last.textContent = "Sense dades";
       return;
-    }
-
-    const row0 = hidroRows[0];
-
-    // “fa quant”
-    if (ui.last) {
-      const ts = row0?.timestamp || row0?.time || row0?.hora || row0?.datetime || row0?.date;
-      if (ts) {
-        const t = new Date(ts);
-        const ageMs = Date.now() - t.getTime();
-        const ageSec = Math.max(0, Math.round(ageMs / 1000));
-        const ageTxt =
-          ageSec < 60 ? `${ageSec} s` :
-          ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
-          `${Math.round(ageSec / 3600)} h`;
-        if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
-      } else {
-        if (ui.last) ui.last.textContent = "Dades disponibles";
-      }
     }
 
     if (ui.summary) {
       ui.summary.textContent = codi
-        ? `Codi: ${codi} · ${hidroRows.length} registres`
-        : `${hidroRows.length} registres`;
+        ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres`
+        : `Hidro · ${hidroRows.length} registres`;
     }
 
-    // files “cards”
-    const rowLvl = pickRow(hidroRows, [
-      (r) => num(r?.nivell) != null || num(r?.level) != null,
-      () => true,
+    const rowLlosa = pickRow(hidroRows, [
+      r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
+      r => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
     ]);
 
-    const rowFlow = pickRow(hidroRows, [
-      (r) => num(r?.cabal) != null || num(r?.flow) != null || num(r?.cabals) != null,
-      () => true,
+    const rowCardener = pickRow(hidroRows, [
+      r => norm(r.nom).includes("cardener"),
+      r => norm(r.codi).includes("cardener"),
     ]);
 
-    const tstamp = row0?.timestamp || row0?.time || row0?.hora || row0?.datetime || row0?.date;
-    const tlabel = tstamp ? fmtTime(tstamp) : "—";
+    const rowValls = pickRow(hidroRows, [
+      r => norm(r.nom).includes("valls"),
+      r => norm(r.codi).includes("valls"),
+    ]);
 
-    const nivell = num(rowLvl?.nivell ?? rowLvl?.level);
-    const cabal = num(rowFlow?.cabal ?? rowFlow?.cabals ?? rowFlow?.flow);
+    const instantLlosa = rowLlosa?.instant ?? null;
+    const cap = num(rowLlosa?.capacitat_pct);
 
-    const nom = norm(row0?.nom ?? row0?.name);
-    const codiRow = norm(row0?.codi ?? row0?.code ?? row0?.codi_hidro);
+    let sortida = num(rowLlosa?.cabal_m3s);
+    if (sortida == null) {
+      const rowSortida = pickRow(hidroRows, [
+        r => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
+        r => norm(r.codi).includes("sortida") && (norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")),
+      ]);
+      sortida = num(rowSortida?.cabal_m3s);
+    }
 
-    const items = [
-      card({
-        title: "Nivell",
-        value: nivell == null ? "—" : fmt1(nivell),
-        unit: "m",
-        sub: `Hora: ${tlabel}`,
-        badge: nom ? nom : "Últim",
-      }),
-      card({
-        title: "Cabal",
-        value: cabal == null ? "—" : fmt1(cabal),
-        unit: "m³/s",
-        sub: codiRow ? `Codi: ${codiRow}` : "—",
-        badge: "Última lectura",
-      }),
-    ];
+    const cabalCardener = num(rowCardener?.cabal_m3s);
+    const cabalValls = num(rowValls?.cabal_m3s);
+    const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
+    const delta = (sortida == null ? null : (entradaTotal - sortida));
 
-    if (ui.cards) {
-      for (const html of items) {
-        ui.cards.insertAdjacentHTML("beforeend", html);
-      }
+    let deltaHtml = "";
+    if (sortida != null && (cabalCardener != null || cabalValls != null)) {
+      const cls = delta >= 0 ? "ok" : "bad";
+      const txt = delta >= 0 ? "S'omple" : "Es buida";
+      deltaHtml = `
+        <span class="sep"></span>
+        <span>Entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
+        <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
+        <span class="delta ${cls}">${txt}</span>
+      `;
+    }
+
+    const cCabal = card({
+      title: "Cabal (balanç)",
+      value: sortida == null ? "—" : fmt1(sortida),
+      unit: "m³/s",
+      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      subHtml: `
+        ${deltaHtml}
+        ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
+      `,
+    });
+    cCabal.classList.add("card--tall", "card--wind");
+
+    const cCap = card({
+      title: "Capacitat",
+      value: cap == null ? "—" : fmt1(cap),
+      unit: "%",
+      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
+    });
+    cCap.classList.add("card--tall", "card--wind");
+
+    const entradesParts = [];
+    if (cabalCardener != null) {
+      entradesParts.push(
+        `Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>${rowCardener?.instant ? ` · <span class="muted">${fmtTime(rowCardener.instant)}</span>` : ""}`
+      );
+    }
+    if (cabalValls != null) {
+      entradesParts.push(
+        `Valls: <strong>${fmt1(cabalValls)} m³/s</strong>${rowValls?.instant ? ` · <span class="muted">${fmtTime(rowValls.instant)}</span>` : ""}`
+      );
+    }
+
+    const cEntrades = card({
+      title: "Entrades (rius)",
+      value: (cabalCardener == null && cabalValls == null) ? "—" : fmt1(entradaTotal),
+      unit: "m³/s",
+      badge: "Total",
+      subHtml: entradesParts.length ? entradesParts.join(`<span class="sep"></span>`) : "",
+    });
+
+    // IMPORTANT: append DOM nodes (NO strings)
+    if (ui.cards) ui.cards.append(cCabal, cCap, cEntrades);
+
+    if (instantLlosa) {
+      const ageSec = Math.max(0, Math.round((Date.now() - new Date(instantLlosa).getTime()) / 1000));
+      const ageTxt =
+        ageSec < 60 ? `${ageSec} s` :
+        ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
+        `${Math.round(ageSec / 3600)} h`;
+      if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
+    } else {
+      if (ui.last) ui.last.textContent = "Dades disponibles";
     }
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
