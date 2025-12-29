@@ -22,30 +22,6 @@ function buildMeteoUI(root) {
       </div>
 
       <div class="grid" id="meteo-cards"></div>
-
-      <div class="panel" style="margin-top:14px;">
-        <div class="section-title" style="margin:0 0 10px;">
-          <h2 style="font-size: var(--fs-1);">Evolució d’avui</h2>
-          <p id="charts-note">Temperatura, pressió i pluja acumulada</p>
-        </div>
-
-        <div class="grid" style="gap:12px; grid-auto-rows: minmax(180px, auto);">
-          <div class="card" style="grid-column: span 12; min-height: 200px;">
-            <div class="k"><h3>Temperatura</h3><span class="badge">°C</span></div>
-            <canvas id="chart-temp" style="width:100%; height:160px;"></canvas>
-          </div>
-
-          <div class="card" style="grid-column: span 12; min-height: 200px;">
-            <div class="k"><h3>Pressió (rel.)</h3><span class="badge">hPa</span></div>
-            <canvas id="chart-press" style="width:100%; height:160px;"></canvas>
-          </div>
-
-          <div class="card" style="grid-column: span 12; min-height: 200px;">
-            <div class="k"><h3>Pluja acumulada</h3><span class="badge">mm</span></div>
-            <canvas id="chart-rain" style="width:100%; height:160px;"></canvas>
-          </div>
-        </div>
-      </div>
     </div>
   `;
 
