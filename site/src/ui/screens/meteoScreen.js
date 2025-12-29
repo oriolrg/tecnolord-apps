@@ -4,7 +4,6 @@ import { card } from "../components/card.js";
 import { num, fmt1, clamp, windAbbr16, windFromCa, fmtTime, norm } from "../format.js";
 import { windNameCa } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
-import { renderMeteoTable } from "../components/tableMeteo.js";
 
 function buildMeteoUI(root) {
   root.innerHTML = `
@@ -15,41 +14,10 @@ function buildMeteoUI(root) {
       </div>
 
       <div class="section-title">
+        <h2>Meteo</h2>
         <p id="meteo-summary">—</p>
       </div>
       <div class="grid" id="meteo-cards"></div>
-
-      <details style="margin-top:22px">
-        <summary>Últims registres (meteo) <span class="badge" id="meteo-count">0</span></summary>
-        <div class="detail-body">
-          <div class="table-wrap">
-            <table id="tbl-meteo" aria-label="Taula de mesures meteorològiques">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Temp (°C)</th>
-                  <th>Sensació (°C)</th>
-                  <th>Rosada (°C)</th>
-                  <th>Hum (%)</th>
-                  <th>Pressió rel (hPa)</th>
-                  <th>Pressió abs (hPa)</th>
-                  <th>UVI</th>
-                  <th>Solar (W/m²)</th>
-                  <th>Taxa pluja (mm/h)</th>
-                  <th>Pluja dia</th>
-                  <th>Pluja 1h</th>
-                  <th>Pluja mes</th>
-                  <th>Pluja any</th>
-                  <th>Vent (m/s)</th>
-                  <th>Ràfega (m/s)</th>
-                  <th>Dir (°)</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </details>
     </div>
   `;
 
@@ -58,9 +26,15 @@ function buildMeteoUI(root) {
     err: $("#meteo-err", root),
     summary: $("#meteo-summary", root),
     cards: $("#meteo-cards", root),
-    count: $("#meteo-count", root),
-    tbody: $("#tbl-meteo tbody", root),
   };
+}
+
+function pickRow(rows, predicates) {
+  for (const pred of predicates) {
+    const found = rows.find(pred);
+    if (found) return found;
+  }
+  return null;
 }
 
 async function refreshMeteo(ui, store) {
@@ -73,198 +47,172 @@ async function refreshMeteo(ui, store) {
   try {
     const meteoRows = await fetchMeteo({ estacio, limit });
 
-    if (ui.count) ui.count.textContent = String(meteoRows.length);
     if (ui.cards) ui.cards.innerHTML = "";
 
-    if (!meteoRows.length) {
-      if (ui.summary) ui.summary.textContent = "Meteo: Sense registres.";
-      if (ui.last) ui.last.textContent = "Sense dades";
-    } else {
-      const r0 = meteoRows[0];
-      const instant = r0.instant ?? r0.at;
-
-      const temp_c = num(r0.temp_c ?? r0.temperature);
-      const feels = num(r0.sensacio_c ?? r0.feels_like ?? r0.feels_like_c);
-      const dew = num(r0.punt_rosada_c ?? r0.dew_point ?? r0.dew_point_c);
-
-      const hum = num(r0.humitat_pct ?? r0.humidity);
-      const pRel = num(r0.pressio_rel_hpa ?? r0.pressure_hpa ?? r0.pressure_rel_hpa);
-      const pAbs = num(r0.pressio_abs_hpa ?? r0.pressure_abs_hpa);
-
-      const uvi = num(r0.uvi);
-      const solar = num(r0.solar_wm2);
-
-      const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
-      const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
-      const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
-      const rainWeek = num(r0.pluja_setmana_mm ?? r0.rain_week_mm);
-      const rainEvent = num(r0.pluja_event_mm ?? r0.rain_event_mm);
-      const rainMonth = num(r0.pluja_mes_mm ?? r0.rain_month_mm);
-      const rainYear = num(r0.pluja_any_mm ?? r0.rain_year_mm);
-
-      const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
-      const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
-      const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
-
-      const deg = wdir == null || Number.isNaN(wdir) ? null : ((wdir % 360) + 360) % 360;
-      const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
-      const abbr = deg == null ? "—" : windAbbr16(deg);
-      const name = deg == null ? "" : windNameCa(deg);
-      const fromTxt = deg == null ? "Vent" : `Vent del ${windFromCa(deg)} (${name})`;
-
-      const ageSec = Math.max(0, Math.round((Date.now() - new Date(instant).getTime()) / 1000));
-      const ageTxt =
-        ageSec < 60 ? `${ageSec} s` :
-        ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
-        `${Math.round(ageSec / 3600)} h`;
-
-      if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
-      if (ui.summary) {
-        ui.summary.textContent = estacio
-          ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres`
-          : `Meteo · ${meteoRows.length} registres`;
-      }
-
-      const d0 = new Date(instant);
-      const y0 = d0.getFullYear();
-      const m0 = d0.getMonth();
-      const day0 = d0.getDate();
-
-      let tMin = null;
-      let tMax = null;
-
-      for (const r of meteoRows) {
-        const t = num(r.temp_c ?? r.temperature);
-        if (t == null || Number.isNaN(t)) continue;
-
-        const ts = r.instant ?? r.at;
-        if (!ts) continue;
-
-        const d = new Date(ts);
-        if (d.getFullYear() !== y0 || d.getMonth() !== m0 || d.getDate() !== day0) continue;
-
-        tMin = tMin == null ? t : Math.min(tMin, t);
-        tMax = tMax == null ? t : Math.max(tMax, t);
-      }
-
-      const extremesHtml =
-        (tMin == null && tMax == null)
-          ? ""
-          : ` · <span class="temp-max">Màx: ${tMax == null ? "—" : fmt1(tMax)} °C</span> · <span class="temp-min">Mín: ${tMin == null ? "—" : fmt1(tMin)} °C</span>`;
-
-      const windVal = (wind == null || Number.isNaN(wind)) ? "—" : fmt1(wind);
-      const gustVal = (gust == null || Number.isNaN(gust)) ? "—" : fmt1(gust);
-
-      const windMetaHtml = `
-        Velocitat: <strong>${windVal} m/s</strong>
-        · Ràfega: <strong>${gustVal} m/s</strong>
-      `;
-
-      const rainMainValue = (rainRate == null || Number.isNaN(rainRate)) ? "—" : fmt1(rainRate);
-      const rainMainUnit = "mm/h";
-
-      const plujaLines = [];
-      const dayTxt = (rainDay == null || Number.isNaN(rainDay)) ? "—" : fmt1(rainDay);
-      plujaLines.push(`Dia: <strong>${dayTxt} mm</strong>`);
-      if (rain1h != null && !Number.isNaN(rain1h)) plujaLines.push(`<span class="muted">1h: ${fmt1(rain1h)} mm</span>`);
-      if (rainWeek != null && !Number.isNaN(rainWeek)) plujaLines.push(`<span class="muted">Setmana: ${fmt1(rainWeek)} mm</span>`);
-      if (rainEvent != null && !Number.isNaN(rainEvent)) plujaLines.push(`<span class="muted">Event: ${fmt1(rainEvent)} mm</span>`);
-      if (rainMonth != null && !Number.isNaN(rainMonth)) plujaLines.push(`<span class="muted">Mes: ${fmt1(rainMonth)} mm</span>`);
-      if (rainYear != null && !Number.isNaN(rainYear)) plujaLines.push(`<span class="muted">Any: ${fmt1(rainYear)} mm</span>`);
-
-      const cTemp = card({
-        title: "Temperatura",
-        value: fmt1(temp_c),
-        unit: "°C",
-        badge: "Última lectura",
-        subHtml:
-          `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : "Sensació: <strong>—</strong>"}`
-          + `${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : " · Rosada: <strong>—</strong>"}`
-          + `${extremesHtml}`,
-      });
-
-      const cHum = card({
-        title: "Humitat",
-        value: hum == null ? "—" : Math.round(hum),
-        unit: "%",
-        badge: "Última lectura",
-        subHtml: "",
-      });
-
-      const cPress = card({
-        title: "Pressió (rel.)",
-        value: fmt1(pRel),
-        unit: "hPa",
-        badge: "Relativa",
-        subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}`,
-      });
-
-      const cWind = card({
-        title: fromTxt,
-        value: "",
-        unit: "",
-        badge: "Direcció",
-        className: "card--wind",
-        subHtml: `
-          <div class="wind-block">
-            ${renderWindRoseSvg(deg, degTxt, abbr)}
-          </div>
-          <div class="wind-meta">${windMetaHtml}</div>
-        `,
-      });
-      cWind.classList.add("card--tall");
-
-      const cRain = card({
-        title: "Pluja",
-        value: rainMainValue,
-        unit: rainMainUnit,
-        badge: "Taxa",
-        subHtml: plujaLines.join(`<span class="sep"></span>`),
-      });
-      cRain.classList.add("card--tall");
-
-      const cUv = card({
-        title: "UV",
-        value: uvi == null ? "—" : Math.round(uvi),
-        unit: "",
-        badge: "Índex",
-        subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
-      });
-
-      if (ui.cards) ui.cards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
+    if (!meteoRows || !meteoRows.length) {
+      if (ui.last) ui.last.textContent = "Sense registres.";
+      if (ui.summary) ui.summary.textContent = estacio ? `Estació: ${estacio} · Sense dades` : "Sense dades";
+      return;
     }
 
-    if (ui.tbody) renderMeteoTable(ui.tbody, meteoRows);
+    // Triar una fila "representativa" per cards (prioritzant la més recent)
+    const row0 = meteoRows[0];
+
+    // “fa quant” (basat en data/hora de la fila 0)
+    if (ui.last) {
+      const ts = row0?.timestamp || row0?.time || row0?.hora || row0?.datetime || row0?.date;
+      if (ts) {
+        const t = new Date(ts);
+        const ageMs = Date.now() - t.getTime();
+        const ageSec = Math.max(0, Math.round(ageMs / 1000));
+        const ageTxt =
+          ageSec < 60 ? `${ageSec} s` :
+          ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
+          `${Math.round(ageSec / 3600)} h`;
+        ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
+      } else {
+        ui.last.textContent = "Dades disponibles";
+      }
+    }
+
+    if (ui.summary) {
+      ui.summary.textContent = estacio
+        ? `Estació: ${estacio} · ${meteoRows.length} registres`
+        : `${meteoRows.length} registres`;
+    }
+
+    // predicats “cards” (intenta trobar valors amb sentit)
+    const rowWind = pickRow(meteoRows, [
+      (r) => num(r?.wind_speed) != null || num(r?.vent) != null,
+      (r) => num(r?.wind_gust) != null || num(r?.rafega) != null,
+      () => true,
+    ]);
+
+    const rowRain = pickRow(meteoRows, [
+      (r) => num(r?.rain_rate) != null || num(r?.taxa_pluja) != null,
+      (r) => num(r?.rain_day) != null || num(r?.pluja_dia) != null,
+      () => true,
+    ]);
+
+    const rowSolar = pickRow(meteoRows, [
+      (r) => num(r?.uv) != null || num(r?.uvi) != null,
+      (r) => num(r?.solar) != null,
+      () => true,
+    ]);
+
+    const rowPress = pickRow(meteoRows, [
+      (r) => num(r?.pressure_rel) != null || num(r?.pressio_rel) != null,
+      (r) => num(r?.pressure_abs) != null || num(r?.pressio_abs) != null,
+      () => true,
+    ]);
+
+    const rowHum = pickRow(meteoRows, [
+      (r) => num(r?.humidity) != null || num(r?.hum) != null,
+      () => true,
+    ]);
+
+    const rowTemp = pickRow(meteoRows, [
+      (r) => num(r?.temp) != null || num(r?.temperature) != null,
+      (r) => num(r?.feelslike) != null || num(r?.sensacio) != null,
+      () => true,
+    ]);
+
+    const tstamp = row0?.timestamp || row0?.time || row0?.hora || row0?.datetime || row0?.date;
+    const tlabel = tstamp ? fmtTime(tstamp) : "—";
+
+    const temp = num(rowTemp?.temp ?? rowTemp?.temperature);
+    const feel = num(rowTemp?.feelslike ?? rowTemp?.sensacio);
+    const dew = num(rowTemp?.dewpoint ?? rowTemp?.rosada);
+    const hum = num(rowHum?.humidity ?? rowHum?.hum);
+
+    const pressRel = num(rowPress?.pressure_rel ?? rowPress?.pressio_rel);
+    const pressAbs = num(rowPress?.pressure_abs ?? rowPress?.pressio_abs);
+
+    const uv = num(rowSolar?.uv ?? rowSolar?.uvi);
+    const solar = num(rowSolar?.solar);
+
+    const rainRate = num(rowRain?.rain_rate ?? rowRain?.taxa_pluja);
+    const rainDay = norm(rowRain?.rain_day ?? rowRain?.pluja_dia);
+    const rain1h = norm(rowRain?.rain_1h ?? rowRain?.pluja_1h);
+    const rainMonth = norm(rowRain?.rain_month ?? rowRain?.pluja_mes);
+    const rainYear = norm(rowRain?.rain_year ?? rowRain?.pluja_any);
+
+    const wind = num(rowWind?.wind_speed ?? rowWind?.vent);
+    const gust = num(rowWind?.wind_gust ?? rowWind?.rafega);
+    const dir = num(rowWind?.wind_dir ?? rowWind?.dir);
+
+    const dirTxt = dir == null ? "—" : `${Math.round(dir)}°`;
+    const windName = dir == null ? "" : windNameCa(dir);
+    const windFrom = dir == null ? "" : windFromCa(dir);
+    const windAbbr = dir == null ? "" : windAbbr16(dir);
+
+    const items = [
+      card({
+        title: "Temperatura",
+        value: temp == null ? "—" : fmt1(temp),
+        unit: "°C",
+        sub: `Hora: ${tlabel}`,
+        badge: "Última lectura",
+      }),
+      card({
+        title: "Sensació",
+        value: feel == null ? "—" : fmt1(feel),
+        unit: "°C",
+        sub: dew == null ? "—" : `Rosada: ${fmt1(dew)} °C`,
+        badge: "Percepció",
+      }),
+      card({
+        title: "Humitat",
+        value: hum == null ? "—" : String(Math.round(hum)),
+        unit: "%",
+        sub: pressRel == null ? "—" : `Pressió rel: ${Math.round(pressRel)} hPa`,
+        badge: "Ambient",
+      }),
+      card({
+        title: "Pressió",
+        value: pressRel == null ? "—" : String(Math.round(pressRel)),
+        unit: "hPa",
+        sub: pressAbs == null ? "—" : `Abs: ${Math.round(pressAbs)} hPa`,
+        badge: "Baròmetre",
+      }),
+      card({
+        title: "UVI",
+        value: uv == null ? "—" : String(Math.round(uv)),
+        unit: "",
+        sub: solar == null ? "—" : `Solar: ${Math.round(solar)} W/m²`,
+        badge: "Radiació",
+      }),
+      card({
+        title: "Pluja",
+        value: rainRate == null ? "—" : fmt1(rainRate),
+        unit: "mm/h",
+        sub: rainDay == null ? "—" : `Dia: ${rainDay}`,
+        badge: "Precipitació",
+      }),
+      card({
+        title: "Vent",
+        value: wind == null ? "—" : fmt1(wind),
+        unit: "m/s",
+        sub: gust == null ? (dir == null ? "—" : `${dirTxt} · ${windAbbr} ${windFrom} ${windName}`) : `Ràfega: ${fmt1(gust)} m/s`,
+        badge: "Direcció",
+      }),
+      card({
+        title: "Acumulats",
+        value: rain1h == null ? "—" : rain1h,
+        unit: "1h",
+        sub: `${rainMonth == null ? "—" : `Mes: ${rainMonth}`} · ${rainYear == null ? "—" : `Any: ${rainYear}`}`,
+        badge: "Pluja",
+      }),
+    ];
+
+    if (ui.cards) {
+      for (const html of items) {
+        ui.cards.insertAdjacentHTML("beforeend", html);
+      }
+    }
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
   }
-}
-
-function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
-  const arrow = deg == null ? "" : `
-    <g transform="rotate(${deg}) translate(0,-46) rotate(180)">
-      <polygon points="0,0 -6,14 0,10 6,14" fill="rgba(239,68,68,.95)"/>
-    </g>
-  `;
-
-  return `
-  <svg class="wind-rose" viewBox="0 0 100 100" aria-label="Rosa de vents" role="img">
-    <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,165,250,.6)" stroke-width="2"/>
-    <g transform="translate(50 50)">
-      <polygon points="0,-42 -6,-16 0,-22 6,-16" fill="rgba(96,165,250,.85)"/>
-      <polygon points="42,0 16,-6 22,0 16,6" fill="rgba(96,165,250,.85)"/>
-      <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
-      <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
-      ${arrow}
-      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
-      <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800">${centerTextTop || ""}</text>
-      <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8">${centerTextBottom || ""}</text>
-    </g>
-    <text x="50" y="12" text-anchor="middle" font-size="10" font-weight="800">N</text>
-    <text x="88" y="54" text-anchor="middle" font-size="10" font-weight="800">E</text>
-    <text x="50" y="96" text-anchor="middle" font-size="10" font-weight="800">S</text>
-    <text x="12" y="54" text-anchor="middle" font-size="10" font-weight="800">W</text>
-  </svg>`;
 }
 
 export function initMeteoScreen(root, store) {
