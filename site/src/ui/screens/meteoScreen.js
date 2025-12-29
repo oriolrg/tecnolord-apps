@@ -160,7 +160,7 @@ async function refreshMeteo(ui, store) {
       value: hum == null ? "—" : Math.round(hum),
       unit: "%",
       badge: "Última lectura",
-      subHtml: "",
+      subHtml: `<span class="muted">Evolució d’avui</span>`,
     });
 
     const cPress = card({
