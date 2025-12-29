@@ -253,6 +253,41 @@ async function pullACAAndSave() {
   const rivers = await riversRes.json();        // river_flow_6min
   const reservoirs = await reservoirsRes.json();// capacity_6min
 
+  // L'ACA pot retornar:
+  //  - objecte indexat per codi (p.ex. rivers["251116-005"])
+  //  - o bé un array d'objectes ({ siteCode: "...", ... })
+  // Per no dependre del format (i evitar casos com Valls que no entra),
+  // indexem sempre per siteCode.
+  function indexBySiteCode(data) {
+    const m = new Map();
+    if (!data) return m;
+
+    // Array d'objectes
+    if (Array.isArray(data)) {
+      for (const it of data) {
+        const code = it?.siteCode ?? it?.codi ?? it?.code;
+        if (code) m.set(String(code).trim(), it);
+      }
+      return m;
+    }
+
+    // Objecte: claus = codis o bé objectes interns amb siteCode
+    if (typeof data === 'object') {
+      for (const [k, v] of Object.entries(data)) {
+        if (!v) continue;
+        if (typeof v === 'object') {
+          const code = v.siteCode ?? v.codi ?? v.code ?? k;
+          m.set(String(code).trim(), v);
+        }
+      }
+    }
+
+    return m;
+  }
+
+  const riversByCode = indexBySiteCode(rivers);
+  const reservoirsByCode = indexBySiteCode(reservoirs);
+
   // Helpers per navegar claus “sorolloses”
   const getPath = (obj, tokens) => {
     try {
@@ -287,8 +322,13 @@ async function pullACAAndSave() {
   const results = [];
 
   for (const s of SITES) {
-    const rObj = s.flowKey ? rivers?.[s.flowKey] : null;
-    const zObj = s.capKey  ? reservoirs?.[s.capKey] : null;
+    // Robust: preferim l'índex per siteCode però mantenim fallback a accés directe
+    const rObj = s.flowKey
+      ? (riversByCode.get(String(s.flowKey).trim()) ?? rivers?.[s.flowKey] ?? null)
+      : null;
+    const zObj = s.capKey
+      ? (reservoirsByCode.get(String(s.capKey).trim()) ?? reservoirs?.[s.capKey] ?? null)
+      : null;
 
     // Cabal (variants)
     const flowVal = toNum(firstOf(rObj, [
