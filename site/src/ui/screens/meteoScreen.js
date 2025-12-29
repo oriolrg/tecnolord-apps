@@ -227,12 +227,14 @@ async function refreshMeteo(ui, store) {
     const cvTemp = attachChart(cTemp, "chart-temp");
     const cvPress = attachChart(cPress, "chart-press");
     const cvRain = attachChart(cRain, "chart-rain");
+    const cvHum = attachChart(cHum, "chart-hum");
+
 
     // IMPORTANT: append DOM nodes (NO strings)
     if (ui.cards) ui.cards.append(cTemp, cHum, cPress, cWind, cRain, cUv);
         // --- Charts (només dades del dia en curs) ---
         const t0 = r0.instant ?? r0.at;
-    if (t0 && (cvTemp || cvPress || cvRain)) {
+    if (t0 && (cvTemp || cvPress || cvRain || cvHum)) {
       const d0 = new Date(t0);
       const y0 = d0.getFullYear();
       const m0 = d0.getMonth();
@@ -248,6 +250,8 @@ async function refreshMeteo(ui, store) {
       const tempPts = buildDaySeries(todayRows, (r) => num(r.temp_c ?? r.temperature));
       const pressPts = buildDaySeries(todayRows, (r) => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa));
       const rainPts = buildDaySeries(todayRows, (r) => num(r.pluja_diaria_mm ?? r.rain_daily_mm ?? r.rain_mm));
+      const humPts = buildDaySeries(todayRows, (r) => num(r.humitat_pct ?? r.humidity));
+
 
       if (cvTemp) {
         renderLineChart(cvTemp, tempPts, {
@@ -271,6 +275,13 @@ async function refreshMeteo(ui, store) {
           formatY: (v) => (Math.round(v * 10) / 10).toString(), // curt
         });
       }
+      if (cvHum) {
+        renderLineChart(cvHum, humPts, {
+          lineColor: "#60a5fa",
+          formatY: (v) => String(Math.round(v)), // 0 decimals (40, 55, 72...)
+        });
+      }
+
     }
 
 
