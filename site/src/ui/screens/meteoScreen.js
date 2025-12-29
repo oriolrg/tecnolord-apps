@@ -30,10 +30,6 @@ function buildMeteoUI(root) {
     err: $("#meteo-err", root),
     summary: $("#meteo-summary", root),
     cards: $("#meteo-cards", root),
-
-    chartTemp: $("#chart-temp", root),
-    chartPress: $("#chart-press", root),
-    chartRain: $("#chart-rain", root),
   };
 }
 

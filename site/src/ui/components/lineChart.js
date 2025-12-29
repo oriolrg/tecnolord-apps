@@ -27,7 +27,6 @@ function formatHourLabel(d) {
 }
 
 function parseRgb(cssColor) {
-  // Accepta "rgb(r,g,b)" o "rgba(r,g,b,a)"
   const m = String(cssColor).match(/rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)/i);
   if (!m) return null;
   return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
@@ -35,6 +34,29 @@ function parseRgb(cssColor) {
 
 function rgba(rgb, a) {
   return `rgba(${rgb.r},${rgb.g},${rgb.b},${a})`;
+}
+
+function pickThemeColor(canvas) {
+  // IMPORTANT: agafa el color del contenidor (card) abans que el canvas.
+  const host =
+    canvas.closest(".card") ||
+    canvas.closest(".panel") ||
+    document.body ||
+    canvas;
+
+  const c = getComputedStyle(host).color;
+  const rgb = parseRgb(c);
+  if (!rgb) {
+    // fallback dur si el navegador retorna quelcom estrany
+    return {
+      text: "#ffffff",
+      grid: "rgba(255,255,255,0.22)",
+    };
+  }
+  return {
+    text: c,
+    grid: rgba(rgb, 0.22),
+  };
 }
 
 /**
@@ -52,12 +74,9 @@ export function renderLineChart(canvas, points, opts = {}) {
 
   ctx.clearRect(0, 0, W, H);
 
-  // Agafa color del tema (si és dark, normalment serà blanc)
-  const cs = getComputedStyle(canvas);
-  const textCss = cs.color || "#fff";
-  const textRgb = parseRgb(textCss);
-  const gridStroke = textRgb ? rgba(textRgb, 0.22) : "rgba(255,255,255,0.22)";
-  const axisText = textCss;
+  const theme = pickThemeColor(canvas);
+  const axisText = theme.text;
+  const gridStroke = theme.grid;
 
   if (!points || points.length < 2) {
     ctx.globalAlpha = 0.85;
@@ -69,8 +88,8 @@ export function renderLineChart(canvas, points, opts = {}) {
     return;
   }
 
-  const xs = points.map(p => p.t.getTime());
-  const ys = points.map(p => p.y);
+  const xs = points.map((p) => p.t.getTime());
+  const ys = points.map((p) => p.y);
 
   const xMin = Math.min(...xs);
   const xMax = Math.max(...xs);
@@ -93,11 +112,11 @@ export function renderLineChart(canvas, points, opts = {}) {
           return `${base}${opts.unit ? " " + opts.unit : ""}`;
         };
 
+  // padding esquerre dinàmic segons label y
   ctx.font = "600 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
   const yLabelTexts = [fmtY(yMax), fmtY((yMin + yMax) / 2), fmtY(yMin)];
   let maxW = 0;
   for (const t of yLabelTexts) maxW = Math.max(maxW, ctx.measureText(t).width);
-
   const padL = Math.min(Math.max(36, Math.ceil(maxW + 14)), 74);
 
   const plotW = W - padL - padR;
@@ -134,7 +153,7 @@ export function renderLineChart(canvas, points, opts = {}) {
 
   // Labels
   ctx.fillStyle = axisText;
-  ctx.globalAlpha = 0.85;
+  ctx.globalAlpha = 0.9;
 
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
