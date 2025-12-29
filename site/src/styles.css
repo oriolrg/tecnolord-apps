@@ -783,3 +783,7 @@ th{
   font-weight: 600;
   opacity: .72;
 }
+/* Vent NO ha d'ocupar 2 files encara que existeixi card--tall o altres regles */
+.card--wind{
+  grid-row: span 1 !important;
+}

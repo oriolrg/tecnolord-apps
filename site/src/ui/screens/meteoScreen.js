@@ -9,17 +9,13 @@ import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 function buildMeteoUI(root) {
   root.innerHTML = `
     <div class="wrap">
-      <div class="status-row">
-        <span id="meteo-err" class="err" role="alert" aria-live="polite"></span>
-      </div>
 
       <div class="section-title">
-        <div class="title-row">
-          <h2>
-            Meteo
-            <span class="last-inline" id="meteo-last">Sense dades encara</span>
-          </h2>
-        </div>
+        <h2 class="meteo-h2">
+          Meteo
+          <span id="meteo-last" class="meteo-last">—</span>
+        </h2>
+        <span id="meteo-err" class="err" role="alert" aria-live="polite"></span>
         <p id="meteo-summary">—</p>
       </div>
 
@@ -34,7 +30,6 @@ function buildMeteoUI(root) {
     cards: $("#meteo-cards", root),
   };
 }
-
 
 async function refreshMeteo(ui, store) {
   if (ui.err) ui.err.textContent = "";
