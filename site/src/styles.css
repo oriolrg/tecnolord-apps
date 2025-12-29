@@ -236,6 +236,12 @@ input:focus, button:focus{
 @media (min-width: 980px){
   .card{ grid-column: span 3; }
 }
+/* Mòbil vertical: 1 sola columna de cards */
+@media (max-width: 560px) and (orientation: portrait){
+  .card{
+    grid-column: span 12;
+  }
+}
 
 .k{
   display:flex;
