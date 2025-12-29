@@ -183,9 +183,6 @@ input:focus, button:focus{
 .card--wind{
   grid-row: span 1;
 }
-@media (min-width: 980px){
-  .card--wind{ grid-row: span 2; }
-}
 
 .card--wind .card-content{
   height: 100%;
@@ -395,110 +392,6 @@ th{
   font-style: italic;
 }
 
-.wind-rose{
-  width: 92px;
-  height: 92px;
-  flex: 0 0 auto;
-  opacity: .95;
-}
-
-.wind-wrap{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.wind-main{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.wind-dir{
-  font-size: var(--fs-4);
-  font-weight: 850;
-  letter-spacing: -0.03em;
-  margin: 0;
-  display:flex;
-  align-items:baseline;
-  gap:10px;
-}
-
-.wind-sub{
-  color: var(--muted2);
-  font-size: var(--fs-0);
-}
-.wind-arrow{
-  font-size: var(--fs-3);
-}
-.wind-card{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  min-height: 96px;
-}
-
-.wind-left{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  min-width: 0;
-}
-
-.wind-meta{
-  color: var(--muted2);
-  font-size: var(--fs-0);
-  line-height: 1.35;
-}
-
-.wind-deg{
-  display: block;
-  font-size: var(--fs-4);
-  font-weight: 900;
-  line-height: 1.05;
-  color: var(--text);
-}
-
-.wind-name{
-  display: block;
-  margin-top: 4px;
-  font-size: var(--fs-1);
-  font-weight: 600;
-  letter-spacing: .02em;
-  text-transform: lowercase;
-  color: var(--muted);
-}
-
-.wind-rose{
-  width: 112px;
-  height: 112px;
-  flex: 0 0 auto;
-  color: var(--muted);
-}
-
-.wind-rose text{
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-}
-
-.wind-rose svg{
-  width: 100%;
-  height: 100%;
-}
-
-.card .v{
-  font-size: var(--fs-3);
-  font-weight: 850;
-  line-height: 1.1;
-}
-
-.wind-block{
-  margin-top: 10px;
-  display:flex;
-  justify-content:center;
-}
-.wind-rose{ width: 120px; height: 120px; }
 
 .tl-header{
   width: 100%;
@@ -786,4 +679,29 @@ th{
 /* Vent NO ha d'ocupar 2 files encara que existeixi card--tall o altres regles */
 .card--wind{
   grid-row: span 1 !important;
+}
+.meteo-h2{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.meteo-last{
+  font-weight: 600;   /* o 500 si vols encara més suau */
+  opacity: .60;       /* més clar que el títol */
+  font-size: 0.95rem; /* una mica més petit */
+}
+.card--wind .wind-block{
+  display:flex;
+  justify-content:center;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.card--wind .wind-rose{
+  width: 100%;
+  height: auto;
+  max-width: 260px;  /* ajusta: 220-300 segons gust */
+  display:block;
 }
