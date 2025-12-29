@@ -136,7 +136,7 @@ async function refreshMeteo(ui, store) {
       title: fromTxt,
       value: "",
       unit: "",
-      badge: "Direcció",
+      //badge: "Direcció",
       className: "card--wind",
       subHtml: `
         <div class="wind-block">
@@ -152,7 +152,7 @@ async function refreshMeteo(ui, store) {
       title: "Temperatura",
       value: fmt1(temp_c),
       unit: "°C",
-      badge: "Última lectura",
+      //badge: "Última lectura",
       subHtml:
         `${feels != null ? `Sensació: <strong>${fmt1(feels)} °C</strong>` : "Sensació: <strong>—</strong>"}`
         + `${dew != null ? ` · Rosada: <strong>${fmt1(dew)} °C</strong>` : " · Rosada: <strong>—</strong>"}`
@@ -192,7 +192,7 @@ async function refreshMeteo(ui, store) {
       title: "Pluja",
       value: rainMainValue,
       unit: rainMainUnit,
-      badge: "Avui",
+      //badge: "Avui",
       subHtml: `
         <div class="meta-row">
           <span>Dia: <strong>${dayTxt} mm</strong></span>
@@ -208,7 +208,7 @@ async function refreshMeteo(ui, store) {
       title: "Pressió (rel.)",
       value: fmt1(pRel),
       unit: "hPa",
-      badge: "Relativa",
+      //badge: "Relativa",
       subHtml: `${pAbs != null ? `Abs.: <strong>${fmt1(pAbs)} hPa</strong>` : ""}`,
     });
 
@@ -217,16 +217,16 @@ async function refreshMeteo(ui, store) {
       title: "Humitat",
       value: hum == null ? "—" : Math.round(hum),
       unit: "%",
-      badge: "Última lectura",
+      //badge: "Última lectura",
       subHtml: `<span class="muted">Evolució d’avui</span>`,
     });
 
     // 6) UV
     const cUv = card({
-      title: "UV",
+      title: "Índex UV",
       value: uvi == null ? "—" : Math.round(uvi),
       unit: "",
-      badge: "Índex",
+      //badge: "Índex",
       subHtml: `${solar != null ? `Solar: <strong>${fmt1(solar)} W/m²</strong>` : ""}`,
     });
 
@@ -328,7 +328,7 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
       <polygon points="0,42 -6,16 0,22 6,16" fill="rgba(96,165,250,.85)"/>
       <polygon points="-42,0 -16,-6 -22,0 -16,6" fill="rgba(96,165,250,.85)"/>
       ${arrow}
-      <circle cx="0" cy="0" r="12" fill="rgba(255,255,255,.65)"></circle>
+      <circle cx="0" cy="0" r="12" fill="currentColor" opacity="0.25"></circle>
       <text x="0" y="-2" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor">${centerTextTop || ""}</text>
       <text x="0" y="9" text-anchor="middle" font-size="8" font-weight="800" opacity=".8" fill="currentColor">${centerTextBottom || ""}</text>
     </g>
