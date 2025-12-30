@@ -33,32 +33,20 @@ function ensureModal() {
   return modalEl;
 }
 
-function isMobilePortrait() {
-  const w = window.innerWidth || 0;
-  const h = window.innerHeight || 0;
-  const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  return coarse && h > w;
-}
-
 function applyModalVars(panel) {
-  // Força blanc (eixos + text) dins el modal
+  // Eixos/text blancs dins el modal (fons negre)
   panel.style.setProperty("--text", "rgb(255,255,255)");
   panel.style.setProperty("--line", "rgba(255,255,255,0.55)");
 }
 
-function setStageSize(stage, canvas, landscape) {
-  // IMPORTANT: mides en px reals, NO 100vh/100vw (a mòbil falla sovint)
-  const vw = window.innerWidth || 360;
-  const vh = window.innerHeight || 640;
+function setStageSize(stage, canvas) {
+  // Mides reals (px) per evitar bugs de vh/vw en mòbil
+  const W = window.innerWidth || 360;
+  const H = window.innerHeight || 640;
 
-  const W = landscape ? vh : vw;
-  const H = landscape ? vw : vh;
-
-  // stage (contenidor que pot rotar)
   stage.style.width = `${W}px`;
   stage.style.height = `${H}px`;
 
-  // canvas ha d’omplir el stage
   canvas.style.width = "100%";
   canvas.style.height = "100%";
 }
@@ -85,28 +73,26 @@ export function openChartModalFromCanvas(sourceCanvas) {
 
   applyModalVars(panel);
 
-  const landscape = isMobilePortrait();
-  panel.classList.toggle("is-landscape", landscape);
-
-  // Guardem el canvas origen per a re-render en resize/orientació
+  // Guardem origen per redibuixar en resize/orientació
   modalCanvas.__source = sourceCanvas;
 
-  setStageSize(stage, modalCanvas, landscape);
-
+  // Obrim primer perquè hi hagi layout real
   m.classList.add("is-open");
   document.documentElement.classList.add("tl-modalOpen");
 
-  // Espera que el layout tingui mida real abans de pintar
+  // Mides + render
   requestAnimationFrame(() => {
-    // si encara és 0, reintenta una vegada (mòbil)
+    setStageSize(stage, modalCanvas);
+
+    // Reintenta 1 cop si el navegador encara no ha calculat mides (mòbil)
     if ((modalCanvas.clientWidth || 0) < 10 || (modalCanvas.clientHeight || 0) < 10) {
       setTimeout(() => {
-        setStageSize(stage, modalCanvas, isMobilePortrait());
-        panel.classList.toggle("is-landscape", isMobilePortrait());
+        setStageSize(stage, modalCanvas);
         redraw(modalCanvas, sourceCanvas);
       }, 60);
       return;
     }
+
     redraw(modalCanvas, sourceCanvas);
   });
 }
@@ -142,22 +128,16 @@ export function installChartModalClicks(root = document) {
     openChartModalFromCanvas(canvas);
   });
 
-  // Reajusta en rotació/resize i re-renderitza
   window.addEventListener("resize", () => {
     if (!modalEl || !modalEl.classList.contains("is-open")) return;
 
-    const panel = modalEl.querySelector(".tl-chartModal__panel");
     const stage = modalEl.querySelector(".tl-chartModal__stage");
     const modalCanvas = modalEl.querySelector(".tl-chartModal__canvas");
-    if (!panel || !stage || !modalCanvas) return;
+    if (!stage || !modalCanvas) return;
 
-    const landscape = isMobilePortrait();
-    panel.classList.toggle("is-landscape", landscape);
-    setStageSize(stage, modalCanvas, landscape);
+    setStageSize(stage, modalCanvas);
 
     const source = modalCanvas.__source;
-    if (source) {
-      requestAnimationFrame(() => redraw(modalCanvas, source));
-    }
+    if (source) requestAnimationFrame(() => redraw(modalCanvas, source));
   });
 }

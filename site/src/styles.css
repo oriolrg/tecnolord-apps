@@ -1018,25 +1018,18 @@ th{
 .tl-chartModal__content {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: block;        /* NO center */
   overflow: hidden;
 }
 
-/* Stage amb mida en px (la defineix JS) */
+/* stage: ocupa la pantalla; JS posa width/height en px */
 .tl-chartModal__stage {
-  display: block;
+  position: absolute;
+  inset: 0;              /* omple */
 }
 
-/* Canvas omple el stage */
 .tl-chartModal__canvas {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-/* Mobile portrait => girem el stage (no el canvas directament) */
-.tl-chartModal__panel.is-landscape .tl-chartModal__stage {
-  transform: rotate(90deg);
-  transform-origin: center;
 }
