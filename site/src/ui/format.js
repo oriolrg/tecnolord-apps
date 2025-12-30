@@ -1,53 +1,59 @@
-export const fmtTime = (iso) => { try { return new Date(iso).toLocaleString(); } catch { return iso || ""; } };
-export const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+// ui/format.js
 
-export const num = (v) => (v == null || v === "" ? null : Number(v));
-export const cell = (v) => (v == null || v === "" ? "-" : v);
+export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
-export const fmt1 = (v) =>
-  (v == null || Number.isNaN(v)) ? "-" : (Math.round(v * 10) / 10).toFixed(1);
+export function num(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
+export function fmt1(v) {
+  const n = num(v);
+  if (n === null) return "—";
+  return n.toFixed(1);
+}
 
-export const norm = (s) => (s ?? "").toString().trim().toLowerCase();
+// >>> AFEGIT per arreglar: import { fmt2 } from '../format.js'
+export function fmt2(v) {
+  const n = num(v);
+  if (n === null) return "—";
+  return n.toFixed(2);
+}
 
-export function degToCompass(deg) {
-  if (deg == null || Number.isNaN(deg)) return null;
-  const dirs = ["N","NE","E","SE","S","SW","W","NW"];
-  const i = Math.round(deg / 45) % 8;
+export function fmtTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+export function norm(s) {
+  return (s ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+export function windAbbr16(deg) {
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  const i = Math.round((((deg % 360) + 360) % 360) / 22.5) % 16;
   return dirs[i];
 }
 
-export function degToArrow(deg) {
-  if (deg == null || Number.isNaN(deg)) return "↑";
-  const arrows = ["↑","↗","→","↘","↓","↙","←","↖"];
-  const i = Math.round(deg / 45) % 8;
-  return arrows[i];
-}
 export function windNameCa(deg) {
-  if (deg == null || Number.isNaN(deg)) return "";
-  const d = ((deg % 360) + 360) % 360;
-
-  // 8 vents (cada 45°). Llindars a mig camí (22.5°)
-  if (d < 22.5 || d >= 337.5) return "tramuntana";
-  if (d < 67.5)  return "gregal";
-  if (d < 112.5) return "llevant";
-  if (d < 157.5) return "xaloc";
-  if (d < 202.5) return "migjorn";
-  if (d < 247.5) return "garbí";
-  if (d < 292.5) return "ponent";
-  return "mestral";
-}
-export function windAbbr16(deg){
-  const d = ((deg % 360) + 360) % 360;
-  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
-  return dirs[Math.round(d / 22.5) % 16];
+  const names = ["Tramuntana","Gregal","Llevant","Xaloc","Migjorn","Llebeig","Ponent","Mestral"];
+  const i = Math.round((((deg % 360) + 360) % 360) / 45) % 8;
+  return names[i];
 }
 
-export function windFromCa(deg){
-  const a = windAbbr16(deg);
-  // “del” + punt cardinal en català (abreujat → text)
-  if (a.startsWith("N")) return "nord";
-  if (a.startsWith("S")) return "sud";
-  if (a.startsWith("E")) return "est";
-  return "oest";
+export function windFromCa(deg) {
+  // “del Nord”, “del Nord-est”, etc.
+  const dirs = ["Nord","Nord-est","Est","Sud-est","Sud","Sud-oest","Oest","Nord-oest"];
+  const i = Math.round((((deg % 360) + 360) % 360) / 45) % 8;
+  return dirs[i];
 }
