@@ -33,6 +33,47 @@ function formatHourLabel(d) {
   return `${hh}h`;
 }
 
+function formatDayMonthLabel(d) {
+  const dd = d.getDate();
+  const mm = d.getMonth() + 1;
+  return `${dd}/${mm}`;
+}
+
+function formatMonthLabel(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return mm;
+}
+
+// Decideix el format de l'eix X segons el rang temporal de les dades
+function formatXLabel(d, spanMs) {
+  const oneHour = 3600 * 1000;
+  const oneDay = 24 * oneHour;
+
+  // fins a 2 dies: hores (com ara)
+  if (spanMs <= 2 * oneDay) return formatHourLabel(d);
+
+  // fins a 2 mesos aprox: dia/mes
+  if (spanMs <= 60 * oneDay) return formatDayMonthLabel(d);
+
+  // fins a ~18 mesos: mes (01..12)
+  if (spanMs <= 548 * oneDay) return formatMonthLabel(d);
+
+  // molt llarg: any
+  return String(d.getFullYear());
+}
+
+// ticks adaptatius per no saturar l'eix X
+function pickTickN(spanMs) {
+  const oneDay = 86400000;
+  const spanDays = spanMs / oneDay;
+
+  if (spanDays <= 2) return 6;      // hores
+  if (spanDays <= 14) return 7;     // 2 setmanes
+  if (spanDays <= 60) return 8;     // fins 2 mesos (dia/mes)
+  if (spanDays <= 366) return 6;    // any (mesos)
+  return 5;                         // molt llarg
+}
+
 function parseRgb(str) {
   // Accepta "rgb(r,g,b)" o "#rrggbb"
   if (!str) return null;
@@ -154,8 +195,8 @@ export function renderLineChart(canvas, points, opts = {}) {
     ctx.fillText(String(Math.round(y * 10) / 10), padL - 8, py);
   }
 
-  // ticks X (aprox 6)
-  const tickN = 6;
+  // ticks X (adaptatiu)
+  const tickN = pickTickN(xr);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   for (let i = 0; i <= tickN; i++) {
@@ -169,7 +210,7 @@ export function renderLineChart(canvas, points, opts = {}) {
 
     const d = new Date(tx);
     ctx.fillStyle = axisText;
-    ctx.fillText(formatHourLabel(d), px, H - padB + 6);
+    ctx.fillText(formatXLabel(d, xr), px, H - padB + 6);
   }
 
   // línia
@@ -277,8 +318,8 @@ export function renderMultiLineChart(canvas, series, opts = {}) {
     ctx.fillText(String(Math.round(y * 10) / 10), padL - 8, py);
   }
 
-  // ticks X
-  const tickN = 6;
+  // ticks X (adaptatiu)
+  const tickN = pickTickN(xr);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   for (let i = 0; i <= tickN; i++) {
@@ -292,7 +333,7 @@ export function renderMultiLineChart(canvas, series, opts = {}) {
 
     const d = new Date(tx);
     ctx.fillStyle = axisText;
-    ctx.fillText(formatHourLabel(d), px, H - padB + 6);
+    ctx.fillText(formatXLabel(d, xr), px, H - padB + 6);
   }
 
   // Paleta simple (fallback) si no passen colors
