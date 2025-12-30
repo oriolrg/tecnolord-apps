@@ -1,5 +1,7 @@
 import { CONFIG } from "./config.js";
 import { initApp } from "./ui/screens/app.js";
+import { installChartModalClicks } from "./ui/components/chartModal.js";
+
 
 (function ensureFreshClient() {
   const KEY = "tecnolord:appVersion";
@@ -25,3 +27,5 @@ import { initApp } from "./ui/screens/app.js";
 })();
 
 initApp(document.getElementById("app"));
+installChartModalClicks(document);
+
