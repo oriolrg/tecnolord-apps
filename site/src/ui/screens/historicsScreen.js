@@ -54,7 +54,7 @@ function buildHistoricsUI(root) {
       </div>
 
       <div class="charts-section">
-        <h3>Evolució Pluja acumulada</h3>
+        <h3>Evolució Pluja Event (acumulat)</h3>
         <div class="chart-container">
           <canvas id="chart-hist-rain" style="width:100%; height:220px;"></canvas>
         </div>
@@ -192,7 +192,7 @@ function calculateStats(rows) {
   const temps = rows.map(r => num(r.temp_c ?? r.temperature)).filter(v => v != null);
   const hums = rows.map(r => num(r.humitat_pct ?? r.humidity)).filter(v => v != null);
   const press = rows.map(r => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa)).filter(v => v != null);
-  const rains = rows.map(r => num(r.pluja_diaria_mm ?? r.rain_daily_mm ?? r.rain_mm)).filter(v => v != null);
+  const rains = rows.map(r => num(r.pluja_event_mm ?? r.rain_event_mm)).filter(v => v != null);
 
   return {
     tempMin: temps.length ? Math.min(...temps) : null,
@@ -241,9 +241,9 @@ function renderStats(container, stats) {
     </div>
 
     <div class="stat-card">
-      <div class="stat-label">Pluja</div>
+      <div class="stat-label">Pluja Event</div>
       <div class="stat-values">
-        <span class="stat-max">Màxim diari: ${stats.rainMax != null ? fmt1(stats.rainMax) + ' mm' : '—'}</span>
+        <span class="stat-max">Màxim acumulat: ${stats.rainMax != null ? fmt1(stats.rainMax) + ' mm' : '—'}</span>
       </div>
     </div>
   `;
@@ -297,7 +297,7 @@ async function refreshHistorics(ui, store, period = 'today', customFrom = null, 
     // Renderitzar gràfiques
     if (filteredMeteo.length > 1) {
       const tempPts = buildDaySeries(filteredMeteo, r => num(r.temp_c ?? r.temperature));
-      const rainPts = buildDaySeries(filteredMeteo, r => num(r.pluja_diaria_mm ?? r.rain_daily_mm ?? r.rain_mm));
+      const rainPts = buildDaySeries(filteredMeteo, r => num(r.pluja_event_mm ?? r.rain_event_mm));
       const pressPts = buildDaySeries(filteredMeteo, r => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa));
       const humPts = buildDaySeries(filteredMeteo, r => num(r.humitat_pct ?? r.humidity));
 
