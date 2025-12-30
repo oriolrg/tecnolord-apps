@@ -18,30 +18,7 @@ function buildCabalsUI(root) {
         <p style="margin-top:6px; color: var(--muted);">Cabals i capacitat del sistema.</p>
       </div>
 
-      <div class="toolbar" id="hidro-period-row">
-        <label class="field">
-          <span>Període</span>
-          <select id="hidro-period" class="select">
-            <option value="today">Avui</option>
-            <option value="yesterday">Ahir</option>
-            <option value="last7d">Últims 7 dies</option>
-            <option value="last30d">Últims 30 dies</option>
-            <option value="custom">Personalitzat</option>
-          </select>
-        </label>
-
-        <label class="field period-custom is-hidden" id="hidro-from-wrap">
-          <span>De</span>
-          <input id="hidro-from" class="input" type="date" />
-        </label>
-
-        <label class="field period-custom is-hidden" id="hidro-to-wrap">
-          <span>Fins</span>
-          <input id="hidro-to" class="input" type="date" />
-        </label>
-
-        <button id="hidro-apply" class="btn btn--small" type="button">Aplicar</button>
-      </div>
+      
 
       <div class="grid" id="hidro-cards"></div>
     </div>
@@ -279,29 +256,7 @@ async function refreshCabals(ui, store) {
 export function initCabalsScreen(root, store) {
   const ui = buildCabalsUI(root);
 
-  if (ui.period) {
-    const s = store.get();
-    ui.period.value = s.period || "today";
-    if (ui.dateFrom) ui.dateFrom.value = s.date_from || "";
-    if (ui.dateTo) ui.dateTo.value = s.date_to || "";
-
-    const toggleCustom = () => {
-      const isCustom = ui.period.value === "custom";
-      ui.fromWrap?.classList.toggle("is-hidden", !isCustom);
-      ui.toWrap?.classList.toggle("is-hidden", !isCustom);
-    };
-    toggleCustom();
-
-    ui.period.addEventListener("change", toggleCustom);
-    ui.apply?.addEventListener("click", () => {
-      const period = ui.period.value;
-      const date_from = ui.dateFrom?.value || "";
-      const date_to = ui.dateTo?.value || "";
-      store.set({ period, date_from, date_to });
-      refreshCabals(ui, store);
-    });
-  }
-
+  
   let timer = null;
   if (store.get().auto) {
     timer = setInterval(() => refreshCabals(ui, store), CONFIG.autoRefreshMs);

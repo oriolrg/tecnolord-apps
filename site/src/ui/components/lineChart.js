@@ -75,9 +75,10 @@ function pickTickN(spanMs) {
 }
 
 function parseRgb(str) {
-  // Accepta "rgb(r,g,b)" o "#rrggbb"
+  // Accepta "rgb(r,g,b)" o "rgba(r,g,b,a)" o "#rrggbb"
   if (!str) return null;
   const s = String(str).trim();
+
   if (s.startsWith("#")) {
     const hex = s.slice(1);
     if (hex.length === 3) {
@@ -94,33 +95,30 @@ function parseRgb(str) {
     }
     return null;
   }
-  const m = s.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+
+  let m = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/i);
   if (!m) return null;
   return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
 }
+
 
 function rgba(rgb, a) {
   return `rgba(${rgb.r},${rgb.g},${rgb.b},${a})`;
 }
 
 function pickThemeColor(el) {
-  const cs = getComputedStyle(el);
+  const csEl = getComputedStyle(el);
+  const csRoot = getComputedStyle(document.documentElement);
+  const csBody = getComputedStyle(document.body);
 
-  // variables existents
-  const textVar = cs.getPropertyValue("--text")?.trim();
-  const lineVar = cs.getPropertyValue("--line")?.trim();
-  const accentVar = cs.getPropertyValue("--accent")?.trim() || "#60a5fa";
-
-  // intentem detectar fons (si el tens definit al CSS)
-  const bgVar =
-    cs.getPropertyValue("--bg")?.trim() ||
-    cs.getPropertyValue("--card")?.trim() ||
-    cs.getPropertyValue("--surface")?.trim() ||
-    "";
+  const accentVar =
+    csEl.getPropertyValue("--accent")?.trim() ||
+    csRoot.getPropertyValue("--accent")?.trim() ||
+    "#60a5fa";
 
   const accentRgb = parseRgb(accentVar) || { r: 96, g: 165, b: 250 };
 
-  // helper: luminància per detectar fosc/clar
+  // Luminància per decidir si és fosc
   const luminance = (rgb) => {
     const srgb = [rgb.r, rgb.g, rgb.b].map((v) => v / 255).map((v) =>
       v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
@@ -128,12 +126,28 @@ function pickThemeColor(el) {
     return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
   };
 
-  const bgRgb = parseRgb(bgVar);
-  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const isDark = bgRgb ? luminance(bgRgb) < 0.35 : prefersDark;
+  // Intenta detectar fons: variables -> body bg -> html bg
+  const bgVar =
+    csRoot.getPropertyValue("--bg")?.trim() ||
+    csRoot.getPropertyValue("--card")?.trim() ||
+    csRoot.getPropertyValue("--surface")?.trim() ||
+    csBody.getPropertyValue("--bg")?.trim() ||
+    csBody.getPropertyValue("--card")?.trim() ||
+    csBody.getPropertyValue("--surface")?.trim() ||
+    "";
 
-  // si és fosc: forcem blanc, independentment del que digui --text/--line
+  const bgRgb =
+    parseRgb(bgVar) ||
+    parseRgb(csBody.backgroundColor) ||
+    parseRgb(csRoot.backgroundColor);
+
+  const prefersDark =
+    window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  const isDark = bgRgb ? luminance(bgRgb) < 0.45 : prefersDark;
+
   if (isDark) {
+    // FORÇA tema fosc: text + eixos blancs
     return {
       text: "rgba(255,255,255,0.92)",
       grid: "rgba(255,255,255,0.22)",
@@ -141,12 +155,19 @@ function pickThemeColor(el) {
     };
   }
 
-  // si és clar: fem servir variables (o fallbacks originals)
-  const text = textVar || "rgb(17,24,39)";
-  const line = lineVar || "rgba(0,0,0,.15)";
+  // Tema clar: usa variables si existeixen o fallbacks
+  const textVar =
+    csEl.getPropertyValue("--text")?.trim() ||
+    csRoot.getPropertyValue("--text")?.trim() ||
+    "rgb(17,24,39)";
 
-  const textRgb = parseRgb(text) || { r: 17, g: 24, b: 39 };
-  const lineRgb = parseRgb(line) || { r: 0, g: 0, b: 0 };
+  const lineVar =
+    csEl.getPropertyValue("--line")?.trim() ||
+    csRoot.getPropertyValue("--line")?.trim() ||
+    "rgba(0,0,0,.15)";
+
+  const textRgb = parseRgb(textVar) || { r: 17, g: 24, b: 39 };
+  const lineRgb = parseRgb(lineVar) || { r: 0, g: 0, b: 0 };
 
   return {
     text: rgba(textRgb, 0.9),
@@ -154,6 +175,7 @@ function pickThemeColor(el) {
     accent: accentRgb,
   };
 }
+
 
 
 // ===============
