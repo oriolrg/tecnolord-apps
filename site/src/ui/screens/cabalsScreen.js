@@ -15,7 +15,45 @@ function buildCabalsUI(root) {
 
       <div class="section-title">
         <h2>Cabals</h2>
-        <p id="hidro-summary">—</p>
+        <p style="margin-top:6px; color: var(--muted);">Cabals i capacitat del sistema.</p>
+      </div>
+
+      <div class="toolbar" id="hidro-period-row">
+        <label class="field">
+          <span>Període</span>
+          <select id="hidro-period" class="select">
+            <option value="today">Avui</option>
+            <option value="yesterday">Ahir</option>
+            <option value="last7d">Últims 7 dies</option>
+            <option value="last30d">Últims 30 dies</option>
+            <option value="custom">Personalitzat</option>
+          </select>
+        </label>
+
+        <label class="field period-custom is-hidden" id="hidro-from-wrap">
+          <span>De</span>
+          <input id="hidro-from" class="input" type="date" />
+        </label>
+
+        <label class="field period-custom is-hidden" id="hidro-to-wrap">
+          <span>Fins</span>
+          <input id="hidro-to" class="input" type="date" />
+        </label>
+
+        <button id="hidro-apply" class="btn btn--small" type="button">Aplicar</button>
+      </div>
+
+      <div class="charts-section" style="margin-top:14px;">
+        <h3>Evolució (any en curs)</h3>
+        <div class="chart-container">
+          <canvas id="cabals-chart-llosa" style="width:100%; height:220px;"></canvas>
+        </div>
+        <div class="chart-container" style="margin-top:14px;">
+          <canvas id="cabals-chart-cardener" style="width:100%; height:220px;"></canvas>
+        </div>
+        <div class="chart-container" style="margin-top:14px;">
+          <canvas id="cabals-chart-valls" style="width:100%; height:220px;"></canvas>
+        </div>
       </div>
 
       <div class="grid" id="hidro-cards"></div>
@@ -23,9 +61,18 @@ function buildCabalsUI(root) {
   `;
 
   return {
+    period: $("#hidro-period", root),
+    fromWrap: $("#hidro-from-wrap", root),
+    toWrap: $("#hidro-to-wrap", root),
+    dateFrom: $("#hidro-from", root),
+    dateTo: $("#hidro-to", root),
+    apply: $("#hidro-apply", root),
     last: $("#hidro-last", root),
     err: $("#hidro-err", root),
     summary: $("#hidro-summary", root),
+    chartLlosa: $("#cabals-chart-llosa", root),
+    chartCardener: $("#cabals-chart-cardener", root),
+    chartValls: $("#cabals-chart-valls", root),
     cards: $("#hidro-cards", root),
   };
 }
@@ -38,19 +85,21 @@ function pickRow(rows, predicates) {
   return null;
 }
 
-function matchName(r, tokens) {
-  const name = norm(r.nom || "");
-  return tokens.some((t) => name.includes(t));
+function ymdLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
-function formatDateFull(ts) {
-  return new Date(ts).toLocaleString("ca-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function ytdRangeInclusive() {
+  // rang que inclou el dia d'avui complet: [1 gen, demà)
+  const now = new Date();
+  const from = `${now.getFullYear()}-01-01`;
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const to = ymdLocal(tomorrow);
+  return { from, to };
 }
 
 async function refreshCabals(ui, store) {
@@ -60,8 +109,14 @@ async function refreshCabals(ui, store) {
   const codi = (s.codiHidro || "").trim();
   const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
 
+  const period = (s.period || "today").trim();
+  const date_from = (s.date_from || "").trim();
+  const date_to = (s.date_to || "").trim();
+  const mode = (s.hidro_mode || "latest").trim();
+  const ensure = (s.hidro_ensure !== false);
+
   try {
-    const hidroRows = await fetchHidro({ codi, limit });
+    const hidroRows = await fetchHidro({ codi, limit, period, date_from, date_to, mode, ensure });
     if (ui.cards) ui.cards.innerHTML = "";
 
     if (!hidroRows.length) {
@@ -72,211 +127,154 @@ async function refreshCabals(ui, store) {
 
     if (ui.summary) {
       ui.summary.textContent = codi
-        ? `Hidro · Codi: ${codi}`
-        : `Hidro`;
+        ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres`
+        : `Hidro · ${hidroRows.length} registres`;
     }
-    const rowsLlosa = hidroRows.filter((r) => matchName(r, ["llosa", "cavall"]));
-    const rowsCardener = hidroRows.filter((r) => matchName(r, ["cardener"]));
-    const rowsValls = hidroRows.filter((r) => matchName(r, ["valls"]));
 
-    const rowLlosa = rowsLlosa[0] || null;
-    const rowCardener = rowsCardener[0] || null;
-    const rowValls = rowsValls[0] || null;
+    const rowLlosa = pickRow(hidroRows, [
+      r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
+      r => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
+    ]);
 
+    const rowCardener = pickRow(hidroRows, [
+      r => norm(r.nom).includes("cardener"),
+      r => norm(r.codi).includes("cardener"),
+    ]);
+
+    const rowValls = pickRow(hidroRows, [
+      r => norm(r.nom).includes("valls"),
+      r => norm(r.codi).includes("valls"),
+    ]);
+
+    const staleLlosa = !!rowLlosa?.is_stale;
+    const staleCardener = !!rowCardener?.is_stale;
+    const staleValls = !!rowValls?.is_stale;
+
+    const anyStale = staleLlosa || staleCardener || staleValls;
+
+    if (anyStale && ui.err) {
+      const parts = [];
+      if (staleLlosa) parts.push("Llosa del Cavall");
+      if (staleCardener) parts.push("Cardener");
+      if (staleValls) parts.push("Valls");
+      ui.err.textContent = `Avís: hi ha sensors sense dades recents. ${parts.length ? "Dades mostrades: " + parts.join(" · ") : ""}`;
+      ui.err.classList.add("warn");
+    } else if (ui.err) {
+      ui.err.classList.remove("warn");
+    }
+
+    const instantLlosa = rowLlosa?.instant ?? null;
     const cap = num(rowLlosa?.capacitat_pct);
+
+    let sortida = num(rowLlosa?.cabal_m3s);
+    if (sortida == null) {
+      const rowSortida = pickRow(hidroRows, [
+        r => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
+        r => norm(r.codi).includes("sortida") && (norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")),
+      ]);
+      sortida = num(rowSortida?.cabal_m3s);
+    }
 
     const cabalCardener = num(rowCardener?.cabal_m3s);
     const cabalValls = num(rowValls?.cabal_m3s);
-
-    const entradaTotal =
-      (cabalCardener ?? 0) + (cabalValls ?? 0);
-
-    const sortida = num(rowLlosa?.cabal_m3s);
+    const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
     const delta = (sortida == null ? null : (entradaTotal - sortida));
 
-    const isStaleCardener = rowCardener?.is_stale;
-    const isStaleValls = rowValls?.is_stale;
-    function pickMonthRows(rows, refRow) {
-      const refTs = refRow?.instant ?? refRow?.at;
-      if (!refTs) return [];
-      const ref = new Date(refTs);
-      const yy = ref.getFullYear();
-      const mm = ref.getMonth();
-      return rows.filter((r) => {
-        const ts = r.instant ?? r.at;
-        if (!ts) return false;
-        const d = new Date(ts);
-        return d.getFullYear() === yy && d.getMonth() === mm;
-      });
-    }
-
-    function calcMinMax(rows, getter) {
-      let min = null;
-      let max = null;
-      for (const r of rows) {
-        const v = num(getter(r));
-        if (v == null) continue;
-        min = min == null ? v : Math.min(min, v);
-        max = max == null ? v : Math.max(max, v);
-      }
-      return { min, max };
-    }
-
-    function attachChart(cardEl, id) {
-      const sub = cardEl.querySelector(".sub");
-      if (!sub) return null;
-
-      const wrap = document.createElement("div");
-      wrap.style.marginTop = "10px";
-
-      const canvas = document.createElement("canvas");
-      canvas.id = id;
-      canvas.style.width = "100%";
-      canvas.style.height = "140px";
-
-      wrap.appendChild(canvas);
-      sub.appendChild(wrap);
-      return canvas;
-    }
-
-    const cardenerMonth = pickMonthRows(rowsCardener, rowCardener);
-    const vallsMonth = pickMonthRows(rowsValls, rowValls);
-    const llosaMonth = pickMonthRows(rowsLlosa, rowLlosa);
-
-    const mmCardener = calcMinMax(cardenerMonth, (r) => r.cabal_m3s);
-    const mmValls = calcMinMax(vallsMonth, (r) => r.cabal_m3s);
-    const mmCap = calcMinMax(llosaMonth, (r) => r.capacitat_pct);
-
-    const cardenerMaxTxt = mmCardener.max == null ? "?" : fmt1(mmCardener.max);
-    const cardenerMinTxt = mmCardener.min == null ? "?" : fmt1(mmCardener.min);
-    const vallsMaxTxt = mmValls.max == null ? "?" : fmt1(mmValls.max);
-    const vallsMinTxt = mmValls.min == null ? "?" : fmt1(mmValls.min);
-    const capMaxTxt = mmCap.max == null ? "?" : fmt1(mmCap.max);
-    const capMinTxt = mmCap.min == null ? "?" : fmt1(mmCap.min);
-
-    const cCardener = card({
-      title: "Cabal riu Cardener",
-      value: cabalCardener == null ? "?" : fmt1(cabalCardener),
-      unit: "m3/s",
-      badge: rowCardener?.nom || "Cardener",
-      subHtml: `
-        <span>Max mes: <strong>${cardenerMaxTxt} m3/s</strong></span>
-        <span class="sep"></span>
-        <span>Min mes: <strong>${cardenerMinTxt} m3/s</strong></span>
-        ${rowCardener?.instant ? `<span class="sep"></span>Hora: <strong>${fmtTime(rowCardener.instant)}</strong>` : ""}
-        ${isStaleCardener && rowCardener?.instant ? `
-          <div class="alert-stale">
-            Sensor del Cardener amb dades antigues.<br>
-            Dades del ${formatDateFull(rowCardener.instant)}
-          </div>
-        ` : ""}
-      `,
-    });
-
-    const cValls = card({
-      title: "Cabal riu de Valls",
-      value: cabalValls == null ? "?" : fmt1(cabalValls),
-      unit: "m3/s",
-      badge: rowValls?.nom || "Valls",
-      subHtml: `
-        <span>Max mes: <strong>${vallsMaxTxt} m3/s</strong></span>
-        <span class="sep"></span>
-        <span>Min mes: <strong>${vallsMinTxt} m3/s</strong></span>
-        ${rowValls?.instant ? `<span class="sep"></span>Hora: <strong>${fmtTime(rowValls.instant)}</strong>` : ""}
-        ${isStaleValls && rowValls?.instant ? `
-          <div class="alert-stale">
-            Sensor de Valls fora de servei.<br>
-            Dades del ${formatDateFull(rowValls.instant)}
-          </div>
-        ` : ""}
-      `,
-    });
-
-    const cCap = card({
-      title: "Capacitat llosa",
-      value: cap == null ? "?" : fmt1(cap),
-      unit: "%",
-      badge: rowLlosa?.nom || "Llosa",
-      subHtml: `
-        <span>Max mes: <strong>${capMaxTxt} %</strong></span>
-        <span class="sep"></span>
-        <span>Min mes: <strong>${capMinTxt} %</strong></span>
-        ${rowLlosa?.instant ? `<span class="sep"></span>Hora: <strong>${fmtTime(rowLlosa.instant)}</strong>` : ""}
-      `,
-    });
-
-    let balanceHtml = "";
+    let deltaHtml = "";
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
-      const cls = delta >= 0 ? "ok" : "bad";
-      const txt = delta >= 0 ? "S'omple" : "Es buida";
-      balanceHtml = `
-        <span>Entrada: <strong>${fmt1(entradaTotal)} m3/s</strong></span>
-        <span class="sep"></span>
-        <span>Sortida: <strong>${fmt1(sortida)} m3/s</strong></span>
-        <span class="sep"></span>
+      const cls = (delta == null ? "" : (delta >= 0 ? "pos" : "neg"));
+      const txt =
+        delta == null ? "—" :
+        (delta >= 0 ? `+${fmt1(delta)} m³/s` : `${fmt1(delta)} m³/s`);
+      deltaHtml = `
+        <span>Entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
+        <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
         <span class="delta ${cls}">${txt}</span>
       `;
     }
 
-    const cBalance = card({
-      title: "Balanc del panta",
-      value: delta == null ? "?" : fmt1(delta),
-      unit: "m3/s",
-      badge: "Entrades - sortida",
-      subHtml: balanceHtml,
+    const cCabal = card({
+      title: "Cabal (balanç)",
+      value: sortida == null ? "—" : fmt1(sortida),
+      unit: "m³/s",
+      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      subHtml: `
+        ${deltaHtml}
+        ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
+      `,
+    });
+    cCabal.classList.add("card--tall", "card--wind");
+
+    const cCap = card({
+      title: "Capacitat",
+      value: cap == null ? "—" : fmt1(cap),
+      unit: "%",
+      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
+    });
+    cCap.classList.add("card--tall", "card--wind");
+
+    const entradesParts = [];
+    if (cabalCardener != null) {
+      entradesParts.push(
+        `Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>${rowCardener?.nom ? ` · ${rowCardener.nom}` : ""}${staleCardener ? ` · <span class="stale-tag">ANTIC</span>` : ""}`
+      );
+    }
+    if (cabalValls != null) {
+      entradesParts.push(
+        `Valls: <strong>${fmt1(cabalValls)} m³/s</strong>${rowValls?.nom ? ` · ${rowValls.nom}` : ""}${staleValls ? ` · <span class="stale-tag">ANTIC</span>` : ""}`
+      );
+    }
+
+    const cEntrades = card({
+      title: "Entrades (rius)",
+      value: (cabalCardener == null && cabalValls == null) ? "—" : fmt1(entradaTotal),
+      unit: "m³/s",
+      badge: "Total",
+      className: (anyStale ? "card--stale" : ""),
+      subHtml: entradesParts.length ? entradesParts.join(`<span class="sep"></span>`) : "",
     });
 
-    const cvCardener = attachChart(cCardener, "chart-cabal-cardener");
-    const cvValls = attachChart(cValls, "chart-cabal-valls");
-    const cvCap = attachChart(cCap, "chart-cap-llosa");
+    // IMPORTANT: append DOM nodes (NO strings)
+    if (ui.cards) ui.cards.append(cCabal, cCap, cEntrades);
 
-    if (ui.cards) ui.cards.append(cCardener, cValls, cCap, cBalance);
-
-    const cardenerPts = buildDaySeries(cardenerMonth, (r) => num(r.cabal_m3s));
-    const vallsPts = buildDaySeries(vallsMonth, (r) => num(r.cabal_m3s));
-    const capPts = buildDaySeries(llosaMonth, (r) => num(r.capacitat_pct));
-
-    if (cvCardener) {
-      renderLineChart(cvCardener, cardenerPts, {
-        unit: "m3/s",
-        lineColor: "#60a5fa",
-        formatY: (v) => (Math.round(v * 10) / 10).toString(),
+    // ==========================
+    // Gràfiques: evolució YTD (any en curs)
+    // ==========================
+    try {
+      const { from, to } = ytdRangeInclusive();
+      const ytdRows = await fetchHidro({
+        codi,
+        limit: 5000,
+        period: "",        // usem rang explícit
+        date_from: from,
+        date_to: to,
+        mode: "range",
+        ensure,
       });
-    }
 
-    if (cvValls) {
-      renderLineChart(cvValls, vallsPts, {
-        unit: "m3/s",
-        lineColor: "#60a5fa",
-        formatY: (v) => (Math.round(v * 10) / 10).toString(),
-      });
-    }
-
-    if (cvCap) {
-      renderLineChart(cvCap, capPts, {
-        unit: "%",
-        lineColor: "#60a5fa",
-        formatY: (v) => (Math.round(v * 10) / 10).toString(),
-      });
-    }
-
-    // Text superior "Dades actualitzades fa…"
-    const refInstant =
-      rowCardener?.instant || rowValls?.instant || rowLlosa?.instant;
-
-    if (refInstant) {
-      const ageSec = Math.max(
-        0,
-        Math.round((Date.now() - new Date(refInstant).getTime()) / 1000)
+      const rowsLlosa = ytdRows.filter(r =>
+        norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall") ||
+        norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")
       );
-      const ageTxt =
-        ageSec < 60 ? `${ageSec} s` :
-        ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
-        `${Math.round(ageSec / 3600)} h`;
+      const rowsCardener = ytdRows.filter(r => norm(r.nom).includes("cardener") || norm(r.codi).includes("cardener"));
+      const rowsValls = ytdRows.filter(r => norm(r.nom).includes("valls") || norm(r.codi).includes("valls"));
 
-      if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
-    } else {
-      if (ui.last) ui.last.textContent = "Dades disponibles";
+      if (ui.chartLlosa) {
+        const pts = buildDaySeries(rowsLlosa, r => r.cabal_m3s);
+        renderLineChart(ui.chartLlosa, pts, { unit: "m³/s" });
+      }
+      if (ui.chartCardener) {
+        const pts = buildDaySeries(rowsCardener, r => r.cabal_m3s);
+        renderLineChart(ui.chartCardener, pts, { unit: "m³/s" });
+      }
+      if (ui.chartValls) {
+        const pts = buildDaySeries(rowsValls, r => r.cabal_m3s);
+        renderLineChart(ui.chartValls, pts, { unit: "m³/s" });
+      }
+    } catch (e2) {
+      // no bloquegem la pantalla si falla la sèrie històrica
+      if (ui.err) ui.err.textContent = (ui.err.textContent ? ui.err.textContent + " · " : "") + "Gràfica YTD: " + (e2.message || e2);
     }
 
   } catch (e) {
@@ -287,17 +285,43 @@ async function refreshCabals(ui, store) {
 export function initCabalsScreen(root, store) {
   const ui = buildCabalsUI(root);
 
-  let timer = null;
-  if (store.get().auto) {
-    timer = setInterval(() => refreshCabals(ui, store), CONFIG.autoRefreshMs);
+  // Inicialitza controls de període
+  if (ui.period) {
+    const s = store.get();
+    ui.period.value = (s.period || "today");
+    if (ui.dateFrom) ui.dateFrom.value = (s.date_from || "");
+    if (ui.dateTo) ui.dateTo.value = (s.date_to || "");
+
+    const toggleCustom = () => {
+      const isCustom = ui.period.value === "custom";
+      ui.fromWrap?.classList.toggle("is-hidden", !isCustom);
+      ui.toWrap?.classList.toggle("is-hidden", !isCustom);
+    };
+    toggleCustom();
+
+    ui.period.addEventListener("change", toggleCustom);
+    ui.apply?.addEventListener("click", () => {
+      const period = ui.period.value;
+      const date_from = ui.dateFrom?.value || "";
+      const date_to = ui.dateTo?.value || "";
+      store.set({ period, date_from, date_to });
+      refreshCabals(ui, store);
+    });
   }
 
-  refreshCabals(ui, store);
+  let timer = null;
+
+  const doRefresh = () => refreshCabals(ui, store);
+
+  // primera càrrega
+  doRefresh();
+
+  // auto-refresh si està configurat
+  const s = store.get();
+  const refreshMs = clamp(parseInt(s.refreshMs || String(CONFIG?.refreshMs || "60000"), 10), 5000, 10 * 60 * 1000);
+  timer = setInterval(doRefresh, refreshMs);
 
   return () => {
     if (timer) clearInterval(timer);
   };
 }
-
-
-
