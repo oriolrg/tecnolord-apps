@@ -1,5 +1,6 @@
+// server.js
 // ──────────────────────────────────────────────────────────
-// Imports i Pool (ja els tens)
+// Imports i Pool
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -41,6 +42,63 @@ app.get('/health', async (_req, res) => {
 
 // Ping
 app.get('/api/ping', (_req, res) => res.json({ ok: true, msg: 'pong' }));
+
+// ──────────────────────────────────────────────────────────
+// Helpers de rang temporal (from/to o period)
+// - Backward compatible: si no envies res => comportament actual (ORDER DESC + LIMIT)
+// - period: today | yesterday | last7d | last30d | last24h
+function parseDateMaybe(v) {
+  if (!v) return null;
+  const d = new Date(String(v));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function startOfDay(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function endOfDay(d) {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+}
+
+function parseRangeFromReq(req) {
+  const period = (req.query.period || req.query.preset || '').toString().trim().toLowerCase();
+  const fromQ = parseDateMaybe(req.query.from);
+  const toQ = parseDateMaybe(req.query.to);
+
+  // Prioritat: from/to explícit
+  if (fromQ || toQ) {
+    const from = fromQ ? fromQ.toISOString() : null;
+    const to = toQ ? toQ.toISOString() : null;
+    return { hasRange: true, from, to };
+  }
+
+  if (!period) return { hasRange: false, from: null, to: null };
+
+  const now = new Date();
+  if (period === 'today') {
+    return { hasRange: true, from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
+  }
+  if (period === 'yesterday') {
+    const y = new Date(now.getTime() - 24 * 3600 * 1000);
+    return { hasRange: true, from: startOfDay(y).toISOString(), to: endOfDay(y).toISOString() };
+  }
+  if (period === 'last7d') {
+    return { hasRange: true, from: new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString(), to: now.toISOString() };
+  }
+  if (period === 'last30d') {
+    return { hasRange: true, from: new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString(), to: now.toISOString() };
+  }
+  if (period === 'last24h') {
+    return { hasRange: true, from: new Date(now.getTime() - 24 * 3600 * 1000).toISOString(), to: now.toISOString() };
+  }
+
+  // period desconegut -> ignorar
+  return { hasRange: false, from: null, to: null };
+}
 
 // ──────────────────────────────────────────────────────────
 // Helpers de permisos/entitats
@@ -88,7 +146,6 @@ async function assegurarHidro(codi, tipus, nom) {
 
 // ──────────────────────────────────────────────────────────
 // Helpers de mapping i URLs
-
 const kmhToMs = v => (v == null || v === '' ? null : Number(v) / 3.6);
 
 function ecowittURL() {
@@ -109,73 +166,189 @@ const ACA_RIVER_URL = 'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/pub
 const ACA_RESERVOIR_URL = 'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/reservoir/capacity_6min';
 
 // ──────────────────────────────────────────────────────────
-// Rutes d’API (consulta) — darreres mesures
+// Rutes d’API — METEO (consulta)
+// Accepta:
+//  - estacio=home (com ara)
+//  - limit=...
+//  - from=ISO / to=ISO o period=today|yesterday|last7d|last30d|last24h
 app.get('/api/v1/mesures/darreres', async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 1000);
-  const estacioCodi = req.query.estacio || null;
+  const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 2000);
+  const estacioCodi = (req.query.estacio || '').toString().trim() || null;
+  const { hasRange, from, to } = parseRangeFromReq(req);
+
   try {
     const params = [];
-    let where = '';
+    const whereParts = [];
+
     if (estacioCodi) {
-      where = 'WHERE m.estacio_id = (SELECT id FROM estacions WHERE codi = $1)';
+      whereParts.push(`m.estacio_id = (SELECT id FROM estacions WHERE codi = $${params.length + 1})`);
       params.push(estacioCodi);
     }
-    const sql = `SELECT m.* FROM mesures m ${where} ORDER BY instant DESC LIMIT ${limit}`;
+
+    if (hasRange) {
+      if (from) {
+        whereParts.push(`m.instant >= $${params.length + 1}`);
+        params.push(from);
+      }
+      if (to) {
+        whereParts.push(`m.instant <= $${params.length + 1}`);
+        params.push(to);
+      }
+    }
+
+    const where = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+    const sql = `SELECT m.* FROM mesures m ${where} ORDER BY m.instant DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, params);
-    res.json({ ok: true, items: rows });
+
+    res.json({ ok: true, items: rows, range: hasRange ? { from, to } : null });
   } catch (e) {
-    console.error(e); res.status(500).json({ ok:false, error:'db query error' });
+    console.error(e);
+    res.status(500).json({ ok: false, error: 'db query error' });
   }
 });
 
-// (opcional) hidrologia
+// ──────────────────────────────────────────────────────────
+// Rutes d’API — HIDRO (consulta)
+// Objectiu: “com a mínim 1 fila per estació” encara que al rang no n’hi hagi.
+// Accepta:
+//  - codi=251116-004 (opcional)
+//  - limit=... (només afecta el mode “històric”)
+//  - from/to o period (opcional)
+//  - mode:
+//      * sense rang => comportament com ara (ORDER DESC LIMIT)
+//      * amb rang => retorna totes les files dins del rang (ORDER DESC LIMIT) PER codi si s’ha passat,
+//                   o bé “última dins del rang, i si no existeix, última global” per cada estació.
 app.get('/api/v1/hidro/darreres', async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 1000);
-  const codi = req.query.codi || null;
+  const limit = Math.min(parseInt(req.query.limit || '200', 10) || 200, 5000);
+  const codi = (req.query.codi || '').toString().trim() || null;
+  const { hasRange, from, to } = parseRangeFromReq(req);
 
   try {
-    const params = [];
-    let where = '';
-    if (codi) { 
-      where = 'WHERE e.codi = $1'; 
-      params.push(codi); 
+    // 1) Si demanes un codi concret:
+    //    - Si NO hi ha rang: igual que ara (últimes N)
+    //    - Si hi ha rang: totes dins del rang (fins a limit) i, si no n’hi ha cap, retornem 1 fila fallback (última global)
+    if (codi) {
+      const params = [codi];
+      const whereParts = [`e.codi = $1`];
+
+      if (hasRange) {
+        if (from) { whereParts.push(`h.instant >= $${params.length + 1}`); params.push(from); }
+        if (to)   { whereParts.push(`h.instant <= $${params.length + 1}`); params.push(to); }
+      }
+
+      const where = `WHERE ${whereParts.join(' AND ')}`;
+
+      const sql = `
+        SELECT
+          h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
+          e.codi, e.nom, e.tipus, e.id AS estacio_id,
+          EXTRACT(EPOCH FROM (NOW() - h.instant)) / 3600 AS age_hours,
+          (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale
+        FROM lectures_hidro h
+        JOIN estacions_hidro e ON e.id = h.estacio_id
+        ${where}
+        ORDER BY h.instant DESC
+        LIMIT ${limit}
+      `;
+
+      const { rows } = await pool.query(sql, params);
+
+      // Fallback: si amb rang no hi ha res, retorna l’última global
+      if (hasRange && rows.length === 0) {
+        const sql2 = `
+          SELECT
+            h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
+            e.codi, e.nom, e.tipus, e.id AS estacio_id,
+            EXTRACT(EPOCH FROM (NOW() - h.instant)) / 3600 AS age_hours,
+            (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale
+          FROM lectures_hidro h
+          JOIN estacions_hidro e ON e.id = h.estacio_id
+          WHERE e.codi = $1
+          ORDER BY h.instant DESC
+          LIMIT 1
+        `;
+        const { rows: rows2 } = await pool.query(sql2, [codi]);
+        return res.json({ ok: true, items: rows2, range: { from, to }, fallback: true });
+      }
+
+      return res.json({ ok: true, items: rows, range: hasRange ? { from, to } : null });
     }
 
+    // 2) Sense codi:
+    //    - Si NO hi ha rang: igual que ara (últimes N en global)
+    //    - Si hi ha rang: 1 fila per estació (última dins del rang; si no existeix, última global)
+    if (!hasRange) {
+      const sql = `
+        SELECT
+          h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
+          e.codi, e.nom, e.tipus, e.id AS estacio_id,
+          EXTRACT(EPOCH FROM (NOW() - h.instant)) / 3600 AS age_hours,
+          (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale
+        FROM lectures_hidro h
+        JOIN estacions_hidro e ON e.id = h.estacio_id
+        ORDER BY h.instant DESC
+        LIMIT ${limit}
+      `;
+      const { rows } = await pool.query(sql);
+      return res.json({ ok: true, items: rows, range: null });
+    }
+
+    // Mode “1 per estació amb fallback”
+    const params = [];
+    const rangeParts = [];
+
+    if (from) { rangeParts.push(`h.instant >= $${params.length + 1}`); params.push(from); }
+    if (to)   { rangeParts.push(`h.instant <= $${params.length + 1}`); params.push(to); }
+    const rangeWhere = rangeParts.length ? `AND ${rangeParts.join(' AND ')}` : '';
+
     const sql = `
+      WITH in_range AS (
+        SELECT DISTINCT ON (h.estacio_id)
+          h.estacio_id, h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres
+        FROM lectures_hidro h
+        WHERE 1=1
+          ${rangeParts.length ? `AND ${rangeParts.join(' AND ')}` : ''}
+        ORDER BY h.estacio_id, h.instant DESC
+      ),
+      latest_any AS (
+        SELECT DISTINCT ON (h.estacio_id)
+          h.estacio_id, h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres
+        FROM lectures_hidro h
+        ORDER BY h.estacio_id, h.instant DESC
+      ),
+      picked AS (
+        SELECT
+          e.id AS estacio_id,
+          e.codi, e.nom, e.tipus,
+          COALESCE(ir.id, la.id) AS id,
+          COALESCE(ir.instant, la.instant) AS instant,
+          COALESCE(ir.cabal_m3s, la.cabal_m3s) AS cabal_m3s,
+          COALESCE(ir.capacitat_pct, la.capacitat_pct) AS capacitat_pct,
+          COALESCE(ir.nivell_m, la.nivell_m) AS nivell_m,
+          COALESCE(ir.extres, la.extres) AS extres,
+          (ir.id IS NULL) AS is_fallback
+        FROM estacions_hidro e
+        LEFT JOIN in_range ir ON ir.estacio_id = e.id
+        LEFT JOIN latest_any la ON la.estacio_id = e.id
+        WHERE e.activa = true
+      )
       SELECT
-        h.id,
-        h.instant,
-        h.cabal_m3s,
-        h.capacitat_pct,
-        h.nivell_m,
-        h.extres,
-
-        e.codi,
-        e.nom,
-        e.tipus,
-        e.id AS estacio_id,
-
-        EXTRACT(EPOCH FROM (NOW() - h.instant)) / 3600 AS age_hours,
-        (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale
-
-      FROM lectures_hidro h
-      JOIN estacions_hidro e ON e.id = h.estacio_id
-      ${where}
-      ORDER BY h.instant DESC
-      LIMIT ${limit}
+        p.*,
+        EXTRACT(EPOCH FROM (NOW() - p.instant)) / 3600 AS age_hours,
+        (NOW() - p.instant) > INTERVAL '24 hours' AS is_stale
+      FROM picked p
+      WHERE p.instant IS NOT NULL
+      ORDER BY p.tipus, p.codi
     `;
 
     const { rows } = await pool.query(sql, params);
-    res.json({ ok: true, items: rows });
+    return res.json({ ok: true, items: rows, range: { from, to } });
 
   } catch (e) {
     console.error(e);
-    res.status(500).json({ ok:false, error:'db query error' });
+    res.status(500).json({ ok: false, error: 'db query error' });
   }
 });
-
-
-
 
 // ──────────────────────────────────────────────────────────
 // Auth simple per tasques internes
@@ -188,7 +361,7 @@ function checkApiKey(req, res, next) {
 }
 
 // ──────────────────────────────────────────────────────────
-// Pull d’Ecowitt → meteo.mesures (TOTES les dades rellevants)
+// Pull d’Ecowitt → meteo.mesures
 async function pullEcowittAndSave() {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
   const codi = process.env.ESTACIO_CODI || process.env.STATION_ID || process.env.STATION_CODE || 'home';
@@ -208,34 +381,34 @@ async function pullEcowittAndSave() {
   const params = [
     estacioId, instant,
 
-    +d?.outdoor?.temperature?.value || null,          // temp_c
-    +d?.outdoor?.feels_like?.value || null,           // sensacio_c
-    +d?.outdoor?.dew_point?.value || null,            // punt_rosada_c
-    d?.outdoor?.humidity?.value != null ? parseInt(d.outdoor.humidity.value, 10) : null, // humitat_pct
+    +d?.outdoor?.temperature?.value || null,
+    +d?.outdoor?.feels_like?.value || null,
+    +d?.outdoor?.dew_point?.value || null,
+    d?.outdoor?.humidity?.value != null ? parseInt(d.outdoor.humidity.value, 10) : null,
 
-    +d?.solar_and_uvi?.solar?.value || null,          // solar_wm2
-    d?.solar_and_uvi?.uvi?.value != null ? parseInt(d.solar_and_uvi.uvi.value, 10) : null, // uvi
+    +d?.solar_and_uvi?.solar?.value || null,
+    d?.solar_and_uvi?.uvi?.value != null ? parseInt(d.solar_and_uvi.uvi.value, 10) : null,
 
-    +d?.rainfall?.['rain_rate']?.value || null,       // taxa_pluja_mm_h
-    +d?.rainfall?.daily?.value || null,               // pluja_diaria_mm
-    +d?.rainfall?.event?.value || null,               // pluja_event_mm
-    +d?.rainfall?.['1_hour']?.value || null,          // pluja_hora_mm
-    +d?.rainfall?.weekly?.value || null,              // pluja_setmana_mm
-    +d?.rainfall?.monthly?.value || null,             // pluja_mes_mm
-    null,                                             // pluja_any_mm
+    +d?.rainfall?.['rain_rate']?.value || null,
+    +d?.rainfall?.daily?.value || null,
+    +d?.rainfall?.event?.value || null,
+    +d?.rainfall?.['1_hour']?.value || null,
+    +d?.rainfall?.weekly?.value || null,
+    +d?.rainfall?.monthly?.value || null,
+    null,
 
-    kmhToMs(+d?.wind?.wind_speed?.value || null),     // vent_ms
-    kmhToMs(+d?.wind?.wind_gust?.value || null),      // vent_rafega_ms
-    d?.wind?.wind_direction?.value != null ? parseInt(d.wind.wind_direction.value,10) : null, // vent_direccio_graus
+    kmhToMs(+d?.wind?.wind_speed?.value || null),
+    kmhToMs(+d?.wind?.wind_gust?.value || null),
+    d?.wind?.wind_direction?.value != null ? parseInt(d.wind.wind_direction.value, 10) : null,
 
-    +d?.pressure?.relative?.value || null,            // pressio_rel_hpa
-    +d?.pressure?.absolute?.value || null,            // pressio_abs_hpa
+    +d?.pressure?.relative?.value || null,
+    +d?.pressure?.absolute?.value || null,
 
     d?.battery?.sensor_array?.value != null
-      ? (parseInt(d.battery.sensor_array.value,10) ? 100 : 0)
-      : null,                                         // bateria_pct
+      ? (parseInt(d.battery.sensor_array.value, 10) ? 100 : 0)
+      : null,
 
-    JSON.stringify({ indoor: d?.indoor ?? null })     // extres
+    JSON.stringify({ indoor: d?.indoor ?? null })
   ];
 
   const sql = `
@@ -259,8 +432,7 @@ async function pullEcowittAndSave() {
   return { id: rows[0]?.id || null, estacio: codi, instant };
 }
 
-// Pull ACA → meteo.lectures_hidro (Cardener, Valls, Llosa)
-// Pull ACA → combina cabal (rius) i capacitat (pantans) per cada codi
+// Pull ACA → meteo.lectures_hidro
 async function pullACAAndSave() {
   const [riversRes, reservoirsRes] = await Promise.all([
     fetch(ACA_RIVER_URL),
@@ -269,19 +441,13 @@ async function pullACAAndSave() {
   if (!riversRes.ok) throw new Error('aca rivers status ' + riversRes.status);
   if (!reservoirsRes.ok) throw new Error('aca reservoirs status ' + reservoirsRes.status);
 
-  const rivers = await riversRes.json();        // river_flow_6min
-  const reservoirs = await reservoirsRes.json();// capacity_6min
+  const rivers = await riversRes.json();
+  const reservoirs = await reservoirsRes.json();
 
-  // L'ACA pot retornar:
-  //  - objecte indexat per codi (p.ex. rivers["251116-005"])
-  //  - o bé un array d'objectes ({ siteCode: "...", ... })
-  // Per no dependre del format (i evitar casos com Valls que no entra),
-  // indexem sempre per siteCode.
   function indexBySiteCode(data) {
     const m = new Map();
     if (!data) return m;
 
-    // Array d'objectes
     if (Array.isArray(data)) {
       for (const it of data) {
         const code = it?.siteCode ?? it?.codi ?? it?.code;
@@ -290,7 +456,6 @@ async function pullACAAndSave() {
       return m;
     }
 
-    // Objecte: claus = codis o bé objectes interns amb siteCode
     if (typeof data === 'object') {
       for (const [k, v] of Object.entries(data)) {
         if (!v) continue;
@@ -307,7 +472,6 @@ async function pullACAAndSave() {
   const riversByCode = indexBySiteCode(rivers);
   const reservoirsByCode = indexBySiteCode(reservoirs);
 
-  // Helpers per navegar claus “sorolloses”
   const getPath = (obj, tokens) => {
     try {
       return tokens.reduce((a, k) => (a && a[k] !== undefined && a[k] !== null) ? a[k] : undefined, obj);
@@ -322,7 +486,6 @@ async function pullACAAndSave() {
   };
   const toNum = v => (v === null || v === '' || v === undefined ? null : Number(v));
 
-  // Codis de .env (permet codis separats per cabal/capacitat a la Llosa)
   const CODE_CARD   = process.env.ACA_CODI_CARDENER;
   const CODE_VALLS  = process.env.ACA_CODI_VALLS;
   const CODE_LLOSA  = process.env.ACA_CODI_LLOSA;
@@ -341,7 +504,6 @@ async function pullACAAndSave() {
   const results = [];
 
   for (const s of SITES) {
-    // Robust: preferim l'índex per siteCode però mantenim fallback a accés directe
     const rObj = s.flowKey
       ? (riversByCode.get(String(s.flowKey).trim()) ?? rivers?.[s.flowKey] ?? null)
       : null;
@@ -349,64 +511,43 @@ async function pullACAAndSave() {
       ? (reservoirsByCode.get(String(s.capKey).trim()) ?? reservoirs?.[s.capKey] ?? null)
       : null;
 
-    // Cabal (variants)
     const flowVal = toNum(firstOf(rObj, [
       ['popup','river_flow','value'],
       ['popup','flux_riu','value'],
       ['popup','cabal_riu','value'],
-      ['finestra emergent','river_flow','valor'],
-      ['finestra emergent','flux_riu','valor'],
-      ['finestra emergent','cabal_riu','valor'],
-      ['emergent','river_flow','valor'],
-      ['emergent','flux_riu','valor'],
-      ['emergent','cabal_riu','valor'],
-      ['finestra','flux_riu','valor'],
-      ['finestra','cabal_riu','valor'],
     ]));
 
-    // Capacitat (variants)
     const capVal = toNum(firstOf(zObj, [
       ['popup','capacity','value'],
       ['popup','capacitat','valor'],
-      ['finestra emergent','capacitat','valor'],
-      ['emergent','capacitat','valor'],
-      ['element emergent','capacitat','valor'],
     ]));
 
-    // Nivell (si ve, també el desarem)
     const levelVal = toNum(firstOf(zObj, [
       ['popup','level','value'],
-      ['finestra emergent','nivell','valor'],
-      ['emergent','nivell','valor'],
+      ['popup','nivell','value'],
+      ['popup','river_level','value'], // per si algun dia ho exposes
     ]));
 
-    // Timestamps reals si existeixen (sinó now)
     const flowTs = firstOf(rObj, [
       ['popup','river_flow','time'], ['popup','flux_riu','time'], ['popup','cabal_riu','time'],
-      ['finestra emergent','river_flow','hora'], ['finestra emergent','flux_riu','hora'], ['finestra emergent','cabal_riu','hora'],
-      ['emergent','river_flow','hora'], ['emergent','flux_riu','hora'], ['emergent','cabal_riu','hora'],
     ]);
     const capTs = firstOf(zObj, [
       ['popup','capacity','time'], ['popup','capacitat','hora'],
-      ['finestra emergent','capacitat','hora'],
-      ['emergent','capacitat','hora'],
-      ['element emergent','capacitat','hora'],
     ]);
     const instant = (flowTs || capTs || nowIso);
 
+    // Si ACA no dona cap valor, NO inserim (això és correcte).
     if (flowVal === null && capVal === null && levelVal === null) {
       console.warn('[ACA] sense valors per', s.siteCode, { flowKey: s.flowKey, capKey: s.capKey });
       continue;
     }
 
-    // Dona d’alta/actualitza el “site”
     const tipusCalc =
       (flowVal !== null && capVal === null) ? 'riu' :
       (capVal  !== null && flowVal === null) ? 'panta' : (s.tipusPreferit || 'panta');
 
     const estacioId = await assegurarHidro(s.siteCode, tipusCalc, s.name);
 
-    // Inserció fusionant si ja existeix la mateixa (estacio_id, instant)
     const sql = `
       INSERT INTO lectures_hidro (estacio_id, instant, cabal_m3s, capacitat_pct, nivell_m, extres)
       VALUES ($1,$2,$3,$4,$5,$6)
@@ -430,9 +571,8 @@ async function pullACAAndSave() {
   return { ok: true, inserts: results };
 }
 
-
 // ──────────────────────────────────────────────────────────
-// Rutes de “tasca”: ara el pull d’Ecowitt TAMBÉ fa ACA
+// Rutes de “tasca”
 app.post(['/tasks/pull-ecowitt','/api/tasks/pull-ecowitt'], checkApiKey, async (_req, res) => {
   try {
     const meteo = await pullEcowittAndSave();
@@ -444,7 +584,6 @@ app.post(['/tasks/pull-ecowitt','/api/tasks/pull-ecowitt'], checkApiKey, async (
   }
 });
 
-// (també exposem una ruta separada només ACA, si et cal)
 app.post(['/tasks/pull-aca','/api/tasks/pull-aca'], checkApiKey, async (_req, res) => {
   try {
     const hidro = await pullACAAndSave();
