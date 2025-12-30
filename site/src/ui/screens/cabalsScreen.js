@@ -143,7 +143,7 @@ async function refreshCabals(ui, store) {
       title: "Cabal (balanç)",
       value: sortida == null ? "—" : fmt1(sortida),
       unit: "m³/s",
-      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      //badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
       subHtml: `
         ${deltaHtml}
         ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
@@ -155,7 +155,7 @@ async function refreshCabals(ui, store) {
       title: "Capacitat",
       value: cap == null ? "—" : fmt1(cap),
       unit: "%",
-      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      //badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
       subHtml:
         `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}` +
         `<div style="margin-top:10px"><canvas id="tl-chart-cap" style="width:100%;height:140px"></canvas></div>`,
@@ -166,7 +166,7 @@ async function refreshCabals(ui, store) {
       title: "Cardener",
       value: cabalCardener == null ? "—" : fmt1(cabalCardener),
       unit: "m³/s",
-      badge: rowCardener?.nom ? rowCardener.nom : "",
+      //badge: rowCardener?.nom ? rowCardener.nom : "",
       className: staleCardener ? "card--stale" : "",
       subHtml: `<div style="margin-top:10px"><canvas id="tl-chart-cardener" style="width:100%;height:140px"></canvas></div>`,
     });
@@ -175,7 +175,7 @@ async function refreshCabals(ui, store) {
       title: "Valls",
       value: cabalValls == null ? "—" : fmt1(cabalValls),
       unit: "m³/s",
-      badge: rowValls?.nom ? rowValls.nom : "",
+      //badge: rowValls?.nom ? rowValls.nom : "",
       className: staleValls ? "card--stale" : "",
       subHtml: `<div style="margin-top:10px"><canvas id="tl-chart-valls" style="width:100%;height:140px"></canvas></div>`,
     });
