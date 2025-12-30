@@ -972,7 +972,7 @@ th{
   border:1px solid rgba(255,184,107,.55);
   color:#ffb86b;
 }
-/* Cursor “zoom” als gràfics */
+/* Cursor zoom */
 .chart-container canvas,
 canvas[id^="chart-"],
 canvas[id^="tl-chart-"] {
@@ -985,7 +985,7 @@ canvas[id^="tl-chart-"] {
   overflow: hidden;
 }
 
-/* Modal */
+/* Modal fullscreen real */
 .tl-chartModal {
   position: fixed;
   inset: 0;
@@ -1000,62 +1000,52 @@ canvas[id^="tl-chart-"] {
 .tl-chartModal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.72);
+  background: rgba(0,0,0,0.88);
 }
 
+/* Panel ocupa tota la pantalla */
 .tl-chartModal__panel {
   position: absolute;
-  inset: 12px;
-  background: rgba(18,18,20,0.92);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.86);
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  padding: 10px;
+  grid-template-rows: auto 1fr;
 }
 
+/* Botó tancar sobreposat */
 .tl-chartModal__close {
-  justify-self: end;
+  position: absolute;
+  top: 10px;
+  right: 10px;
   border: 0;
   background: rgba(255,255,255,0.10);
   color: #fff;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   font-size: 18px;
   cursor: pointer;
+  z-index: 2;
 }
 
 .tl-chartModal__content {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  overflow: hidden;
 }
 
-.tl-chartModal__img {
-  max-width: 100%;
-  max-height: calc(100vh - 140px);
-  width: auto;
-  height: auto;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.02);
+/* Canvas a fullscreen */
+.tl-chartModal__canvas {
+  width: 100vw;
+  height: 100vh;
+  display: block;
 }
 
-/* Hint */
-.tl-chartModal__hint {
-  color: rgba(255,255,255,0.75);
-  font-size: 12px;
-  text-align: center;
-  padding: 8px 0 2px;
-}
-
-/* Mobile portrait => “landscape mode” (rotació) */
-.tl-chartModal__panel.is-landscape .tl-chartModal__img {
+/* Mobile portrait -> mostra en horitzontal (rotació) */
+.tl-chartModal__panel.is-landscape .tl-chartModal__canvas {
   transform: rotate(90deg);
   transform-origin: center;
-  /* quan rotes, l'alçada efectiva canvia */
-  max-height: 100vw;
-  max-width: calc(100vh - 140px);
+  width: 100vh;
+  height: 100vw;
 }

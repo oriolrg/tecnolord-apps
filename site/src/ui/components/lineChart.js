@@ -49,7 +49,7 @@ function formatXLabel(d, spanMs) {
   const oneHour = 3600 * 1000;
   const oneDay = 24 * oneHour;
 
-  // fins a 2 dies: hores (com ara)
+  // fins a 2 dies: hores
   if (spanMs <= 2 * oneDay) return formatHourLabel(d);
 
   // fins a 2 mesos aprox: dia/mes
@@ -67,11 +67,11 @@ function pickTickN(spanMs) {
   const oneDay = 86400000;
   const spanDays = spanMs / oneDay;
 
-  if (spanDays <= 2) return 6;      // hores
-  if (spanDays <= 14) return 7;     // 2 setmanes
-  if (spanDays <= 60) return 8;     // fins 2 mesos (dia/mes)
-  if (spanDays <= 366) return 6;    // any (mesos)
-  return 5;                         // molt llarg
+  if (spanDays <= 2) return 6; // hores
+  if (spanDays <= 14) return 7; // 2 setmanes
+  if (spanDays <= 60) return 8; // fins 2 mesos (dia/mes)
+  if (spanDays <= 366) return 6; // any (mesos)
+  return 5; // molt llarg
 }
 
 function parseRgb(str) {
@@ -96,11 +96,10 @@ function parseRgb(str) {
     return null;
   }
 
-  let m = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/i);
+  const m = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/i);
   if (!m) return null;
   return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
 }
-
 
 function rgba(rgb, a) {
   return `rgba(${rgb.r},${rgb.g},${rgb.b},${a})`;
@@ -120,9 +119,9 @@ function pickThemeColor(el) {
 
   // Luminància per decidir si és fosc
   const luminance = (rgb) => {
-    const srgb = [rgb.r, rgb.g, rgb.b].map((v) => v / 255).map((v) =>
-      v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
-    );
+    const srgb = [rgb.r, rgb.g, rgb.b]
+      .map((v) => v / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
     return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
   };
 
@@ -136,13 +135,9 @@ function pickThemeColor(el) {
     csBody.getPropertyValue("--surface")?.trim() ||
     "";
 
-  const bgRgb =
-    parseRgb(bgVar) ||
-    parseRgb(csBody.backgroundColor) ||
-    parseRgb(csRoot.backgroundColor);
+  const bgRgb = parseRgb(bgVar) || parseRgb(csBody.backgroundColor) || parseRgb(csRoot.backgroundColor);
 
-  const prefersDark =
-    window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   const isDark = bgRgb ? luminance(bgRgb) < 0.45 : prefersDark;
 
@@ -176,12 +171,14 @@ function pickThemeColor(el) {
   };
 }
 
-
-
 // ===============
 // Render 1 sèrie
 // ===============
 export function renderLineChart(canvas, points, opts = {}) {
+  // Guarda dades per poder re-renderitzar en modal (fullscreen)
+  // (incloent cas sense dades)
+  canvas.__tlChart = { type: "single", points: Array.isArray(points) ? points : [], opts };
+
   const ctx = hiDpi(canvas);
 
   const W = canvas.clientWidth || 300;
@@ -309,6 +306,10 @@ export function renderMultiLineChart(canvas, series, opts = {}) {
       color: s?.color,
     }))
     .filter((s) => s.points.length >= 2);
+
+  // Guarda dades per poder re-renderitzar en modal (fullscreen)
+  // (encara que quedin 0/1 sèries després del filtre)
+  canvas.__tlChart = { type: "multi", series: valid, opts };
 
   if (valid.length <= 1) {
     const one = valid[0]?.points || [];
@@ -440,7 +441,7 @@ export function buildDaySeries(rows, getter) {
 }
 
 // =====================
-// Component DOM (export que et faltava)
+// Component DOM
 // =====================
 export function lineChart(opts = {}) {
   const title = opts.title || "";
@@ -518,15 +519,12 @@ export function lineChart(opts = {}) {
   }));
 
   const draw = () => {
-    // assegura que ja tingui mida (sobretot si encara no està al DOM)
     if (!canvas.isConnected) return;
     renderMultiLineChart(canvas, series);
   };
 
-  // pinta quan ja estigui al DOM
   requestAnimationFrame(draw);
 
-  // redibuixa en resize del contenidor
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(() => draw());
     ro.observe(wrap);

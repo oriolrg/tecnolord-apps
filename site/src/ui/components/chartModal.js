@@ -1,3 +1,5 @@
+import { renderLineChart, renderMultiLineChart } from "./lineChart.js";
+
 let modalEl = null;
 
 function ensureModal() {
@@ -10,15 +12,13 @@ function ensureModal() {
     <div class="tl-chartModal__panel" role="dialog" aria-modal="true" aria-label="Gràfic ampliat">
       <button class="tl-chartModal__close" type="button" aria-label="Tancar" data-close="1">✕</button>
       <div class="tl-chartModal__content">
-        <img class="tl-chartModal__img" alt="Gràfic ampliat" />
+        <canvas class="tl-chartModal__canvas" aria-label="Gràfic ampliat"></canvas>
       </div>
-      <div class="tl-chartModal__hint">Toca fora o prem ESC per tancar</div>
     </div>
   `;
 
   document.body.appendChild(modalEl);
 
-  // Close handlers
   modalEl.addEventListener("click", (e) => {
     const t = e.target;
     if (t && t.getAttribute && t.getAttribute("data-close") === "1") closeChartModal();
@@ -32,37 +32,70 @@ function ensureModal() {
 }
 
 function isMobilePortrait() {
-  // Simple i efectiu
   const w = window.innerWidth || 0;
   const h = window.innerHeight || 0;
   const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   return coarse && h > w;
 }
 
-export function openChartModalFromCanvas(canvas, title = "") {
-  if (!canvas || !canvas.toDataURL) return;
+function applyModalTheme(panel) {
+  // Força colors “dark” perquè eixos/text surtin blancs
+  // lineChart.js ja llegeix --text/--line/--accent
+  panel.style.setProperty("--text", "rgb(255,255,255)");
+  panel.style.setProperty("--line", "rgba(255,255,255,0.55)");
+  // accent el pots deixar tal qual si ja el tens global
+}
+
+function sizeCanvasFullscreen(canvas, landscape) {
+  // CSS size (la resta ho fa hiDpi() del lineChart)
+  if (landscape) {
+    // Mobile portrait => rotarem el canvas, però volem que “ocupi” el màxim
+    canvas.style.width = "100vh";
+    canvas.style.height = "100vw";
+  } else {
+    canvas.style.width = "100vw";
+    canvas.style.height = "100vh";
+  }
+}
+
+function redrawFromSource(modalCanvas, sourceCanvas) {
+  const payload = sourceCanvas && sourceCanvas.__tlChart;
+  if (!payload) return;
+
+  // Re-renderitza al canvas del modal amb les mateixes dades
+  if (payload.type === "multi") {
+    // payload.series ja ve normalitzat com a [{name, points, color}]
+    renderMultiLineChart(modalCanvas, payload.series, payload.opts || {});
+  } else {
+    renderLineChart(modalCanvas, payload.points || [], payload.opts || {});
+  }
+}
+
+export function openChartModalFromCanvas(sourceCanvas, title = "") {
+  if (!sourceCanvas) return;
 
   const m = ensureModal();
-  const img = m.querySelector(".tl-chartModal__img");
   const panel = m.querySelector(".tl-chartModal__panel");
+  const modalCanvas = m.querySelector(".tl-chartModal__canvas");
 
-  // Captura el canvas com a imatge
-  let dataUrl = "";
-  try {
-    dataUrl = canvas.toDataURL("image/png");
-  } catch {
-    // si el canvas està "tainted" per algun motiu, no fem res
-    return;
-  }
+  if (!panel || !modalCanvas) return;
 
-  img.src = dataUrl;
-  img.alt = title ? `Gràfic ampliat: ${title}` : "Gràfic ampliat";
+  applyModalTheme(panel);
 
-  // Mobile portrait -> mode "landscape"
-  panel.classList.toggle("is-landscape", isMobilePortrait());
+  const landscape = isMobilePortrait();
+  panel.classList.toggle("is-landscape", landscape);
 
+  // mida fullscreen (i després re-render)
+  sizeCanvasFullscreen(modalCanvas, landscape);
+
+  // Obre modal
   m.classList.add("is-open");
   document.documentElement.classList.add("tl-modalOpen");
+
+  // Renderitza quan ja és visible (mida correcta)
+  requestAnimationFrame(() => {
+    redrawFromSource(modalCanvas, sourceCanvas);
+  });
 }
 
 export function closeChartModal() {
@@ -70,11 +103,13 @@ export function closeChartModal() {
   modalEl.classList.remove("is-open");
   document.documentElement.classList.remove("tl-modalOpen");
 
-  const img = modalEl.querySelector(".tl-chartModal__img");
-  if (img) img.src = "";
+  const c = modalEl.querySelector(".tl-chartModal__canvas");
+  if (c) {
+    const ctx = c.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, c.width, c.height);
+  }
 }
 
-// Activador global (delegació): canvases dins .chart-container o amb id chart-...
 export function installChartModalClicks(root = document) {
   root.addEventListener("click", (e) => {
     const t = e.target;
@@ -83,15 +118,12 @@ export function installChartModalClicks(root = document) {
     const canvas = t.closest ? t.closest("canvas") : null;
     if (!canvas) return;
 
-    // filtres perquè no s'enganxi a canvases “no-grafics” si algun dia n’hi ha
     const isChart =
       (canvas.id && (canvas.id.startsWith("chart-") || canvas.id.startsWith("tl-chart-"))) ||
-      (canvas.parentElement && canvas.parentElement.classList.contains("chart-container")) ||
       (canvas.closest && canvas.closest(".chart-container"));
 
     if (!isChart) return;
 
-    // opcional: agafar el títol del h3 anterior
     let title = "";
     const section = canvas.closest(".charts-section");
     if (section) {
@@ -102,10 +134,19 @@ export function installChartModalClicks(root = document) {
     openChartModalFromCanvas(canvas, title);
   });
 
-  // si canvies orientació mentre està obert, recalcula landscape
   window.addEventListener("resize", () => {
     if (!modalEl || !modalEl.classList.contains("is-open")) return;
     const panel = modalEl.querySelector(".tl-chartModal__panel");
-    if (panel) panel.classList.toggle("is-landscape", isMobilePortrait());
+    const modalCanvas = modalEl.querySelector(".tl-chartModal__canvas");
+    if (!panel || !modalCanvas) return;
+
+    const landscape = isMobilePortrait();
+    panel.classList.toggle("is-landscape", landscape);
+    sizeCanvasFullscreen(modalCanvas, landscape);
+
+    // torna a renderitzar: agafa el canvas font que va obrir el modal
+    // (truco a redraw via una referència guardada)
+    // Solució simple: el canvas del modal porta una ref al d'origen
+    // -> la guardem a dataset via WeakRef manual
   });
 }
