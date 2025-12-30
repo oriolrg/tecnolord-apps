@@ -42,28 +42,6 @@ function buildHistoricsUI(root) {
         <span id="hist-err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
-      <!-- Gràfiques HIDRO (abans de Meteo) -->
-      <div class="charts-section">
-        <h3>Evolució Cabal · Cardener</h3>
-        <div class="chart-container">
-          <canvas id="chart-hist-cardener" style="width:100%; height:220px;"></canvas>
-        </div>
-      </div>
-
-      <div class="charts-section">
-        <h3>Evolució Cabal · Valls</h3>
-        <div class="chart-container">
-          <canvas id="chart-hist-valls" style="width:100%; height:220px;"></canvas>
-        </div>
-      </div>
-
-      <div class="charts-section">
-        <h3>Evolució Capacitat (%) · Llosa del Cavall</h3>
-        <div class="chart-container">
-          <canvas id="chart-hist-cap" style="width:100%; height:220px;"></canvas>
-        </div>
-      </div>
-
       <!-- Estadístiques Meteo -->
       <div class="stats-grid" id="meteo-stats"></div>
 
@@ -95,7 +73,28 @@ function buildHistoricsUI(root) {
           <canvas id="chart-hist-hum" style="width:100%; height:220px;"></canvas>
         </div>
       </div>
+<!-- Gràfiques HIDRO (abans de Meteo) -->
+      <div class="charts-section">
+        <h3>Evolució Cabal · Cardener</h3>
+        <div class="chart-container">
+          <canvas id="chart-hist-cardener" style="width:100%; height:220px;"></canvas>
+        </div>
+      </div>
 
+      <div class="charts-section">
+        <h3>Evolució Cabal · Valls</h3>
+        <div class="chart-container">
+          <canvas id="chart-hist-valls" style="width:100%; height:220px;"></canvas>
+        </div>
+      </div>
+
+      <div class="charts-section">
+        <h3>Evolució Capacitat (%) · Llosa del Cavall</h3>
+        <div class="chart-container">
+          <canvas id="chart-hist-cap" style="width:100%; height:220px;"></canvas>
+        </div>
+      </div>
+      
       <!-- Taules detallades (plegables) -->
       <details style="margin-top:22px">
         <summary>Dades detallades (meteo) <span class="badge" id="hist-meteo-count">0</span></summary>
