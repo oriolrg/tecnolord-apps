@@ -37,6 +37,16 @@ function pickRow(rows, predicates) {
   return null;
 }
 
+function formatDateFull(ts) {
+  return new Date(ts).toLocaleString("ca-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 async function refreshCabals(ui, store) {
   if (ui.err) ui.err.textContent = "";
 
@@ -56,41 +66,35 @@ async function refreshCabals(ui, store) {
 
     if (ui.summary) {
       ui.summary.textContent = codi
-        ? `Hidro · Codi: ${codi} · ${hidroRows.length} registres`
-        : `Hidro · ${hidroRows.length} registres`;
+        ? `Hidro · Codi: ${codi}`
+        : `Hidro`;
     }
 
     const rowLlosa = pickRow(hidroRows, [
       r => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
-      r => norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
     ]);
 
     const rowCardener = pickRow(hidroRows, [
       r => norm(r.nom).includes("cardener"),
-      r => norm(r.codi).includes("cardener"),
     ]);
 
     const rowValls = pickRow(hidroRows, [
       r => norm(r.nom).includes("valls"),
-      r => norm(r.codi).includes("valls"),
     ]);
 
-    const instantLlosa = rowLlosa?.instant ?? null;
     const cap = num(rowLlosa?.capacitat_pct);
-
-    let sortida = num(rowLlosa?.cabal_m3s);
-    if (sortida == null) {
-      const rowSortida = pickRow(hidroRows, [
-        r => norm(r.nom).includes("sortida") && (norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall")),
-        r => norm(r.codi).includes("sortida") && (norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall")),
-      ]);
-      sortida = num(rowSortida?.cabal_m3s);
-    }
 
     const cabalCardener = num(rowCardener?.cabal_m3s);
     const cabalValls = num(rowValls?.cabal_m3s);
-    const entradaTotal = (cabalCardener ?? 0) + (cabalValls ?? 0);
+
+    const entradaTotal =
+      (cabalCardener ?? 0) + (cabalValls ?? 0);
+
+    const sortida = num(rowLlosa?.cabal_m3s);
     const delta = (sortida == null ? null : (entradaTotal - sortida));
+
+    const isStaleCardener = rowCardener?.is_stale;
+    const isStaleValls = rowValls?.is_stale;
 
     let deltaHtml = "";
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
@@ -108,56 +112,97 @@ async function refreshCabals(ui, store) {
       title: "Cabal (balanç)",
       value: sortida == null ? "—" : fmt1(sortida),
       unit: "m³/s",
-      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
+      badge: rowLlosa?.nom || "Últim",
       subHtml: `
         ${deltaHtml}
-        ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
+        ${rowLlosa?.instant ? `<span class="sep"></span>Hora: <strong>${fmtTime(rowLlosa.instant)}</strong>` : ""}
       `,
     });
-    cCabal.classList.add("card--tall", "card--wind");
 
     const cCap = card({
       title: "Capacitat",
       value: cap == null ? "—" : fmt1(cap),
       unit: "%",
-      badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
-      subHtml: `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}`,
+      badge: rowLlosa?.nom || "Últim",
+      subHtml: rowLlosa?.nom
+        ? `Estació: <strong>${rowLlosa.nom}</strong>`
+        : "",
     });
-    cCap.classList.add("card--tall", "card--wind");
 
     const entradesParts = [];
+
     if (cabalCardener != null) {
-      entradesParts.push(
-        `Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>${rowCardener?.instant ? ` · <span class="muted">${fmtTime(rowCardener.instant)}</span>` : ""}`
-      );
+      entradesParts.push(`
+        <span class="${isStaleCardener ? "is-stale" : ""}">
+          Cardener: <strong>${fmt1(cabalCardener)} m³/s</strong>
+          ${rowCardener?.instant ? ` · <span class="muted">${fmtTime(rowCardener.instant)}</span>` : ""}
+        </span>
+      `);
     }
+
     if (cabalValls != null) {
-      entradesParts.push(
-        `Valls: <strong>${fmt1(cabalValls)} m³/s</strong>${rowValls?.instant ? ` · <span class="muted">${fmtTime(rowValls.instant)}</span>` : ""}`
-      );
+      entradesParts.push(`
+        <span class="${isStaleValls ? "is-stale" : ""}">
+          Valls: <strong>${fmt1(cabalValls)} m³/s</strong>
+          ${rowValls?.instant ? ` · <span class="muted">${fmtTime(rowValls.instant)}</span>` : ""}
+        </span>
+      `);
+    }
+
+    const alerts = [];
+
+    if (isStaleValls && rowValls?.instant) {
+      alerts.push(`
+        <div class="alert-stale">
+          ⚠️ Sensor de Valls fora de servei.<br>
+          Dades del ${formatDateFull(rowValls.instant)}
+        </div>
+      `);
+    }
+
+    if (isStaleCardener && rowCardener?.instant) {
+      alerts.push(`
+        <div class="alert-stale">
+          ⚠️ Sensor del Cardener amb dades antigues.<br>
+          Dades del ${formatDateFull(rowCardener.instant)}
+        </div>
+      `);
     }
 
     const cEntrades = card({
       title: "Entrades (rius)",
-      value: (cabalCardener == null && cabalValls == null) ? "—" : fmt1(entradaTotal),
+      value: (cabalCardener == null && cabalValls == null)
+        ? "—"
+        : fmt1(entradaTotal),
       unit: "m³/s",
       badge: "Total",
-      subHtml: entradesParts.length ? entradesParts.join(`<span class="sep"></span>`) : "",
+      subHtml: `
+        ${entradesParts.join(`<span class="sep"></span>`)}
+        ${alerts.join("")}
+      `,
     });
 
-    // IMPORTANT: append DOM nodes (NO strings)
     if (ui.cards) ui.cards.append(cCabal, cCap, cEntrades);
 
-    if (instantLlosa) {
-      const ageSec = Math.max(0, Math.round((Date.now() - new Date(instantLlosa).getTime()) / 1000));
+    // Text superior "Dades actualitzades fa…"
+    const refInstant =
+      rowCardener?.instant || rowValls?.instant || rowLlosa?.instant;
+
+    if (refInstant) {
+      const ageSec = Math.max(
+        0,
+        Math.round((Date.now() - new Date(refInstant).getTime()) / 1000)
+      );
       const ageTxt =
         ageSec < 60 ? `${ageSec} s` :
         ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
         `${Math.round(ageSec / 3600)} h`;
+
       if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
     } else {
       if (ui.last) ui.last.textContent = "Dades disponibles";
     }
+
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
   }

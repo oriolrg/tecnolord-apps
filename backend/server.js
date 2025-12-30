@@ -136,25 +136,44 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
   try {
     const params = [];
     let where = '';
-    if (codi) { where = 'WHERE e.codi = $1'; params.push(codi); }
+    if (codi) { 
+      where = 'WHERE e.codi = $1'; 
+      params.push(codi); 
+    }
 
     const sql = `
       SELECT
-        h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
-        e.codi, e.nom, e.tipus, e.id AS estacio_id
+        h.id,
+        h.instant,
+        h.cabal_m3s,
+        h.capacitat_pct,
+        h.nivell_m,
+        h.extres,
+
+        e.codi,
+        e.nom,
+        e.tipus,
+        e.id AS estacio_id,
+
+        EXTRACT(EPOCH FROM (NOW() - h.instant)) / 3600 AS age_hours,
+        (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale
+
       FROM lectures_hidro h
       JOIN estacions_hidro e ON e.id = h.estacio_id
       ${where}
       ORDER BY h.instant DESC
       LIMIT ${limit}
     `;
+
     const { rows } = await pool.query(sql, params);
     res.json({ ok: true, items: rows });
+
   } catch (e) {
     console.error(e);
     res.status(500).json({ ok:false, error:'db query error' });
   }
 });
+
 
 
 

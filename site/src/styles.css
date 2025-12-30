@@ -705,3 +705,23 @@ th{
   max-width: 260px;  /* ajusta: 220-300 segons gust */
   display:block;
 } 
+/* Estat dades antigues (>24h) */
+.is-stale {
+  --accent: #f59e0b;
+}
+
+.is-stale .v,
+.is-stale .unit {
+  color: var(--accent);
+}
+
+.alert-stale {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(245,158,11,.15);
+  border: 1px solid rgba(245,158,11,.35);
+  color: #f59e0b;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
