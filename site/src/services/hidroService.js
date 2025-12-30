@@ -1,4 +1,10 @@
-import { apiGet } from "./api.js";
+import { CONFIG } from "../config.js";
+
+async function httpGetJson(url) {
+  const r = await fetch(url, { headers: { "accept": "application/json" } });
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+  return r.json();
+}
 
 export async function fetchHidro({ codi, limit, period, date_from, date_to, mode, ensure }) {
   const params = new URLSearchParams();
@@ -10,6 +16,9 @@ export async function fetchHidro({ codi, limit, period, date_from, date_to, mode
   if (ensure != null) params.set("ensure", String(ensure ? 1 : 0));
   params.set("limit", String(limit));
 
-  const data = await apiGet(`/api/v1/hidro/darreres?${params.toString()}`);
+  const base = (CONFIG?.apiBase || "").replace(/\/$/, "");
+  const url = `${base}/api/v1/hidro/darreres?${params.toString()}`;
+
+  const data = await httpGetJson(url);
   return data?.items || [];
 }

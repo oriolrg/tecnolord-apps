@@ -1,10 +1,9 @@
-export async function getJSON(path, params = {}) {
-  const u = new URL(path, location.origin);
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") u.searchParams.set(k, String(v));
-  }
+import { CONFIG } from "../config.js";
 
-  const res = await fetch(u.toString(), { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+export async function apiGet(path) {
+  const base = (CONFIG?.apiBase || "").replace(/\/$/, "");
+  const url = `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+  const r = await fetch(url, { headers: { "accept": "application/json" } });
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+  return r.json();
 }
