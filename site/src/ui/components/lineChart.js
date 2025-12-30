@@ -104,15 +104,49 @@ function rgba(rgb, a) {
 }
 
 function pickThemeColor(el) {
-  // Llegeix variables CSS si existeixen; si no, fallback
   const cs = getComputedStyle(el);
-  const text = cs.getPropertyValue("--text")?.trim() || "rgb(17,24,39)";
-  const line = cs.getPropertyValue("--line")?.trim() || "rgba(0,0,0,.15)";
-  const accent = cs.getPropertyValue("--accent")?.trim() || "#60a5fa";
+
+  // variables existents
+  const textVar = cs.getPropertyValue("--text")?.trim();
+  const lineVar = cs.getPropertyValue("--line")?.trim();
+  const accentVar = cs.getPropertyValue("--accent")?.trim() || "#60a5fa";
+
+  // intentem detectar fons (si el tens definit al CSS)
+  const bgVar =
+    cs.getPropertyValue("--bg")?.trim() ||
+    cs.getPropertyValue("--card")?.trim() ||
+    cs.getPropertyValue("--surface")?.trim() ||
+    "";
+
+  const accentRgb = parseRgb(accentVar) || { r: 96, g: 165, b: 250 };
+
+  // helper: luminància per detectar fosc/clar
+  const luminance = (rgb) => {
+    const srgb = [rgb.r, rgb.g, rgb.b].map((v) => v / 255).map((v) =>
+      v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+    );
+    return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  };
+
+  const bgRgb = parseRgb(bgVar);
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = bgRgb ? luminance(bgRgb) < 0.35 : prefersDark;
+
+  // si és fosc: forcem blanc, independentment del que digui --text/--line
+  if (isDark) {
+    return {
+      text: "rgba(255,255,255,0.92)",
+      grid: "rgba(255,255,255,0.22)",
+      accent: accentRgb,
+    };
+  }
+
+  // si és clar: fem servir variables (o fallbacks originals)
+  const text = textVar || "rgb(17,24,39)";
+  const line = lineVar || "rgba(0,0,0,.15)";
 
   const textRgb = parseRgb(text) || { r: 17, g: 24, b: 39 };
   const lineRgb = parseRgb(line) || { r: 0, g: 0, b: 0 };
-  const accentRgb = parseRgb(accent) || { r: 96, g: 165, b: 250 };
 
   return {
     text: rgba(textRgb, 0.9),
@@ -120,6 +154,7 @@ function pickThemeColor(el) {
     accent: accentRgb,
   };
 }
+
 
 // ===============
 // Render 1 sèrie
