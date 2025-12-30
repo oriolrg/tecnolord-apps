@@ -33,19 +33,37 @@ function ensureModal() {
   return modalEl;
 }
 
+function isCoarsePointer() {
+  return window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+}
+
+function isPortrait() {
+  return (window.innerHeight || 0) > (window.innerWidth || 0);
+}
+
+function shouldRotate90() {
+  // Només rotem automàticament en mòbil (coarse) quan està en portrait
+  return isCoarsePointer() && isPortrait();
+}
+
 function applyModalVars(panel) {
-  // Eixos/text blancs dins el modal (fons negre)
   panel.style.setProperty("--text", "rgb(255,255,255)");
   panel.style.setProperty("--line", "rgba(255,255,255,0.55)");
 }
 
-function setStageSize(stage, canvas) {
-  // Mides reals (px) per evitar bugs de vh/vw en mòbil
+function setStageSizeAndRotation(panel, stage, canvas) {
   const W = window.innerWidth || 360;
   const H = window.innerHeight || 640;
 
-  stage.style.width = `${W}px`;
-  stage.style.height = `${H}px`;
+  const rotate = shouldRotate90();
+  panel.classList.toggle("is-rot90", rotate);
+
+  // Si rotem 90º, el “rectangle útil” ha de ser (H x W)
+  const stageW = rotate ? H : W;
+  const stageH = rotate ? W : H;
+
+  stage.style.width = `${stageW}px`;
+  stage.style.height = `${stageH}px`;
 
   canvas.style.width = "100%";
   canvas.style.height = "100%";
@@ -72,22 +90,18 @@ export function openChartModalFromCanvas(sourceCanvas) {
   if (!panel || !stage || !modalCanvas) return;
 
   applyModalVars(panel);
-
-  // Guardem origen per redibuixar en resize/orientació
   modalCanvas.__source = sourceCanvas;
 
-  // Obrim primer perquè hi hagi layout real
   m.classList.add("is-open");
   document.documentElement.classList.add("tl-modalOpen");
 
-  // Mides + render
   requestAnimationFrame(() => {
-    setStageSize(stage, modalCanvas);
+    setStageSizeAndRotation(panel, stage, modalCanvas);
 
-    // Reintenta 1 cop si el navegador encara no ha calculat mides (mòbil)
+    // Reintenta 1 cop si el layout encara és 0 (mòbil)
     if ((modalCanvas.clientWidth || 0) < 10 || (modalCanvas.clientHeight || 0) < 10) {
       setTimeout(() => {
-        setStageSize(stage, modalCanvas);
+        setStageSizeAndRotation(panel, stage, modalCanvas);
         redraw(modalCanvas, sourceCanvas);
       }, 60);
       return;
@@ -131,11 +145,12 @@ export function installChartModalClicks(root = document) {
   window.addEventListener("resize", () => {
     if (!modalEl || !modalEl.classList.contains("is-open")) return;
 
+    const panel = modalEl.querySelector(".tl-chartModal__panel");
     const stage = modalEl.querySelector(".tl-chartModal__stage");
     const modalCanvas = modalEl.querySelector(".tl-chartModal__canvas");
-    if (!stage || !modalCanvas) return;
+    if (!panel || !stage || !modalCanvas) return;
 
-    setStageSize(stage, modalCanvas);
+    setStageSizeAndRotation(panel, stage, modalCanvas);
 
     const source = modalCanvas.__source;
     if (source) requestAnimationFrame(() => redraw(modalCanvas, source));
