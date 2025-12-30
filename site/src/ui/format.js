@@ -57,3 +57,9 @@ export function windFromCa(deg) {
   const i = Math.round((((deg % 360) + 360) % 360) / 45) % 8;
   return dirs[i];
 }
+export function cell(value) {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  return String(value);
+}
