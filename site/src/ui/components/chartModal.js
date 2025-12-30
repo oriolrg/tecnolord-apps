@@ -58,12 +58,21 @@ function setStageSizeAndRotation(panel, stage, canvas) {
   const rotate = shouldRotate90();
   panel.classList.toggle("is-rot90", rotate);
 
-  // Si rotem 90º, el “rectangle útil” ha de ser (H x W)
-  const stageW = rotate ? H : W;
-  const stageH = rotate ? W : H;
+  if (rotate) {
+    // stage en “mida intercanviada”
+    stage.style.width = `${H}px`;
+    stage.style.height = `${W}px`;
 
-  stage.style.width = `${stageW}px`;
-  stage.style.height = `${stageH}px`;
+    // clau: ancorat top-left però dins viewport
+    // (equivalent a: mou a la dreta W i rota 90º)
+    stage.style.transform = `translateX(${W}px) rotate(90deg)`;
+    stage.style.transformOrigin = "top left";
+  } else {
+    stage.style.width = `${W}px`;
+    stage.style.height = `${H}px`;
+    stage.style.transform = "";
+    stage.style.transformOrigin = "";
+  }
 
   canvas.style.width = "100%";
   canvas.style.height = "100%";

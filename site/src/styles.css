@@ -973,67 +973,6 @@ th{
   color:#ffb86b;
 }
 .tl-modalOpen,
-.tl-modalOpen body {
-  overflow: hidden;
-}
-
-.tl-chartModal {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: none;
-}
-
-.tl-chartModal.is-open {
-  display: block;
-}
-
-.tl-chartModal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.90);
-}
-
-.tl-chartModal__panel {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.86);
-}
-
-.tl-chartModal__close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  border: 0;
-  background: rgba(255,255,255,0.12);
-  color: #fff;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  font-size: 18px;
-  cursor: pointer;
-  z-index: 5;
-}
-
-.tl-chartModal__content {
-  position: absolute;
-  inset: 0;
-  display: block;        /* NO center */
-  overflow: hidden;
-}
-
-/* stage: ocupa la pantalla; JS posa width/height en px */
-.tl-chartModal__stage {
-  position: absolute;
-  inset: 0;              /* omple */
-}
-
-.tl-chartModal__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.tl-modalOpen,
 .tl-modalOpen body { overflow: hidden; }
 
 .tl-chartModal {
@@ -1071,28 +1010,30 @@ th{
   z-index: 5;
 }
 
+/* content NO centra: serveix de “canvas holder” */
 .tl-chartModal__content {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center; /* CENTRAT: evita franges negres */
   overflow: hidden;
 }
 
-/* Stage amb mida en px (JS), centrat */
+/* stage sempre ancorat a dalt-esquerra */
 .tl-chartModal__stage {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
 }
 
-/* Canvas omple el stage */
+/* canvas omple el stage */
 .tl-chartModal__canvas {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-/* Rotació 90º només quan el JS posa la classe */
+/* Rotació 90º ancorada a top-left (NO centrat) */
 .tl-chartModal__panel.is-rot90 .tl-chartModal__stage {
   transform: rotate(90deg);
-  transform-origin: center;
+  transform-origin: top left;
 }
