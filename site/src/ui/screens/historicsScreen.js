@@ -1,337 +1,212 @@
 import { CONFIG } from "../../config.js";
 import { $ } from "../dom.js";
-import { num, fmt1, clamp } from "../format.js";
+import { clamp, fmtTime, fmt1, norm } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
 import { fetchHidro } from "../../services/hidroService.js";
-import { renderMeteoTable } from "../components/tableMeteo.js";
-import { renderHidroTable } from "../components/tableHidro.js";
-import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
+import { lineChart } from "../components/lineChart.js";
 
 function buildHistoricsUI(root) {
   root.innerHTML = `
     <div class="wrap">
-      <div class="section-title">
-        <h2>Històrics</h2>
-        <p style="margin-top:6px; color: var(--muted);">Visualitza l'evolució de les dades meteorològiques i hidrològiques.</p>
-      </div>
-
-      <!-- Selector de període -->
-      <div class="period-selector">
-        <button class="period-btn active" data-period="today" type="button">Avui</button>
-        <button class="period-btn" data-period="yesterday" type="button">Ahir</button>
-        <button class="period-btn" data-period="7days" type="button">7 dies</button>
-        <button class="period-btn" data-period="30days" type="button">30 dies</button>
-        <button class="period-btn" data-period="custom" type="button">Personalitzat</button>
-      </div>
-
-      <!-- Selector de dates personalitzat (inicialment amagat) -->
-      <div id="custom-dates" class="custom-dates" style="display:none;">
-        <label>
-          <span>Des de:</span>
-          <input type="date" id="date-from" />
-        </label>
-        <label>
-          <span>Fins:</span>
-          <input type="date" id="date-to" />
-        </label>
-        <button class="btn" id="apply-custom" type="button">Aplicar</button>
-      </div>
-
       <div class="status-row">
-        <span class="pill"><span class="dot"></span><span id="hist-period">Avui</span></span>
+        <span class="pill"><span class="dot"></span><span id="hist-last">—</span></span>
         <span id="hist-err" class="err" role="alert" aria-live="polite"></span>
       </div>
 
-      <!-- Estadístiques Meteo -->
-      <div class="stats-grid" id="meteo-stats"></div>
-
-      <!-- Gràfiques Meteo -->
-      <div class="charts-section">
-        <h3>Evolució Temperatura</h3>
-        <div class="chart-container">
-          <canvas id="chart-hist-temp" style="width:100%; height:220px;"></canvas>
-        </div>
+      <div class="section-title">
+        <h2>Històrics</h2>
+        <p id="hist-summary">Taules d'últims registres i sèries per període.</p>
       </div>
 
-      <div class="charts-section">
-        <h3>Evolució Pluja Event (acumulat)</h3>
-        <div class="chart-container">
-          <canvas id="chart-hist-rain" style="width:100%; height:220px;"></canvas>
-        </div>
+      <div class="period-row" id="hist-period-row">
+        <label class="field">
+          <span>Període</span>
+          <select id="hist-period" class="input">
+            <option value="last24h">Últimes 24h</option>
+            <option value="today">Avui</option>
+            <option value="yesterday">Ahir</option>
+            <option value="last7d">Últims 7 dies</option>
+            <option value="last30d">Últims 30 dies</option>
+            <option value="custom">Personalitzat</option>
+          </select>
+        </label>
+
+        <label class="field period-custom is-hidden" id="hist-from-wrap">
+          <span>De</span>
+          <input id="hist-from" class="input" type="date" />
+        </label>
+
+        <label class="field period-custom is-hidden" id="hist-to-wrap">
+          <span>Fins</span>
+          <input id="hist-to" class="input" type="date" />
+        </label>
+
+        <button id="hist-apply" class="btn btn--small" type="button">Aplicar</button>
       </div>
 
-      <div class="charts-section">
-        <h3>Evolució Pressió</h3>
-        <div class="chart-container">
-          <canvas id="chart-hist-press" style="width:100%; height:220px;"></canvas>
-        </div>
-      </div>
-
-      <div class="charts-section">
-        <h3>Evolució Humitat</h3>
-        <div class="chart-container">
-          <canvas id="chart-hist-hum" style="width:100%; height:220px;"></canvas>
-        </div>
-      </div>
-
-      <!-- Taules detallades (plegables) -->
-      <details style="margin-top:22px">
-        <summary>Dades detallades (meteo) <span class="badge" id="hist-meteo-count">0</span></summary>
-        <div class="detail-body">
-          <div class="table-wrap">
-            <table id="tbl-hist-meteo" aria-label="Taula de mesures meteorològiques">
+      <div class="grid">
+        <div class="panel">
+          <h3>Meteo</h3>
+          <div id="meteo-chart"></div>
+          <div class="tableWrap">
+            <table class="tbl">
               <thead>
                 <tr>
-                  <th>Hora</th>
+                  <th>Instant</th>
                   <th>Temp (°C)</th>
-                  <th>Sensació (°C)</th>
-                  <th>Rosada (°C)</th>
                   <th>Hum (%)</th>
-                  <th>Pressió rel (hPa)</th>
-                  <th>Pressió abs (hPa)</th>
-                  <th>UVI</th>
-                  <th>Solar (W/m²)</th>
-                  <th>Taxa pluja (mm/h)</th>
-                  <th>Pluja dia</th>
-                  <th>Pluja 1h</th>
-                  <th>Pluja mes</th>
-                  <th>Pluja any</th>
                   <th>Vent (m/s)</th>
-                  <th>Ràfega (m/s)</th>
-                  <th>Dir (°)</th>
+                  <th>Pluja dia (mm)</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody id="meteo-rows"></tbody>
             </table>
           </div>
         </div>
-      </details>
 
-      <details style="margin-top:14px">
-        <summary>Dades detallades (hidro) <span class="badge" id="hist-hidro-count">0</span></summary>
-        <div class="detail-body">
-          <div class="table-wrap">
-            <table id="tbl-hist-hidro" aria-label="Taula d'hidrologia">
+        <div class="panel">
+          <h3>Hidro</h3>
+          <div id="hidro-chart"></div>
+          <div class="tableWrap">
+            <table class="tbl">
               <thead>
                 <tr>
-                  <th>Hora</th>
-                  <th>Codi</th>
-                  <th>Nom</th>
-                  <th>Tipus</th>
+                  <th>Instant</th>
+                  <th>Estació</th>
                   <th>Cabal (m³/s)</th>
                   <th>Capacitat (%)</th>
+                  <th>Antic?</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody id="hidro-rows"></tbody>
             </table>
           </div>
         </div>
-      </details>
+      </div>
     </div>
   `;
 
   return {
+    period: $("#hist-period", root),
+    fromWrap: $("#hist-from-wrap", root),
+    toWrap: $("#hist-to-wrap", root),
+    dateFrom: $("#hist-from", root),
+    dateTo: $("#hist-to", root),
+    apply: $("#hist-apply", root),
+
+    last: $("#hist-last", root),
     err: $("#hist-err", root),
-    periodLabel: $("#hist-period", root),
-    meteoStats: $("#meteo-stats", root),
-    meteoCount: $("#hist-meteo-count", root),
-    hidroCount: $("#hist-hidro-count", root),
-    meteoTbody: $("#tbl-hist-meteo tbody", root),
-    hidroTbody: $("#tbl-hist-hidro tbody", root),
-    chartTemp: $("#chart-hist-temp", root),
-    chartRain: $("#chart-hist-rain", root),
-    chartPress: $("#chart-hist-press", root),
-    chartHum: $("#chart-hist-hum", root),
-    periodButtons: root.querySelectorAll(".period-btn"),
-    customDatesDiv: $("#custom-dates", root),
-    dateFrom: $("#date-from", root),
-    dateTo: $("#date-to", root),
-    applyCustom: $("#apply-custom", root),
+
+    meteoChart: $("#meteo-chart", root),
+    meteoRows: $("#meteo-rows", root),
+
+    hidroChart: $("#hidro-chart", root),
+    hidroRows: $("#hidro-rows", root),
   };
 }
 
-function calculatePeriod(period) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  switch(period) {
-    case 'today':
-      return { from: today, to: now, label: 'Avui' };
-    
-    case 'yesterday':
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayEnd = new Date(today);
-      return { from: yesterday, to: yesterdayEnd, label: 'Ahir' };
-    
-    case '7days':
-      const week = new Date(today);
-      week.setDate(week.getDate() - 7);
-      return { from: week, to: now, label: 'Últims 7 dies' };
-    
-    case '30days':
-      const month = new Date(today);
-      month.setDate(month.getDate() - 30);
-      return { from: month, to: now, label: 'Últims 30 dies' };
-    
-    default:
-      return { from: today, to: now, label: 'Avui' };
+function pickRow(rows, predicates) {
+  for (const pred of predicates) {
+    const found = rows.find(pred);
+    if (found) return found;
   }
+  return null;
 }
 
-function filterByPeriod(rows, from, to) {
-  return rows.filter(r => {
-    const ts = r.instant ?? r.at;
-    if (!ts) return false;
-    const d = new Date(ts);
-    return d >= from && d <= to;
-  });
-}
-
-function calculateStats(rows) {
-  const temps = rows.map(r => num(r.temp_c ?? r.temperature)).filter(v => v != null);
-  const hums = rows.map(r => num(r.humitat_pct ?? r.humidity)).filter(v => v != null);
-  const press = rows.map(r => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa)).filter(v => v != null);
-  const rains = rows.map(r => num(r.pluja_event_mm ?? r.rain_event_mm)).filter(v => v != null);
-
-  return {
-    tempMin: temps.length ? Math.min(...temps) : null,
-    tempMax: temps.length ? Math.max(...temps) : null,
-    tempAvg: temps.length ? temps.reduce((a,b) => a+b, 0) / temps.length : null,
-    
-    humMin: hums.length ? Math.min(...hums) : null,
-    humMax: hums.length ? Math.max(...hums) : null,
-    humAvg: hums.length ? hums.reduce((a,b) => a+b, 0) / hums.length : null,
-    
-    pressMin: press.length ? Math.min(...press) : null,
-    pressMax: press.length ? Math.max(...press) : null,
-    pressAvg: press.length ? press.reduce((a,b) => a+b, 0) / press.length : null,
-    
-    rainMax: rains.length ? Math.max(...rains) : null,
-  };
-}
-
-function renderStats(container, stats) {
-  container.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">Temperatura</div>
-      <div class="stat-values">
-        <span class="stat-max">Màx: ${stats.tempMax != null ? fmt1(stats.tempMax) + ' °C' : '—'}</span>
-        <span class="stat-avg">Mitjana: ${stats.tempAvg != null ? fmt1(stats.tempAvg) + ' °C' : '—'}</span>
-        <span class="stat-min">Mín: ${stats.tempMin != null ? fmt1(stats.tempMin) + ' °C' : '—'}</span>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-label">Humitat</div>
-      <div class="stat-values">
-        <span class="stat-max">Màx: ${stats.humMax != null ? Math.round(stats.humMax) + ' %' : '—'}</span>
-        <span class="stat-avg">Mitjana: ${stats.humAvg != null ? Math.round(stats.humAvg) + ' %' : '—'}</span>
-        <span class="stat-min">Mín: ${stats.humMin != null ? Math.round(stats.humMin) + ' %' : '—'}</span>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-label">Pressió</div>
-      <div class="stat-values">
-        <span class="stat-max">Màx: ${stats.pressMax != null ? fmt1(stats.pressMax) + ' hPa' : '—'}</span>
-        <span class="stat-avg">Mitjana: ${stats.pressAvg != null ? fmt1(stats.pressAvg) + ' hPa' : '—'}</span>
-        <span class="stat-min">Mín: ${stats.pressMin != null ? fmt1(stats.pressMin) + ' hPa' : '—'}</span>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-label">Pluja Event</div>
-      <div class="stat-values">
-        <span class="stat-max">Màxim acumulat: ${stats.rainMax != null ? fmt1(stats.rainMax) + ' mm' : '—'}</span>
-      </div>
-    </div>
-  `;
-}
-
-async function refreshHistorics(ui, store, period = 'today', customFrom = null, customTo = null) {
+async function refreshHistorics(ui, store) {
   if (ui.err) ui.err.textContent = "";
 
   const s = store.get();
   const estacio = (s.estacio || "").trim();
   const codi = (s.codiHidro || "").trim();
-  
-  // Demanem més dades per tenir històric
-  const limit = period === '30days' ? 500 : period === '7days' ? 350 : 200;
+  const limit = clamp(parseInt(s.limit || "1000", 10), 10, 5000);
+
+  const period = (s.period || "last24h").trim();
+  const date_from = (s.date_from || "").trim();
+  const date_to = (s.date_to || "").trim();
 
   try {
     const [meteoRows, hidroRows] = await Promise.all([
-      fetchMeteo({ estacio, limit }),
-      fetchHidro({ codi, limit }),
+      fetchMeteo({ estacio, limit, period, date_from, date_to }),
+      fetchHidro({ codi, limit, period, date_from, date_to, mode: "range", ensure: true }),
     ]);
 
-    // Calcular període
-    let periodData;
-    if (period === 'custom' && customFrom && customTo) {
-      periodData = {
-        from: new Date(customFrom),
-        to: new Date(customTo),
-        label: `${customFrom} a ${customTo}`
-      };
-    } else {
-      periodData = calculatePeriod(period);
+    if (ui.last) ui.last.textContent = `Meteo: ${meteoRows.length} regs · Hidro: ${hidroRows.length} regs`;
+
+    // ── Meteo table + chart
+    if (ui.meteoRows) {
+      ui.meteoRows.innerHTML = meteoRows.slice(0, 200).map(r => `
+        <tr>
+          <td>${fmtTime(r.instant)}</td>
+          <td>${r.temp_c == null ? "—" : fmt1(r.temp_c)}</td>
+          <td>${r.humitat_pct == null ? "—" : Math.round(r.humitat_pct)}</td>
+          <td>${r.vent_ms == null ? "—" : fmt1(r.vent_ms)}</td>
+          <td>${r.pluja_diaria_mm == null ? "—" : fmt1(r.pluja_diaria_mm)}</td>
+        </tr>
+      `).join("");
     }
 
-    if (ui.periodLabel) ui.periodLabel.textContent = periodData.label;
+    if (ui.meteoChart) {
+      const series = meteoRows
+        .slice()
+        .reverse()
+        .map(r => ({ x: new Date(r.instant).getTime(), y: r.temp_c }));
+      ui.meteoChart.innerHTML = "";
+      ui.meteoChart.append(lineChart({
+        title: "Temperatura",
+        series,
+        yLabel: "°C"
+      }));
+    }
 
-    // Filtrar dades pel període
-    const filteredMeteo = filterByPeriod(meteoRows, periodData.from, periodData.to);
-    const filteredHidro = filterByPeriod(hidroRows, periodData.from, periodData.to);
+    // ── Hidro table + chart (ex: Cardener + Valls)
+    if (ui.hidroRows) {
+      ui.hidroRows.innerHTML = hidroRows.slice(0, 300).map(r => `
+        <tr>
+          <td>${fmtTime(r.instant)}</td>
+          <td>${r.nom || r.codi}</td>
+          <td>${r.cabal_m3s == null ? "—" : fmt1(r.cabal_m3s)}</td>
+          <td>${r.capacitat_pct == null ? "—" : fmt1(r.capacitat_pct)}</td>
+          <td>${r.is_stale ? "Sí" : "No"}</td>
+        </tr>
+      `).join("");
+    }
 
-    if (ui.meteoCount) ui.meteoCount.textContent = String(filteredMeteo.length);
-    if (ui.hidroCount) ui.hidroCount.textContent = String(filteredHidro.length);
+    if (ui.hidroChart) {
+      const rowCardener = pickRow(hidroRows, [
+        r => norm(r.nom).includes("cardener"),
+        r => norm(r.codi).includes("cardener"),
+      ]);
+      const rowValls = pickRow(hidroRows, [
+        r => norm(r.nom).includes("valls"),
+        r => norm(r.codi).includes("valls"),
+      ]);
 
-    // Calcular estadístiques
-    const stats = calculateStats(filteredMeteo);
-    if (ui.meteoStats) renderStats(ui.meteoStats, stats);
-
-    // Renderitzar taules
-    if (ui.meteoTbody) renderMeteoTable(ui.meteoTbody, filteredMeteo);
-    if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, filteredHidro);
-
-    // Renderitzar gràfiques
-    if (filteredMeteo.length > 1) {
-      const tempPts = buildDaySeries(filteredMeteo, r => num(r.temp_c ?? r.temperature));
-      const rainPts = buildDaySeries(filteredMeteo, r => num(r.pluja_event_mm ?? r.rain_event_mm));
-      const pressPts = buildDaySeries(filteredMeteo, r => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa));
-      const humPts = buildDaySeries(filteredMeteo, r => num(r.humitat_pct ?? r.humidity));
-
-      if (ui.chartTemp) {
-        renderLineChart(ui.chartTemp, tempPts, {
-          unit: '°C',
-          lineColor: '#f59e0b',
-          formatY: v => fmt1(v)
-        });
+      // Construïm sèries per codi (si existeixen)
+      const byCode = new Map();
+      for (const r of hidroRows) {
+        const code = r.codi || "";
+        if (!code) continue;
+        if (!byCode.has(code)) byCode.set(code, []);
+        byCode.get(code).push(r);
       }
+      for (const arr of byCode.values()) arr.sort((a, b) => new Date(a.instant) - new Date(b.instant));
 
-      if (ui.chartRain) {
-        renderLineChart(ui.chartRain, rainPts, {
-          unit: 'mm',
-          lineColor: '#3b82f6',
-          formatY: v => fmt1(v)
-        });
-      }
+      const pickCode = (rowCardener?.codi || "251116-005");
+      const pickCode2 = (rowValls?.codi || "251116-004");
 
-      if (ui.chartPress) {
-        renderLineChart(ui.chartPress, pressPts, {
-          unit: 'hPa',
-          lineColor: '#8b5cf6',
-          formatY: v => fmt1(v)
-        });
-      }
+      const s1 = (byCode.get(pickCode) || []).map(r => ({ x: new Date(r.instant).getTime(), y: r.cabal_m3s }));
+      const s2 = (byCode.get(pickCode2) || []).map(r => ({ x: new Date(r.instant).getTime(), y: r.cabal_m3s }));
 
-      if (ui.chartHum) {
-        renderLineChart(ui.chartHum, humPts, {
-          unit: '%',
-          lineColor: '#06b6d4',
-          formatY: v => Math.round(v).toString()
-        });
-      }
+      ui.hidroChart.innerHTML = "";
+      ui.hidroChart.append(lineChart({
+        title: `Cabal (${pickCode} vs ${pickCode2})`,
+        series: [
+          { name: pickCode, points: s1 },
+          { name: pickCode2, points: s2 },
+        ],
+        yLabel: "m³/s"
+      }));
     }
 
   } catch (e) {
@@ -341,61 +216,37 @@ async function refreshHistorics(ui, store, period = 'today', customFrom = null, 
 
 export function initHistoricsScreen(root, store) {
   const ui = buildHistoricsUI(root);
-  let currentPeriod = 'today';
 
-  // Event listeners pels botons de període
-  ui.periodButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      // Actualitzar botons actius
-      ui.periodButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      
-      const period = btn.dataset.period;
-      currentPeriod = period;
+  // Inicialitza controls de període
+  if (ui.period) {
+    const s = store.get();
+    ui.period.value = (s.period || "last24h");
+    if (ui.dateFrom) ui.dateFrom.value = (s.date_from || "");
+    if (ui.dateTo) ui.dateTo.value = (s.date_to || "");
 
-      // Mostrar/amagar selector personalitzat
-      if (period === 'custom') {
-        ui.customDatesDiv.style.display = 'flex';
-        
-        // Inicialitzar dates per defecte
-        const today = new Date().toISOString().split('T')[0];
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const weekAgoStr = weekAgo.toISOString().split('T')[0];
-        
-        ui.dateFrom.value = weekAgoStr;
-        ui.dateTo.value = today;
-      } else {
-        ui.customDatesDiv.style.display = 'none';
-        refreshHistorics(ui, store, period);
-      }
-    });
-  });
+    const toggleCustom = () => {
+      const isCustom = ui.period.value === "custom";
+      ui.fromWrap?.classList.toggle("is-hidden", !isCustom);
+      ui.toWrap?.classList.toggle("is-hidden", !isCustom);
+    };
+    toggleCustom();
 
-  // Event listener pel botó aplicar dates personalitzades
-  if (ui.applyCustom) {
-    ui.applyCustom.addEventListener('click', () => {
-      const from = ui.dateFrom.value;
-      const to = ui.dateTo.value;
-      
-      if (from && to) {
-        refreshHistorics(ui, store, 'custom', from, to);
-      }
+    ui.period.addEventListener("change", toggleCustom);
+    ui.apply?.addEventListener("click", () => {
+      const period = ui.period.value;
+      const date_from = ui.dateFrom?.value || "";
+      const date_to = ui.dateTo?.value || "";
+      store.set({ period, date_from, date_to });
+      refreshHistorics(ui, store);
     });
   }
 
-  // Timer per auto-refresh (només si estem a "Avui")
   let timer = null;
   if (store.get().auto) {
-    timer = setInterval(() => {
-      if (currentPeriod === 'today') {
-        refreshHistorics(ui, store, currentPeriod);
-      }
-    }, CONFIG.autoRefreshMs);
+    timer = setInterval(() => refreshHistorics(ui, store), CONFIG.autoRefreshMs);
   }
 
-  // Càrrega inicial
-  refreshHistorics(ui, store, currentPeriod);
+  refreshHistorics(ui, store);
 
   return () => {
     if (timer) clearInterval(timer);
