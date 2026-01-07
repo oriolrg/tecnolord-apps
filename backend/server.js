@@ -107,6 +107,170 @@ function ecowittURL() {
 const ACA_RIVER_URL = 'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/rivergauges/river_flow_6min';
 const ACA_RESERVOIR_URL = 'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/reservoir/capacity_6min';
 
+
+// ──────────────────────────────────────────────────────────
+// PREVI (Forecast 48h) — ingest + storage (mínim)
+// Fem servir Open-Meteo com a font per ara (fàcil i ràpid)
+
+function mustNumEnv(name) {
+  const v = process.env[name];
+  const n = Number(v);
+  if (!Number.isFinite(n)) throw new Error(`missing/invalid env ${name}`);
+  return n;
+}
+
+function previConfig() {
+  const lat = mustNumEnv('PREVI_LAT');
+  const lon = mustNumEnv('PREVI_LON');
+
+  const hours = Math.min(Math.max(parseInt(process.env.PREVI_HOURS || '48', 10) || 48, 1), 48);
+
+  return {
+    source: (process.env.PREVI_SOURCE || 'open-meteo').trim(),
+    model: (process.env.PREVI_MODEL || 'icon').trim(),
+    stationCode: (process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home').trim(),
+    hours,
+    lat,
+    lon
+  };
+}
+
+function openMeteoURL({ lat, lon, model, hours }) {
+  // Hourly variables: ajusta si vols més/endavant
+  const hourly = [
+    'temperature_2m',
+    'relative_humidity_2m',
+    'precipitation',
+    'wind_speed_10m',
+    'wind_direction_10m'
+  ].join(',');
+
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    hourly,
+    forecast_hours: String(hours),
+    timezone: 'UTC',
+    windspeed_unit: 'ms',
+    precipitation_unit: 'mm',
+    temperature_unit: 'celsius',
+    models: model
+  });
+
+  return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+}
+
+async function pullPreviAndSave() {
+  const cfg = previConfig();
+  const issuedAt = new Date().toISOString();
+
+  if (cfg.source !== 'open-meteo') {
+    throw new Error(`Unsupported PREVI_SOURCE=${cfg.source} (for now only 'open-meteo')`);
+  }
+
+  const url = openMeteoURL(cfg);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('previ status ' + r.status);
+  const data = await r.json();
+
+  const h = data?.hourly;
+  const times = Array.isArray(h?.time) ? h.time : [];
+
+  const t2m = Array.isArray(h?.temperature_2m) ? h.temperature_2m : [];
+  const rh2m = Array.isArray(h?.relative_humidity_2m) ? h.relative_humidity_2m : [];
+  const prcp = Array.isArray(h?.precipitation) ? h.precipitation : [];
+  const wspd = Array.isArray(h?.wind_speed_10m) ? h.wind_speed_10m : [];
+  const wdir = Array.isArray(h?.wind_direction_10m) ? h.wind_direction_10m : [];
+
+  if (!times.length) throw new Error('previ malformed: missing hourly.time');
+
+  // Normalitza a ISO UTC
+  const validTimes = times.map((t) => new Date(t).toISOString());
+
+  // Inserim run + hourly en transacció
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const runSql = `
+      INSERT INTO forecast_run (source, model, station_code, issued_at, hours)
+      VALUES ($1,$2,$3,$4,$5)
+      ON CONFLICT (source, model, station_code, issued_at)
+      DO UPDATE SET hours = EXCLUDED.hours
+      RETURNING id
+    `;
+    const runRes = await client.query(runSql, [
+      cfg.source, cfg.model, cfg.stationCode, issuedAt, cfg.hours
+    ]);
+    const runId = runRes.rows[0].id;
+
+    // Bulk insert amb UNNEST (molt eficient)
+    const insSql = `
+      INSERT INTO forecast_hourly
+        (run_id, valid_time, temp_c, hum_pct, wind_ms, wind_dir, rain_mm)
+      SELECT
+        $1::bigint,
+        x.valid_time::timestamptz,
+        x.temp_c::real,
+        x.hum_pct::real,
+        x.wind_ms::real,
+        x.wind_dir::real,
+        x.rain_mm::real
+      FROM UNNEST(
+        $2::timestamptz[],
+        $3::real[],
+        $4::real[],
+        $5::real[],
+        $6::real[],
+        $7::real[]
+      ) AS x(valid_time, temp_c, hum_pct, wind_ms, wind_dir, rain_mm)
+      ON CONFLICT (run_id, valid_time) DO UPDATE SET
+        temp_c   = EXCLUDED.temp_c,
+        hum_pct  = EXCLUDED.hum_pct,
+        wind_ms  = EXCLUDED.wind_ms,
+        wind_dir = EXCLUDED.wind_dir,
+        rain_mm  = EXCLUDED.rain_mm
+    `;
+
+    // Arrays mateix llarg; si algun ve buit, omplim nulls
+    const fill = (arr) => (arr.length === validTimes.length ? arr : new Array(validTimes.length).fill(null));
+    const aTemp = fill(t2m).map(v => (v == null ? null : Number(v)));
+    const aHum  = fill(rh2m).map(v => (v == null ? null : Number(v)));
+    const aRain = fill(prcp).map(v => (v == null ? null : Number(v)));
+    const aWind = fill(wspd).map(v => (v == null ? null : Number(v)));
+    const aDir  = fill(wdir).map(v => (v == null ? null : Number(v)));
+
+    await client.query(insSql, [
+      runId,
+      validTimes,
+      aTemp,
+      aHum,
+      aWind,
+      aDir,
+      aRain
+    ]);
+
+    await client.query('COMMIT');
+
+    return {
+      ok: true,
+      source: cfg.source,
+      model: cfg.model,
+      station: cfg.stationCode,
+      issued_at: issuedAt,
+      hours: cfg.hours,
+      points: validTimes.length
+    };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+
+
 // ──────────────────────────────────────────────────────────
 // Helpers de períodes (meteo/hidro)
 function parsePeriodWindow(period) {
@@ -206,6 +370,54 @@ app.get('/api/v1/mesures/darreres', async (req, res) => {
     res.status(500).json({ ok:false, error:'db query error' });
   }
 });
+
+// ──────────────────────────────────────────────────────────
+// PREVI: retorna l'últim run guardat (48h o el que tinguis)
+// GET /api/v1/previ/48h?station=home&model=icon
+app.get('/api/v1/previ/48h', async (req, res) => {
+  const station = String(req.query.station || process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home');
+  const model = String(req.query.model || process.env.PREVI_MODEL || 'icon');
+  const source = String(req.query.source || process.env.PREVI_SOURCE || 'open-meteo');
+
+  try {
+    const runQ = await pool.query(
+      `SELECT id, source, model, station_code, issued_at, hours
+       FROM forecast_run
+       WHERE station_code = $1 AND model = $2 AND source = $3
+       ORDER BY issued_at DESC
+       LIMIT 1`,
+      [station, model, source]
+    );
+
+    const run = runQ.rows[0];
+    if (!run) return res.status(404).json({ ok: false, error: 'no forecast saved yet' });
+
+    const rowsQ = await pool.query(
+      `SELECT valid_time, temp_c, hum_pct, wind_ms, wind_dir, rain_mm
+       FROM forecast_hourly
+       WHERE run_id = $1
+       ORDER BY valid_time ASC`,
+      [run.id]
+    );
+
+    return res.json({
+      ok: true,
+      run: {
+        id: run.id,
+        source: run.source,
+        model: run.model,
+        station: run.station_code,
+        issued_at: run.issued_at,
+        hours: run.hours
+      },
+      items: rowsQ.rows
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ ok: false, error: 'db query error' });
+  }
+});
+
 
 // ──────────────────────────────────────────────────────────
 // HIDRO: mode=latest (default quan hi ha rang) o mode=range (històric del rang)
@@ -758,6 +970,19 @@ app.post(['/tasks/pull-aca','/api/tasks/pull-aca'], checkApiKey, async (_req, re
     return res.status(500).json({ ok:false, error:'pull aca failed' });
   }
 });
+
+// ──────────────────────────────────────────────────────────
+// Task: Pull PREVI (forecast) i guardar a BD
+app.post(['/tasks/pull-previ','/api/tasks/pull-previ'], checkApiKey, async (_req, res) => {
+  try {
+    const previ = await pullPreviAndSave();
+    return res.status(201).json({ ok: true, previ });
+  } catch (e) {
+    console.error('pull-previ error:', e);
+    return res.status(500).json({ ok:false, error:'pull previ failed' });
+  }
+});
+
 
 // ──────────────────────────────────────────────────────────
 // Arrencada
