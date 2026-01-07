@@ -125,15 +125,17 @@ function previConfig() {
 
   const hours = Math.min(Math.max(parseInt(process.env.PREVI_HOURS || '48', 10) || 48, 1), 48);
 
+  // IMPORTANT: per defecte NO forcem cap model (Open-Meteo tria)
+  const modelRaw = (process.env.PREVI_MODEL || 'auto').trim();
+
   return {
     source: (process.env.PREVI_SOURCE || 'open-meteo').trim(),
-    model: (process.env.PREVI_MODEL || 'auto').trim(), // 👈 canvi clau
+    model: modelRaw, // 'auto' o buit => no enviem 'models'
     stationCode: (process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home').trim(),
     hours,
     lat,
     lon
   };
-
 }
 
 function openMeteoURL({ lat, lon, model, hours }) {
@@ -149,16 +151,21 @@ function openMeteoURL({ lat, lon, model, hours }) {
     latitude: String(lat),
     longitude: String(lon),
     hourly,
+    forecast_hours: String(hours),
     timezone: 'UTC',
     windspeed_unit: 'ms',
     precipitation_unit: 'mm',
     temperature_unit: 'celsius',
-    models: model
   });
+
+  // Enviem models NOMÉS si ve informat i no és 'auto'
+  const m = (model || '').trim().toLowerCase();
+  if (m && m !== 'auto') {
+    params.set('models', model.trim());
+  }
 
   return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
 }
-
 
 async function pullPreviAndSave() {
   const cfg = previConfig();
@@ -169,8 +176,14 @@ async function pullPreviAndSave() {
   }
 
   const url = openMeteoURL(cfg);
+
   const r = await fetch(url);
-  if (!r.ok) throw new Error('previ status ' + r.status);
+  if (!r.ok) {
+    // CLAU: veure el missatge real d'Open-Meteo
+    const body = await r.text().catch(() => '');
+    throw new Error(`previ status ${r.status} url=${url} body=${body.slice(0, 500)}`);
+  }
+
   const data = await r.json();
 
   const h = data?.hourly;
