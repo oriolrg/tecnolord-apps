@@ -119,18 +119,54 @@ function mustNumEnv(name) {
   return n;
 }
 
+// Normalitza models Open-Meteo.
+// IMPORTANT: Open-Meteo NO accepta "icon" a seques; cal icon_global / icon_eu / icon_d2, etc.
+// Si no reconeixem el valor, retornem null i NO enviem el paràmetre "models" (best match per defecte).
+function normalizeOpenMeteoModel(raw) {
+  const s = String(raw ?? '').trim().toLowerCase();
+  if (!s) return null;
+
+  const map = {
+    // alias comuns
+    'best': 'best_match',
+    'bestmatch': 'best_match',
+    'best_match': 'best_match',
+    'default': 'best_match',
+
+    // ICON (DWD)
+    'icon': 'icon_global',
+    'icon-global': 'icon_global',
+    'icon_global': 'icon_global',
+    'icon eu': 'icon_eu',
+    'icon-eu': 'icon_eu',
+    'icon_eu': 'icon_eu',
+    'icon d2': 'icon_d2',
+    'icon-d2': 'icon_d2',
+    'icon_d2': 'icon_d2',
+    'icon seamless': 'icon_seamless',
+    'icon-seamless': 'icon_seamless',
+    'icon_seamless': 'icon_seamless',
+  };
+
+  if (map[s]) return map[s];
+
+  // Si ja ve en format token (p.ex. "ecmwf_ifs" o altres), no ens la juguem:
+  // només acceptem tokens amb [a-z0-9_]
+  if (/^[a-z0-9_]+$/.test(s)) return s;
+
+  return null;
+}
+
 function previConfig() {
   const lat = mustNumEnv('PREVI_LAT');
   const lon = mustNumEnv('PREVI_LON');
 
   const hours = Math.min(Math.max(parseInt(process.env.PREVI_HOURS || '48', 10) || 48, 1), 48);
 
-  // IMPORTANT: per defecte NO forcem cap model (Open-Meteo tria)
-  const modelRaw = (process.env.PREVI_MODEL || 'auto').trim();
-
   return {
     source: (process.env.PREVI_SOURCE || 'open-meteo').trim(),
-    model: modelRaw, // 'auto' o buit => no enviem 'models'
+    // abans tenies 'icon' per defecte; això peta a Open-Meteo. millor best_match.
+    model: (process.env.PREVI_MODEL || 'best_match').trim(),
     stationCode: (process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home').trim(),
     hours,
     lat,
@@ -139,6 +175,7 @@ function previConfig() {
 }
 
 function openMeteoURL({ lat, lon, model, hours }) {
+  // Hourly variables: ajusta si vols més/endavant
   const hourly = [
     'temperature_2m',
     'relative_humidity_2m',
@@ -158,11 +195,8 @@ function openMeteoURL({ lat, lon, model, hours }) {
     temperature_unit: 'celsius',
   });
 
-  // Enviem models NOMÉS si ve informat i no és 'auto'
-  const m = (model || '').trim().toLowerCase();
-  if (m && m !== 'auto') {
-    params.set('models', model.trim());
-  }
+  const m = normalizeOpenMeteoModel(model);
+  if (m) params.set('models', m);
 
   return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
 }
@@ -176,12 +210,12 @@ async function pullPreviAndSave() {
   }
 
   const url = openMeteoURL(cfg);
-
   const r = await fetch(url);
+
   if (!r.ok) {
-    // CLAU: veure el missatge real d'Open-Meteo
-    const body = await r.text().catch(() => '');
-    throw new Error(`previ status ${r.status} url=${url} body=${body.slice(0, 500)}`);
+    let body = '';
+    try { body = await r.text(); } catch {}
+    throw new Error(`previ status ${r.status} url=${url} body=${body || '(no body)'}`);
   }
 
   const data = await r.json();
@@ -213,7 +247,7 @@ async function pullPreviAndSave() {
       RETURNING id
     `;
     const runRes = await client.query(runSql, [
-      cfg.source, cfg.model, cfg.stationCode, issuedAt, cfg.hours
+      cfg.source, normalizeOpenMeteoModel(cfg.model) || 'best_match', cfg.stationCode, issuedAt, cfg.hours
     ]);
     const runId = runRes.rows[0].id;
 
@@ -268,7 +302,7 @@ async function pullPreviAndSave() {
     return {
       ok: true,
       source: cfg.source,
-      model: cfg.model,
+      model: normalizeOpenMeteoModel(cfg.model) || 'best_match',
       station: cfg.stationCode,
       issued_at: issuedAt,
       hours: cfg.hours,
@@ -389,7 +423,7 @@ app.get('/api/v1/mesures/darreres', async (req, res) => {
 // GET /api/v1/previ/48h?station=home&model=icon
 app.get('/api/v1/previ/48h', async (req, res) => {
   const station = String(req.query.station || process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home');
-  const model = String(req.query.model || process.env.PREVI_MODEL || 'icon');
+  const model = String(req.query.model || process.env.PREVI_MODEL || 'best_match');
   const source = String(req.query.source || process.env.PREVI_SOURCE || 'open-meteo');
 
   try {
@@ -399,7 +433,7 @@ app.get('/api/v1/previ/48h', async (req, res) => {
        WHERE station_code = $1 AND model = $2 AND source = $3
        ORDER BY issued_at DESC
        LIMIT 1`,
-      [station, model, source]
+      [station, normalizeOpenMeteoModel(model) || 'best_match', source]
     );
 
     const run = runQ.rows[0];
