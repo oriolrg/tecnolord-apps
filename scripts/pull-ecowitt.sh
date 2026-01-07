@@ -39,20 +39,18 @@ if [ -z "${KEY:-}" ]; then
   exit 1
 fi
 
-# 1) Ecowitt + ACA (ja ho fa aquest endpoint)
-{
-  out="$(post_task "/api/tasks/pull-ecowitt" "$KEY" | head -c 4000 || true)"
+# 1) Ecowitt + ACA
+if out="$(post_task "/api/tasks/pull-ecowitt" "$KEY" | head -c 4000)"; then
   echo "[$(ts)] pull-ecowitt: ${out}" >> "$LOG_FILE"
-} || {
+else
   echo "[$(ts)] pull-ecowitt: ERROR (see docker logs)" >> "$LOG_FILE"
-}
+fi
 
 # 2) Previ (forecast 48h)
-{
-  out="$(post_task "/api/tasks/pull-previ" "$KEY" | head -c 4000 || true)"
+if out="$(post_task "/api/tasks/pull-previ" "$KEY" | head -c 4000)"; then
   echo "[$(ts)] pull-previ: ${out}" >> "$LOG_FILE"
-} || {
+else
   echo "[$(ts)] pull-previ: ERROR (see docker logs)" >> "$LOG_FILE"
-}
+fi
 
 echo "[$(ts)] ingest: done" >> "$LOG_FILE"
