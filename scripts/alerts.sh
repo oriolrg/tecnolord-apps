@@ -1,28 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# =======================
+# TECNOLORD - alerts.sh
+# - DB table size + disk usage
+# - Web + API healthchecks
+# - Telegram notify (token/chat_id from .env via cron/export)
+# =======================
+
 # ========= CONFIG =========
 
-# Telegram
-TG_BOT_TOKEN="${TG_BOT_TOKEN:-PUT_YOUR_BOT_TOKEN_HERE}"
-TG_CHAT_ID="${TG_CHAT_ID:-PUT_YOUR_CHAT_ID_HERE}"
+# Telegram (expects env vars from .env)
+: "${TG_BOT_TOKEN:?Missing TG_BOT_TOKEN env var}"
+: "${TG_CHAT_ID:?Missing TG_CHAT_ID env var}"
 
-# DB (posa la teva URL real si no la tens per env var)
+# DB (expects env var DB_URL or uses default)
 DB_URL="${DB_URL:-postgresql://meteo:meteo@127.0.0.1:5432/meteo}"
 SCHEMA="meteo"
 TABLE="forecast_hourly"
 
-# Llindars
+# Thresholds
 MAX_TABLE_BYTES=$((1024 * 1024 * 1024))   # 1 GiB
-MAX_DISK_PCT=85                           # 85% ple
+MAX_DISK_PCT=85                           # 85% on /
 
 # Health checks
 BASE_URL="https://tecnolord.cat"
 WEB_PATH="/meteo/"
 API1="/api/v1/mesures/darreres"
 API2="/api/v1/hidro/darreres"
-CURL_TIMEOUT=12                           # segons
-CURL_MAX_TIME=15                          # segons
+CURL_TIMEOUT=12
+CURL_MAX_TIME=15
 
 # Logs
 LOG_FILE="/home/deploy/tecnolord-apps/logs/alerts.log"
@@ -32,26 +39,8 @@ LOG_FILE="/home/deploy/tecnolord-apps/logs/alerts.log"
 ts() { date -Is; }
 
 log() {
-  echo "[$(ts)] $*" | tee -a "$LOG_FILE" >/dev/null
-}
-
-tg_send() {
-  local text="$1"
-  # Escape mínim: Telegram accepta text pla; fem URL-encode via jq si hi és
-  if command -v jq >/dev/null 2>&1; then
-    local enc
-    enc="$(jq -rn --arg t "$text" '$t|@uri')"
-    curl -fsS --max-time 20 \
-      "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage?chat_id=${TG_CHAT_ID}&text=${enc}" \
-      >/dev/null || true
-  else
-    # fallback sense encoding (funciona si no hi ha caràcters “estranys”)
-    curl -fsS --max-time 20 \
-      -d "chat_id=${TG_CHAT_ID}" \
-      --data-urlencode "text=${text}" \
-      "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-      >/dev/null || true
-  fi
+  mkdir -p "$(dirname "$LOG_FILE")"
+  echo "[$(ts)] $*" >> "$LOG_FILE"
 }
 
 human_bytes() {
@@ -63,9 +52,19 @@ human_bytes() {
   fi
 }
 
+tg_send() {
+  local text="$1"
+  # Robust telegram send: POST + data-urlencode + timeout
+  curl -fsS --max-time 20 \
+    -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+    --data-urlencode "chat_id=${TG_CHAT_ID}" \
+    --data-urlencode "text=${text}" \
+    >/dev/null || true
+}
+
 check_http() {
   local url="$1"
-  # retorna "code total_time" o falla
+  # returns: "code total_time" (or fails)
   curl -sS -o /dev/null \
     -w "%{http_code} %{time_total}\n" \
     --connect-timeout "$CURL_TIMEOUT" \
@@ -85,7 +84,7 @@ if [ "${disk_pct:-0}" -ge "$MAX_DISK_PCT" ]; then
   alerts+=("DISC: / a ${disk_pct}% (llindar ${MAX_DISK_PCT}%)")
 fi
 
-# 2) Table size (pg_total_relation_size inclou indexes)
+# 2) Table size (includes indexes)
 table_bytes="$(psql "$DB_URL" -Atc "SELECT pg_total_relation_size('${SCHEMA}.${TABLE}');" 2>/dev/null || echo 0)"
 if [ "${table_bytes:-0}" -ge "$MAX_TABLE_BYTES" ]; then
   alerts+=("DB: ${SCHEMA}.${TABLE} mida $(human_bytes "$table_bytes") (llindar $(human_bytes "$MAX_TABLE_BYTES"))")
@@ -129,7 +128,7 @@ else
   alerts+=("API: ${API2} NO RESPONSE (timeout/error)")
 fi
 
-# Extra info DB (si hi ha alerta)
+# Extra DB stats (only when alert)
 db_stats=""
 if [ "${#alerts[@]}" -gt 0 ]; then
   db_stats="$(psql "$DB_URL" -Atc "
