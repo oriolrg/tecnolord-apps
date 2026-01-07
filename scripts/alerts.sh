@@ -11,15 +11,19 @@ set -euo pipefail
 #     * lectures_hidro.instant
 # - Telegram notify (TG_BOT_TOKEN / TG_CHAT_ID from .env)
 # - DB via docker exec (psql inside container)
+# - Anti-spam cooldown (no repeat of same alert within COOLDOWN_MIN)
 # =======================
 
 APP_DIR="/home/deploy/tecnolord-apps"
 LOG_FILE="${APP_DIR}/logs/alerts.log"
 ENV_FILE="${APP_DIR}/.env"
 
+# Cooldown state file (stored per deploy server)
+STATE_DIR="${APP_DIR}/.state"
+STATE_FILE="${STATE_DIR}/alerts.state"
+COOLDOWN_MIN=15
+
 # ========= Load env (safe) =========
-# Loads ONLY lines like KEY=VALUE where KEY is a valid env var name.
-# Ignores comments and "human text" lines (with spaces etc).
 load_env_kv() {
   local f="$1"
   [ -f "$f" ] || return 0
@@ -40,7 +44,7 @@ load_env_kv() {
   done < "$f"
 }
 
-mkdir -p "$(dirname "$LOG_FILE")"
+mkdir -p "$(dirname "$LOG_FILE")" "$STATE_DIR"
 load_env_kv "$ENV_FILE"
 
 # ========= REQUIRED (Telegram) =========
@@ -81,6 +85,7 @@ MAX_API_TIME_S=2.0
 
 # ========= HELPERS =========
 ts() { date -Is; }
+epoch_now() { date +%s; }
 
 log() { echo "[$(ts)] $*" >> "$LOG_FILE"; }
 
@@ -104,7 +109,6 @@ tg_send() {
 
 check_http() {
   local url="$1"
-  # returns: "code total_time" or fails
   curl -sS -o /dev/null \
     -w "%{http_code} %{time_total}\n" \
     --connect-timeout "$CURL_TIMEOUT" \
@@ -115,6 +119,41 @@ check_http() {
 db_psql() {
   local sql="$1"
   docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -Atc "$sql"
+}
+
+# Deterministic hash for cooldown key
+hash_alerts() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf "%s" "$1" | sha256sum | awk '{print $1}'
+  else
+    # fallback: not as strong, but deterministic
+    printf "%s" "$1" | cksum | awk '{print $1}'
+  fi
+}
+
+# Cooldown: returns 0 if should send, 1 if suppressed
+cooldown_should_send() {
+  local key="$1"
+  local now_s="$2"
+  local cooldown_s="$3"
+
+  # state file format: "<epoch>\t<hash>\n"
+  if [ -f "$STATE_FILE" ]; then
+    local last_s last_key
+    last_s="$(awk 'NR==1{print $1}' "$STATE_FILE" 2>/dev/null || echo "")"
+    last_key="$(awk 'NR==1{print $2}' "$STATE_FILE" 2>/dev/null || echo "")"
+
+    if [ -n "$last_s" ] && [ -n "$last_key" ]; then
+      # same alert and within cooldown => suppress
+      if [ "$last_key" = "$key" ] && [ $((now_s - last_s)) -lt "$cooldown_s" ]; then
+        return 1
+      fi
+    fi
+  fi
+
+  # update state (always record last alert)
+  printf "%s\t%s\n" "$now_s" "$key" > "$STATE_FILE"
+  return 0
 }
 
 # ========= CHECKS =========
@@ -254,7 +293,7 @@ if [ "${#alerts[@]}" -gt 0 ] && [ -z "$db_err" ]; then
   " 2>/dev/null || true)"
 fi
 
-# ========= NOTIFY =========
+# ========= NOTIFY (with cooldown) =========
 if [ "${#alerts[@]}" -gt 0 ]; then
   msg="[TECNOLORD ALERT] ${HOST}
 ${NOW}
@@ -267,8 +306,19 @@ Table(${SCHEMA}.${TABLE}): $(human_bytes "$table_bytes")
 DB stats:
 ${db_stats}
 "
-  log "ALERT triggered: ${alerts[*]}"
-  tg_send "$msg"
+
+  # Cooldown key is based on the alert lines (not on NOW)
+  key_src="$(printf '%s\n' "${alerts[@]}")"
+  key="$(hash_alerts "$key_src")"
+  now_s="$(epoch_now)"
+  cooldown_s=$((COOLDOWN_MIN * 60))
+
+  if cooldown_should_send "$key" "$now_s" "$cooldown_s"; then
+    log "ALERT triggered (sent): ${alerts[*]}"
+    tg_send "$msg"
+  else
+    log "ALERT triggered (suppressed by cooldown ${COOLDOWN_MIN}min): ${alerts[*]}"
+  fi
 else
   log "OK: disk=${disk_pct}% table=$(human_bytes "$table_bytes") web/api ok"
 fi
