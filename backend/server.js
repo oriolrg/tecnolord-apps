@@ -127,16 +127,16 @@ function previConfig() {
 
   return {
     source: (process.env.PREVI_SOURCE || 'open-meteo').trim(),
-    model: (process.env.PREVI_MODEL || 'icon').trim(),
+    model: (process.env.PREVI_MODEL || 'auto').trim(), // 👈 canvi clau
     stationCode: (process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home').trim(),
     hours,
     lat,
     lon
   };
+
 }
 
 function openMeteoURL({ lat, lon, model, hours }) {
-  // Hourly variables: ajusta si vols més/endavant
   const hourly = [
     'temperature_2m',
     'relative_humidity_2m',
@@ -149,7 +149,6 @@ function openMeteoURL({ lat, lon, model, hours }) {
     latitude: String(lat),
     longitude: String(lon),
     hourly,
-    forecast_hours: String(hours),
     timezone: 'UTC',
     windspeed_unit: 'ms',
     precipitation_unit: 'mm',
@@ -159,6 +158,7 @@ function openMeteoURL({ lat, lon, model, hours }) {
 
   return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
 }
+
 
 async function pullPreviAndSave() {
   const cfg = previConfig();
