@@ -8,19 +8,51 @@ COMPOSE_FILE="$REPO_DIR/docker-compose.yml"
 
 mkdir -p "$LOG_DIR"
 
-# Comanda docker compose (camí absolut per cron)
-DOCKER="$(command -v docker)"
-COMPOSE="$DOCKER compose -f \"$COMPOSE_FILE\""
+ts() { date -Is; }
 
-# Executa dins del contenidor backend amb Node (fetch)
-OUT=$(/usr/bin/docker compose -f "$COMPOSE_FILE" exec -T backend node -e '
-const url = "http://localhost:3000/api/tasks/pull-ecowitt";
-const key = process.env.INGEST_API_KEY || "";
-if (!key) { console.error("INGEST_API_KEY missing"); process.exit(1); }
-fetch(url, { method: "POST", headers: { "x-api-key": key } })
-  .then(async r => { const t = await r.text(); console.log(r.status + " " + t); })
-  .catch(e => { console.error("ERR " + e); process.exit(1); });
-')
+# Helper: extreure un env dins del container (INGEST_API_KEY)
+get_ingest_key() {
+  /usr/bin/docker compose -f "$COMPOSE_FILE" exec -T backend sh -lc 'printf "%s" "${INGEST_API_KEY:-}"'
+}
 
-# Append al log (sense cometes estranyes)
-printf '%s %s\n' "$(date -Is)" "$OUT" >> "$LOG_DIR/pull-ecowitt.log"
+# Helper: fer POST a un endpoint intern via curl DES DE DINS del backend
+# (així "localhost:3000" sempre és el backend container i no depens de xarxes externes)
+post_task() {
+  local endpoint="$1"  # ex: /api/tasks/pull-ecowitt
+  local key="$2"
+
+  /usr/bin/docker compose -f "$COMPOSE_FILE" exec -T backend sh -lc "
+    set -e;
+    curl -fsS -X POST \"http://localhost:3000${endpoint}\" \
+      -H \"x-api-key: ${key}\" \
+      -H \"accept: application/json\"
+  "
+}
+
+LOG_FILE="$LOG_DIR/pull-ingest.log"
+
+echo "[$(ts)] ingest: start" >> "$LOG_FILE"
+
+KEY="$(get_ingest_key || true)"
+if [ -z "${KEY:-}" ]; then
+  echo "[$(ts)] ingest: ERROR missing INGEST_API_KEY in backend container env" >> "$LOG_FILE"
+  exit 1
+fi
+
+# 1) Ecowitt + ACA (ja ho fa aquest endpoint)
+{
+  out="$(post_task "/api/tasks/pull-ecowitt" "$KEY" | head -c 4000 || true)"
+  echo "[$(ts)] pull-ecowitt: ${out}" >> "$LOG_FILE"
+} || {
+  echo "[$(ts)] pull-ecowitt: ERROR (see docker logs)" >> "$LOG_FILE"
+}
+
+# 2) Previ (forecast 48h)
+{
+  out="$(post_task "/api/tasks/pull-previ" "$KEY" | head -c 4000 || true)"
+  echo "[$(ts)] pull-previ: ${out}" >> "$LOG_FILE"
+} || {
+  echo "[$(ts)] pull-previ: ERROR (see docker logs)" >> "$LOG_FILE"
+}
+
+echo "[$(ts)] ingest: done" >> "$LOG_FILE"
