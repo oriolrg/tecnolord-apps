@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# =======================
+# TECNOLORD - alerts.sh
+# - DB table size + disk usage
+# - Web + API healthchecks (status + latency)
+# - Data "silence" (staleness) checks:
+#     * forecast_run.issued_at
+#     * mesures.instant
+#     * lectures_hidro.instant
+# - Telegram notify (TG_BOT_TOKEN / TG_CHAT_ID from .env)
+# - DB via docker exec (psql inside container)
+# =======================
+
 APP_DIR="/home/deploy/tecnolord-apps"
 LOG_FILE="${APP_DIR}/logs/alerts.log"
 ENV_FILE="${APP_DIR}/.env"
 
 # ========= Load env (safe) =========
-# Llegeix NOMÉS línies tipus KEY=VALUE (sense espais abans del =)
-# Ignora comentaris i línies “de text”
+# Loads ONLY lines like KEY=VALUE where KEY is a valid env var name.
+# Ignores comments and "human text" lines (with spaces etc).
 load_env_kv() {
   local f="$1"
   [ -f "$f" ] || return 0
+
   while IFS= read -r line; do
     # trim
     line="${line#"${line%%[![:space:]]*}"}"
@@ -22,7 +35,6 @@ load_env_kv() {
 
     # accept KEY=VALUE where KEY is valid shell var name
     if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-      # remove optional surrounding quotes in VALUE is not handled; keep raw
       export "$line"
     fi
   done < "$f"
@@ -32,10 +44,11 @@ mkdir -p "$(dirname "$LOG_FILE")"
 load_env_kv "$ENV_FILE"
 
 # ========= REQUIRED (Telegram) =========
-: "${TG_BOT_TOKEN:?Missing TG_BOT_TOKEN in .env or environment}"
-: "${TG_CHAT_ID:?Missing TG_CHAT_ID in .env or environment}"
+: "${TG_BOT_TOKEN:?Missing TG_BOT_TOKEN in ${ENV_FILE} or environment}"
+: "${TG_CHAT_ID:?Missing TG_CHAT_ID in ${ENV_FILE} or environment}"
 
 # ========= CONFIG =========
+
 # DB is inside docker
 DB_CONTAINER="${DB_CONTAINER:-tecnolord-apps-db-1}"
 DB_USER="${DB_USER:-meteo}"
@@ -44,15 +57,27 @@ DB_NAME="${DB_NAME:-meteo}"
 SCHEMA="meteo"
 TABLE="forecast_hourly"
 
-MAX_TABLE_BYTES=$((1024 * 1024 * 1024))   # 1 GiB
-MAX_DISK_PCT=85                           # 85% on /
+# Thresholds
+MAX_TABLE_BYTES=$((1024 * 1024 * 1024))   # 1 GiB total relation size (table+indexes)
+MAX_DISK_PCT=85                           # 85% usage on /
 
+# Data staleness thresholds (minutes)
+MAX_FORECAST_AGE_MIN=90   # forecast_run.issued_at no més vell de 90 min
+MAX_METEO_AGE_MIN=30      # mesures.instant no més vell de 30 min
+MAX_HIDRO_AGE_MIN=30      # lectures_hidro.instant no més vell de 30 min
+
+# Health checks
 BASE_URL="${BASE_URL:-https://tecnolord.cat}"
 WEB_PATH="/meteo/"
 API1="/api/v1/mesures/darreres"
 API2="/api/v1/hidro/darreres"
+
 CURL_TIMEOUT=12
 CURL_MAX_TIME=15
+
+# Latency thresholds (seconds)
+MAX_WEB_TIME_S=3.0
+MAX_API_TIME_S=2.0
 
 # ========= HELPERS =========
 ts() { date -Is; }
@@ -79,6 +104,7 @@ tg_send() {
 
 check_http() {
   local url="$1"
+  # returns: "code total_time" or fails
   curl -sS -o /dev/null \
     -w "%{http_code} %{time_total}\n" \
     --connect-timeout "$CURL_TIMEOUT" \
@@ -88,7 +114,6 @@ check_http() {
 
 db_psql() {
   local sql="$1"
-  # Executa psql dins el container
   docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -Atc "$sql"
 }
 
@@ -117,42 +142,108 @@ else
   table_bytes="0"
 fi
 
-# 3) Web + APIs
+# 2b) Data staleness (silence)
+if [ -z "$db_err" ]; then
+  # Forecast staleness (issued_at)
+  if max_ts="$(db_psql "SELECT max(issued_at) FROM meteo.forecast_run;" 2>/dev/null)"; then
+    if [ -n "$max_ts" ]; then
+      age_min="$(db_psql "SELECT EXTRACT(EPOCH FROM (now() - max(issued_at)))/60 FROM meteo.forecast_run;" 2>/dev/null || echo "")"
+      age_min_int="${age_min%.*}"
+      if [ -n "$age_min_int" ] && [ "$age_min_int" -ge "$MAX_FORECAST_AGE_MIN" ]; then
+        alerts+=("SILENCE: forecast_run últim issued_at fa ${age_min_int} min (llindar ${MAX_FORECAST_AGE_MIN} min)")
+      fi
+    else
+      alerts+=("SILENCE: forecast_run sense dades (max issued_at NULL)")
+    fi
+  else
+    alerts+=("SILENCE: no es pot llegir forecast_run (DB)")
+  fi
+
+  # Meteo staleness (mesures.instant)
+  if max_ts="$(db_psql "SELECT max(instant) FROM meteo.mesures;" 2>/dev/null)"; then
+    if [ -n "$max_ts" ]; then
+      age_min="$(db_psql "SELECT EXTRACT(EPOCH FROM (now() - max(instant)))/60 FROM meteo.mesures;" 2>/dev/null || echo "")"
+      age_min_int="${age_min%.*}"
+      if [ -n "$age_min_int" ] && [ "$age_min_int" -ge "$MAX_METEO_AGE_MIN" ]; then
+        alerts+=("SILENCE: meteo.mesures últim instant fa ${age_min_int} min (llindar ${MAX_METEO_AGE_MIN} min)")
+      fi
+    else
+      alerts+=("SILENCE: meteo.mesures sense dades (max instant NULL)")
+    fi
+  else
+    alerts+=("SILENCE: no es pot llegir meteo.mesures (DB)")
+  fi
+
+  # Hidro staleness (lectures_hidro.instant)
+  if max_ts="$(db_psql "SELECT max(instant) FROM meteo.lectures_hidro;" 2>/dev/null)"; then
+    if [ -n "$max_ts" ]; then
+      age_min="$(db_psql "SELECT EXTRACT(EPOCH FROM (now() - max(instant)))/60 FROM meteo.lectures_hidro;" 2>/dev/null || echo "")"
+      age_min_int="${age_min%.*}"
+      if [ -n "$age_min_int" ] && [ "$age_min_int" -ge "$MAX_HIDRO_AGE_MIN" ]; then
+        alerts+=("SILENCE: meteo.lectures_hidro últim instant fa ${age_min_int} min (llindar ${MAX_HIDRO_AGE_MIN} min)")
+      fi
+    else
+      alerts+=("SILENCE: meteo.lectures_hidro sense dades (max instant NULL)")
+    fi
+  else
+    alerts+=("SILENCE: no es pot llegir meteo.lectures_hidro (DB)")
+  fi
+fi
+
+# 3) Web + APIs health
 web_url="${BASE_URL}${WEB_PATH}"
 api1_url="${BASE_URL}${API1}"
 api2_url="${BASE_URL}${API2}"
 
+# Web
 if out="$(check_http "$web_url" 2>/dev/null)"; then
   code="$(awk '{print $1}' <<<"$out")"
   t="$(awk '{print $2}' <<<"$out")"
+
   if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
     alerts+=("WEB: ${web_url} HTTP ${code} (t=${t}s)")
+  fi
+
+  if awk "BEGIN{exit !($t > $MAX_WEB_TIME_S)}"; then
+    alerts+=("SLOW: WEB ${web_url} t=${t}s (llindar ${MAX_WEB_TIME_S}s)")
   fi
 else
   alerts+=("WEB: ${web_url} NO RESPONSE (timeout/error)")
 fi
 
+# API1
 if out="$(check_http "$api1_url" 2>/dev/null)"; then
   code="$(awk '{print $1}' <<<"$out")"
   t="$(awk '{print $2}' <<<"$out")"
+
   if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
     alerts+=("API: ${API1} HTTP ${code} (t=${t}s)")
+  fi
+
+  if awk "BEGIN{exit !($t > $MAX_API_TIME_S)}"; then
+    alerts+=("SLOW: API ${API1} t=${t}s (llindar ${MAX_API_TIME_S}s)")
   fi
 else
   alerts+=("API: ${API1} NO RESPONSE (timeout/error)")
 fi
 
+# API2
 if out="$(check_http "$api2_url" 2>/dev/null)"; then
   code="$(awk '{print $1}' <<<"$out")"
   t="$(awk '{print $2}' <<<"$out")"
+
   if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
     alerts+=("API: ${API2} HTTP ${code} (t=${t}s)")
+  fi
+
+  if awk "BEGIN{exit !($t > $MAX_API_TIME_S)}"; then
+    alerts+=("SLOW: API ${API2} t=${t}s (llindar ${MAX_API_TIME_S}s)")
   fi
 else
   alerts+=("API: ${API2} NO RESPONSE (timeout/error)")
 fi
 
-# DB stats only if alert and db OK
+# Extra DB stats (only when alert and DB OK)
 db_stats=""
 if [ "${#alerts[@]}" -gt 0 ] && [ -z "$db_err" ]; then
   db_stats="$(db_psql "
