@@ -61,6 +61,8 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+      - "443:443/udp"
       - "2019:2019"           # (admin API, útil per reloads)
     depends_on: [backend, api_py]
     volumes:
