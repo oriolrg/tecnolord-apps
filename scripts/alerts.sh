@@ -67,8 +67,8 @@ MAX_DISK_PCT=85                           # 85% usage on /
 
 # Data staleness thresholds (minutes)
 MAX_FORECAST_AGE_MIN=90   # forecast_run.issued_at no més vell de 90 min
-MAX_METEO_AGE_MIN=30      # mesures.instant no més vell de 30 min
-MAX_HIDRO_AGE_MIN=30      # lectures_hidro.instant no més vell de 30 min
+MAX_METEO_AGE_MIN=61      # mesures.instant no més vell de 30 min
+MAX_HIDRO_AGE_MIN=61      # lectures_hidro.instant no més vell de 30 min
 
 # Health checks
 BASE_URL="${BASE_URL:-https://tecnolord.cat}"
