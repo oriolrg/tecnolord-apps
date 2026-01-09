@@ -6,6 +6,14 @@ import { windNameCa } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
+// Umami (analytics) – tracking segur (no trenca si no està carregat)
+function trackEvent(name, props) {
+  try {
+    const u = window.umami;
+    if (u && typeof u.track === "function") u.track(name, props);
+  } catch (_) {}
+}
+
 function buildMeteoUI(root) {
   root.innerHTML = `
     <div class="wrap">
@@ -41,6 +49,9 @@ async function refreshMeteo(ui, store) {
   try {
     const meteoRows = await fetchMeteo({ estacio, limit });
     if (ui.cards) ui.cards.innerHTML = "";
+
+    // Tracking: refresh OK (sense dades)
+    trackEvent("meteo_refresh_ok", { limit, has_station: !!estacio });
 
     if (!meteoRows.length) {
       if (ui.summary) ui.summary.textContent = "Meteo: Sense registres.";
@@ -312,6 +323,7 @@ async function refreshMeteo(ui, store) {
 
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
+    trackEvent("meteo_refresh_error", { msg: String(e && (e.message || e)) });
   }
 }
 
@@ -346,6 +358,9 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
 
 export function initMeteoScreen(root, store) {
   const ui = buildMeteoUI(root);
+
+  // Tracking: screen view
+  trackEvent("screen_view", { screen: "meteo" });
 
   let timer = null;
   if (store.get().auto) {

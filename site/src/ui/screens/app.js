@@ -8,6 +8,14 @@ import { initMeteoScreen } from "./meteoScreen.js";
 import { initCabalsScreen } from "./cabalsScreen.js";
 import { initHistoricsScreen } from "./historicsScreen.js";
 
+// Umami (analytics) – tracking segur (no trenca si no està carregat)
+function trackEvent(name, props) {
+  try {
+    const u = window.umami;
+    if (u && typeof u.track === "function") u.track(name, props);
+  } catch (_) {}
+}
+
 function readUrlParams(store) {
   const url = new URL(location.href);
   const estFromUrl = url.searchParams.get("estacio") || url.searchParams.get("station_id");
@@ -72,9 +80,7 @@ function switchScreen(screenId, ui) {
     historics: ui.screenHistorics,
   };
 
-  if (screens[screenId]) {
-    screens[screenId].classList.add("active");
-  }
+  if (screens[screenId]) screens[screenId].classList.add("active");
 
   // Actualitzar botons actius
   ui.navButtons.forEach((btn) => {
@@ -88,25 +94,31 @@ function switchScreen(screenId, ui) {
 
 export function initApp(root) {
   const store = createStore();
+
   readUrlParams(store);
 
   const ui = buildUI(root);
 
-  // Inicialitzar cada pantalla
+  // Inicialitzar pantalles
   const cleanupMeteo = initMeteoScreen(ui.screenMeteo, store);
   const cleanupCabals = initCabalsScreen(ui.screenCabals, store);
   const cleanupHistorics = initHistoricsScreen(ui.screenHistorics, store);
 
-  // Event listeners per als botons de navegació
+  // Event listeners per al menú inferior
   ui.navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const screenId = btn.dataset.screen;
       switchScreen(screenId, ui);
+      trackEvent(`nav_${screenId}`);
     });
   });
 
   // Pantalla per defecte: Meteo
   switchScreen("meteo", ui);
+  trackEvent("nav_meteo");
+
+  // (opcional, útil) App boot
+  trackEvent("app_init", { app: "tecnolord_meteo" });
 
   return () => {
     cleanupMeteo();

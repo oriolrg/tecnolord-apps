@@ -7,6 +7,14 @@ import { renderMeteoTable } from "../components/tableMeteo.js";
 import { renderHidroTable } from "../components/tableHidro.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
+// Umami (analytics) – tracking segur (no trenca si no està carregat)
+function trackEvent(name, props) {
+  try {
+    const u = window.umami;
+    if (u && typeof u.track === "function") u.track(name, props);
+  } catch (_) {}
+}
+
 function buildHistoricsUI(root) {
   root.innerHTML = `
     <div class="wrap">
@@ -385,6 +393,14 @@ async function refreshHistorics(ui, store, period = "today", customFrom = null, 
     const filteredMeteo = filterByPeriod(meteoRows, periodData.from, periodData.to);
     const filteredHidro = filterByPeriod(hidroRows, periodData.from, periodData.to);
 
+    // Tracking: refresh OK (sense enviar valors de dades)
+    trackEvent("historics_refresh_ok", {
+      period,
+      custom: !!isCustom,
+      meteo_n: filteredMeteo.length,
+      hidro_n: filteredHidro.length,
+    });
+
     if (ui.meteoCount) ui.meteoCount.textContent = String(filteredMeteo.length);
     if (ui.hidroCount) ui.hidroCount.textContent = String(filteredHidro.length);
 
@@ -441,12 +457,16 @@ async function refreshHistorics(ui, store, period = "today", customFrom = null, 
     if (ui.hidroTbody) renderHidroTable(ui.hidroTbody, filteredHidro);
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
+    trackEvent("historics_refresh_error", { msg: String(e && (e.message || e)) });
   }
 }
 
 export function initHistoricsScreen(root, store) {
   const ui = buildHistoricsUI(root);
   let currentPeriod = "today";
+
+  // Tracking: screen view
+  trackEvent("screen_view", { screen: "historics" });
 
   ui.periodButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -455,6 +475,9 @@ export function initHistoricsScreen(root, store) {
 
       const period = btn.dataset.period;
       currentPeriod = period;
+
+      // Tracking: canvi de periode
+      trackEvent("historics_period_change", { period });
 
       if (period === "custom") {
         ui.customDatesDiv.style.display = "flex";
@@ -477,6 +500,10 @@ export function initHistoricsScreen(root, store) {
     ui.applyCustom.addEventListener("click", () => {
       const from = ui.dateFrom.value;
       const to = ui.dateTo.value;
+
+      // Tracking: aplicar custom (sense dates)
+      trackEvent("historics_custom_apply", { ok: !!(from && to) });
+
       if (from && to) refreshHistorics(ui, store, "custom", from, to);
     });
   }

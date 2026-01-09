@@ -5,6 +5,14 @@ import { num, fmt1, clamp, fmtTime, norm } from "../format.js";
 import { fetchHidro } from "../../services/hidroService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
+// Umami (analytics) – tracking segur (no trenca si no està carregat)
+function trackEvent(name, props) {
+  try {
+    const u = window.umami;
+    if (u && typeof u.track === "function") u.track(name, props);
+  } catch (_) {}
+}
+
 function buildCabalsUI(root) {
   root.innerHTML = `
     <div class="wrap">
@@ -78,6 +86,9 @@ async function refreshCabals(ui, store) {
   try {
     const hidroRows = await fetchHidro({ codi, limit, period, date_from, date_to, mode, ensure });
     if (ui.cards) ui.cards.innerHTML = "";
+
+    // Tracking: refresh OK (molt lleuger, sense dades sensibles)
+    trackEvent("cabals_refresh_ok", { mode, period, limit });
 
     if (!hidroRows.length) {
       if (ui.last) ui.last.textContent = "Sense dades";
@@ -250,11 +261,17 @@ async function refreshCabals(ui, store) {
     }
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
+
+    // Tracking: refresh KO
+    trackEvent("cabals_refresh_error", { msg: String(e && (e.message || e)) });
   }
 }
 
 export function initCabalsScreen(root, store) {
   const ui = buildCabalsUI(root);
+
+  // Tracking: screen view
+  trackEvent("screen_view", { screen: "cabals" });
 
   
   let timer = null;
