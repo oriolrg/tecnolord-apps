@@ -16,6 +16,27 @@ function trackEvent(name, props) {
   } catch (_) {}
 }
 
+// Umami – Pageviews per SPA (virtual URLs)
+function trackPageview(url, title) {
+  try {
+    const u = window.umami;
+    if (u && typeof u.track === "function") {
+      u.track((props) => ({ ...props, url, title }));
+    }
+  } catch (_) {}
+}
+
+function trackScreenView(screenId) {
+  // "Vistes" separades per pantalles dins /meteo/ (SPA)
+  const map = {
+    meteo: { url: "/meteo/", title: "Meteo" },
+    cabals: { url: "/meteo/cabals", title: "Cabals" },
+    historics: { url: "/meteo/historics", title: "Històrics" },
+  };
+  const cfg = map[screenId];
+  if (cfg) trackPageview(cfg.url, cfg.title);
+}
+
 function readUrlParams(store) {
   const url = new URL(location.href);
   const estFromUrl = url.searchParams.get("estacio") || url.searchParams.get("station_id");
@@ -30,41 +51,9 @@ function readUrlParams(store) {
     patch.limit = String(lim);
   }
 
-  if (codiFromUrl) patch.codiHidro = codiFromUrl;
+  if (codiFromUrl) patch.codi_hidro = codiFromUrl;
 
-  store.set(patch);
-}
-
-function buildUI(root) {
-  root.innerHTML = `
-    ${renderTecnolordHeader({
-      title: CONFIG.appTitle,
-      subtitle: CONFIG.appSubtitle,
-      icon: CONFIG.appIcon,
-      actionLabel: "Inicia sessió",
-    })}
-
-    <div id="screen-meteo" class="screen active">
-      <!-- Contingut de Meteo -->
-    </div>
-
-    <div id="screen-cabals" class="screen">
-      <!-- Contingut de Cabals -->
-    </div>
-
-    <div id="screen-historics" class="screen">
-      <!-- Contingut d'Històrics -->
-    </div>
-
-    ${renderBottomNav()}
-  `;
-
-  return {
-    screenMeteo: $("#screen-meteo", root),
-    screenCabals: $("#screen-cabals", root),
-    screenHistorics: $("#screen-historics", root),
-    navButtons: root.querySelectorAll(".nav-btn"),
-  };
+  if (Object.keys(patch).length) store.setState(patch, { silent: true });
 }
 
 function switchScreen(screenId, ui) {
@@ -92,14 +81,36 @@ function switchScreen(screenId, ui) {
   });
 }
 
-export function initApp(root) {
+export function initApp() {
   const store = createStore();
-
   readUrlParams(store);
 
-  const ui = buildUI(root);
+  const app = $("#app");
+  if (!app) return () => {};
 
-  // Inicialitzar pantalles
+  // Header
+  const headerMount = $("#tl-header");
+  if (headerMount) renderTecnolordHeader(headerMount);
+
+  // Pantalles
+  const screenMeteo = $("#screen-meteo");
+  const screenCabals = $("#screen-cabals");
+  const screenHistorics = $("#screen-historics");
+
+  // Menú inferior
+  const navMount = $("#bottom-nav");
+  if (navMount) renderBottomNav(navMount);
+
+  const navButtons = Array.from(document.querySelectorAll("[data-screen]"));
+
+  const ui = {
+    screenMeteo,
+    screenCabals,
+    screenHistorics,
+    navButtons,
+  };
+
+  // Inicialitza pantalles (retornen cleanup)
   const cleanupMeteo = initMeteoScreen(ui.screenMeteo, store);
   const cleanupCabals = initCabalsScreen(ui.screenCabals, store);
   const cleanupHistorics = initHistoricsScreen(ui.screenHistorics, store);
@@ -109,6 +120,11 @@ export function initApp(root) {
     btn.addEventListener("click", () => {
       const screenId = btn.dataset.screen;
       switchScreen(screenId, ui);
+
+      // IMPORTANT: pageview virtual per SPA
+      trackScreenView(screenId);
+
+      // Event (opcional) per analítica d'ús
       trackEvent(`nav_${screenId}`);
     });
   });
@@ -116,9 +132,6 @@ export function initApp(root) {
   // Pantalla per defecte: Meteo
   switchScreen("meteo", ui);
   trackEvent("nav_meteo");
-
-  // (opcional, útil) App boot
-  trackEvent("app_init", { app: "tecnolord_meteo" });
 
   return () => {
     cleanupMeteo();
