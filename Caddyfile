@@ -24,3 +24,8 @@ tecnolord.cat, www.tecnolord.cat {
     redir /meteo/ 302
   }
 }
+
+stats.tecnolord.cat {
+  encode gzip zstd
+  reverse_proxy umami:3000
+}

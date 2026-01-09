@@ -8,6 +8,7 @@ services:
       SCHEMA: ml
     depends_on: [db]
     expose: ["8000"]
+
   worker:
     image: prefecthq/prefect:2-latest   # o apache/airflow si prefereixes
     restart: unless-stopped
@@ -25,6 +26,7 @@ services:
     volumes:
       - ./mlruns:/mlartifacts
     expose: ["5000"]
+
   db:
     image: postgres:16
     restart: unless-stopped
@@ -40,6 +42,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
   backend:
     build:
       context: ./backend
@@ -58,6 +61,36 @@ services:
       - db
     expose:
       - "3000"
+
+  # --- NOU: DB per Umami (separada per no tocar la teva db principal) ---
+  umami_db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD}
+      POSTGRES_DB: umami
+    volumes:
+      - umami_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- NOU: Umami ---
+  umami:
+    image: ghcr.io/umami-software/umami:3.0.3
+    restart: unless-stopped
+    depends_on:
+      umami_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@umami_db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET}
+    expose:
+      - "3000"
+
   caddy:
     image: caddy:2
     restart: unless-stopped
@@ -66,15 +99,15 @@ services:
       - "443:443"
       - "443:443/udp"
       - "2019:2019"           # (admin API, útil per reloads)
-    depends_on: [backend, api_py]
+    depends_on: [backend, api_py, umami]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro   # << EL TEU FITXER AL HOST
       - ./site:/srv
       - caddy_data:/data
       - caddy_config:/config
-  
-  
+
 volumes:
   caddy_data: {}
   caddy_config: {}
-  pgdata:
+  pgdata: {}
+  umami_pgdata: {}
