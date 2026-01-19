@@ -1,5 +1,22 @@
 // ──────────────────────────────────────────────────────────
-// Imports i Pool
+// server.js — tecnolord backend
+// - Manté el comportament “antic” que et funcionava.
+// - Afegeix fallback automàtic d'Ecowitt:
+//     1) prova ECW_*
+//     2) si ve buit/falla, prova ECW_FB_*
+//     3) si també falla, NO insereix (skipped=true) i NO peta la web
+//
+// Env fallback esperades:
+//   ECW_FB_APPLICATION_KEY
+//   ECW_FB_API_KEY
+//   ECW_FB_MAC
+// (unitids opcionals: ECW_FB_TEMP_UNITID, ECW_FB_WIND_SPEED_UNITID, ECW_FB_RAINFALL_UNITID, ECW_FB_PRESSURE_UNITID)
+//
+// També pots controlar timeout:
+//   ECW_TIMEOUT_MS=15000
+//
+// ──────────────────────────────────────────────────────────
+
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -87,31 +104,100 @@ async function assegurarHidro(codi, tipus, nom) {
 }
 
 // ──────────────────────────────────────────────────────────
-// Helpers de mapping i URLs
+// Helpers Ecowitt/ACA
 const kmhToMs = v => (v == null || v === '' ? null : Number(v) / 3.6);
 
-function ecowittURL() {
+function envGet(prefix, key, fallback = undefined) {
+  const v = process.env[`${prefix}_${key}`];
+  return (v === undefined || v === '') ? fallback : v;
+}
+
+function hasEcw(prefix) {
+  return !!(process.env[`${prefix}_APPLICATION_KEY`] && process.env[`${prefix}_API_KEY`] && process.env[`${prefix}_MAC`]);
+}
+
+function ecowittURL(prefix = 'ECW') {
   const params = new URLSearchParams({
-    application_key: process.env.ECW_APPLICATION_KEY,
-    api_key: process.env.ECW_API_KEY,
-    mac: process.env.ECW_MAC,
+    application_key: envGet(prefix, 'APPLICATION_KEY'),
+    api_key: envGet(prefix, 'API_KEY'),
+    mac: envGet(prefix, 'MAC'),
     call_back: 'all',
-    temp_unitid: process.env.ECW_TEMP_UNITID || '1',
-    wind_speed_unitid: process.env.ECW_WIND_SPEED_UNITID || '8',
-    rainfall_unitid: process.env.ECW_RAINFALL_UNITID || '12',
-    pressure_unitid: process.env.ECW_PRESSURE_UNITID || '3',
+    temp_unitid: envGet(prefix, 'TEMP_UNITID', process.env.ECW_TEMP_UNITID || '1'),
+    wind_speed_unitid: envGet(prefix, 'WIND_SPEED_UNITID', process.env.ECW_WIND_SPEED_UNITID || '8'),
+    rainfall_unitid: envGet(prefix, 'RAINFALL_UNITID', process.env.ECW_RAINFALL_UNITID || '12'),
+    pressure_unitid: envGet(prefix, 'PRESSURE_UNITID', process.env.ECW_PRESSURE_UNITID || '3'),
   });
   return `https://api.ecowitt.net/api/v3/device/real_time?${params.toString()}`;
+}
+
+function isEcowittEmpty(data) {
+  if (!data || typeof data !== 'object') return true;
+  if (Array.isArray(data)) return data.length === 0;
+  if (Object.keys(data).length === 0) return true;
+
+  const pick = [
+    data?.outdoor?.temperature?.value,
+    data?.outdoor?.feels_like?.value,
+    data?.outdoor?.dew_point?.value,
+    data?.outdoor?.humidity?.value,
+    data?.solar_and_uvi?.solar?.value,
+    data?.solar_and_uvi?.uvi?.value,
+    data?.rainfall?.['rain_rate']?.value,
+    data?.rainfall?.daily?.value,
+    data?.rainfall?.event?.value,
+    data?.rainfall?.['1_hour']?.value,
+    data?.rainfall?.weekly?.value,
+    data?.rainfall?.monthly?.value,
+    data?.rainfall?.yearly?.value,
+    data?.wind?.wind_speed?.value,
+    data?.wind?.wind_gust?.value,
+    data?.wind?.wind_direction?.value,
+    data?.pressure?.relative?.value,
+    data?.pressure?.absolute?.value,
+    data?.battery?.sensor_array?.value,
+  ];
+  return pick.every(v => v == null || v === '');
+}
+
+async function fetchWithTimeout(url, ms = 15000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function fetchEcowitt(prefix) {
+  if (!hasEcw(prefix)) {
+    return { ok: false, prefix, reason: 'missing_config', http: null, payload: null };
+  }
+  const url = ecowittURL(prefix);
+  try {
+    const r = await fetchWithTimeout(url, Number(process.env.ECW_TIMEOUT_MS || 15000));
+    const http = r.status;
+    if (!r.ok) {
+      let body = '';
+      try { body = await r.text(); } catch {}
+      return { ok: false, prefix, reason: `http_${http}`, http, payload: body || null };
+    }
+    const p = await r.json();
+    if (p?.code !== 0) return { ok: false, prefix, reason: `ecowitt_code_${p?.code}`, http, payload: p };
+    const d = p?.data;
+    if (isEcowittEmpty(d)) return { ok: false, prefix, reason: 'empty_data', http, payload: p };
+    return { ok: true, prefix, reason: 'ok', http, payload: p };
+  } catch (e) {
+    const msg = (e && e.name === 'AbortError') ? 'timeout' : (e?.message || String(e));
+    return { ok: false, prefix, reason: `fetch_error_${msg}`, http: null, payload: null };
+  }
 }
 
 const ACA_RIVER_URL = 'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/rivergauges/river_flow_6min';
 const ACA_RESERVOIR_URL = 'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/reservoir/capacity_6min';
 
-
 // ──────────────────────────────────────────────────────────
-// PREVI (Forecast 48h) — ingest + storage (mínim)
-// Fem servir Open-Meteo com a font per ara (fàcil i ràpid)
-
+// PREVI (tal qual el teu)
 function mustNumEnv(name) {
   const v = process.env[name];
   const n = Number(v);
@@ -119,21 +205,15 @@ function mustNumEnv(name) {
   return n;
 }
 
-// Normalitza models Open-Meteo.
-// IMPORTANT: Open-Meteo NO accepta "icon" a seques; cal icon_global / icon_eu / icon_d2, etc.
-// Si no reconeixem el valor, retornem null i NO enviem el paràmetre "models" (best match per defecte).
 function normalizeOpenMeteoModel(raw) {
   const s = String(raw ?? '').trim().toLowerCase();
   if (!s) return null;
 
   const map = {
-    // alias comuns
     'best': 'best_match',
     'bestmatch': 'best_match',
     'best_match': 'best_match',
     'default': 'best_match',
-
-    // ICON (DWD)
     'icon': 'icon_global',
     'icon-global': 'icon_global',
     'icon_global': 'icon_global',
@@ -149,33 +229,24 @@ function normalizeOpenMeteoModel(raw) {
   };
 
   if (map[s]) return map[s];
-
-  // Si ja ve en format token (p.ex. "ecmwf_ifs" o altres), no ens la juguem:
-  // només acceptem tokens amb [a-z0-9_]
   if (/^[a-z0-9_]+$/.test(s)) return s;
-
   return null;
 }
 
 function previConfig() {
   const lat = mustNumEnv('PREVI_LAT');
   const lon = mustNumEnv('PREVI_LON');
-
   const hours = Math.min(Math.max(parseInt(process.env.PREVI_HOURS || '48', 10) || 48, 1), 48);
 
   return {
     source: (process.env.PREVI_SOURCE || 'open-meteo').trim(),
-    // abans tenies 'icon' per defecte; això peta a Open-Meteo. millor best_match.
     model: (process.env.PREVI_MODEL || 'best_match').trim(),
     stationCode: (process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home').trim(),
-    hours,
-    lat,
-    lon
+    hours, lat, lon
   };
 }
 
 function openMeteoURL({ lat, lon, model, hours }) {
-  // Hourly variables: ajusta si vols més/endavant
   const hourly = [
     'temperature_2m',
     'relative_humidity_2m',
@@ -219,7 +290,6 @@ async function pullPreviAndSave() {
   }
 
   const data = await r.json();
-
   const h = data?.hourly;
   const times = Array.isArray(h?.time) ? h.time : [];
 
@@ -230,11 +300,8 @@ async function pullPreviAndSave() {
   const wdir = Array.isArray(h?.wind_direction_10m) ? h.wind_direction_10m : [];
 
   if (!times.length) throw new Error('previ malformed: missing hourly.time');
-
-  // Normalitza a ISO UTC
   const validTimes = times.map((t) => new Date(t).toISOString());
 
-  // Inserim run + hourly en transacció
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -251,7 +318,6 @@ async function pullPreviAndSave() {
     ]);
     const runId = runRes.rows[0].id;
 
-    // Bulk insert amb UNNEST (molt eficient)
     const insSql = `
       INSERT INTO forecast_hourly
         (run_id, valid_time, temp_c, hum_pct, wind_ms, wind_dir, rain_mm)
@@ -279,7 +345,6 @@ async function pullPreviAndSave() {
         rain_mm  = EXCLUDED.rain_mm
     `;
 
-    // Arrays mateix llarg; si algun ve buit, omplim nulls
     const fill = (arr) => (arr.length === validTimes.length ? arr : new Array(validTimes.length).fill(null));
     const aTemp = fill(t2m).map(v => (v == null ? null : Number(v)));
     const aHum  = fill(rh2m).map(v => (v == null ? null : Number(v)));
@@ -287,15 +352,7 @@ async function pullPreviAndSave() {
     const aWind = fill(wspd).map(v => (v == null ? null : Number(v)));
     const aDir  = fill(wdir).map(v => (v == null ? null : Number(v)));
 
-    await client.query(insSql, [
-      runId,
-      validTimes,
-      aTemp,
-      aHum,
-      aWind,
-      aDir,
-      aRain
-    ]);
+    await client.query(insSql, [runId, validTimes, aTemp, aHum, aWind, aDir, aRain]);
 
     await client.query('COMMIT');
 
@@ -316,42 +373,33 @@ async function pullPreviAndSave() {
   }
 }
 
-
-
 // ──────────────────────────────────────────────────────────
-// Helpers de períodes (meteo/hidro)
+// Helpers de períodes
 function parsePeriodWindow(period) {
   const now = new Date();
   const end = now;
   let start = null;
 
   const startOfTodayUTC = () => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-  const startOfTomorrowUTC = () => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
 
   switch ((period || '').toLowerCase()) {
     case 'last24h':
       start = new Date(now.getTime() - 24 * 3600 * 1000);
       return { start, end };
-
-    case 'today': {
+    case 'today':
       start = startOfTodayUTC();
       return { start, end };
-    }
-
     case 'yesterday': {
       const s = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 0, 0, 0));
       const e = startOfTodayUTC();
       return { start: s, end: e };
     }
-
     case 'last7d':
       start = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
       return { start, end };
-
     case 'last30d':
       start = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
       return { start, end };
-
     default:
       return { start: null, end: null };
   }
@@ -370,23 +418,16 @@ function getWindowFromQuery(req) {
   const from = req.query.from || null;
   const to = req.query.to || null;
 
-  if (from || to) {
-    const w = parseFromTo(from, to);
-    return { ...w, source: 'fromto' };
-  }
-  if (period) {
-    const w = parsePeriodWindow(period);
-    return { ...w, source: 'period' };
-  }
+  if (from || to) return { ...parseFromTo(from, to), source: 'fromto' };
+  if (period) return { ...parsePeriodWindow(period), source: 'period' };
   return { start: null, end: null, source: 'none' };
 }
 
 // ──────────────────────────────────────────────────────────
-// Rutes d’API — METEO darreres mesures + períodes
+// Rutes METEO
 app.get('/api/v1/mesures/darreres', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 5000);
   const estacioCodi = req.query.estacio || null;
-
   const { start, end } = getWindowFromQuery(req);
 
   try {
@@ -397,15 +438,8 @@ app.get('/api/v1/mesures/darreres', async (req, res) => {
       params.push(estacioCodi);
       wheres.push(`m.estacio_id = (SELECT id FROM estacions WHERE codi = $${params.length})`);
     }
-
-    if (start) {
-      params.push(start.toISOString());
-      wheres.push(`m.instant >= $${params.length}`);
-    }
-    if (end) {
-      params.push(end.toISOString());
-      wheres.push(`m.instant < $${params.length}`);
-    }
+    if (start) { params.push(start.toISOString()); wheres.push(`m.instant >= $${params.length}`); }
+    if (end)   { params.push(end.toISOString());   wheres.push(`m.instant < $${params.length}`); }
 
     const whereSql = wheres.length ? `WHERE ${wheres.join(' AND ')}` : '';
     const sql = `SELECT m.* FROM mesures m ${whereSql} ORDER BY instant DESC LIMIT ${limit}`;
@@ -419,8 +453,7 @@ app.get('/api/v1/mesures/darreres', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
-// PREVI: retorna l'últim run guardat (48h o el que tinguis)
-// GET /api/v1/previ/48h?station=home&model=icon
+// PREVI: retorna l'últim run guardat
 app.get('/api/v1/previ/48h', async (req, res) => {
   const station = String(req.query.station || process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home');
   const model = String(req.query.model || process.env.PREVI_MODEL || 'best_match');
@@ -465,11 +498,8 @@ app.get('/api/v1/previ/48h', async (req, res) => {
   }
 });
 
-
 // ──────────────────────────────────────────────────────────
-// HIDRO: mode=latest (default quan hi ha rang) o mode=range (històric del rang)
-// - mode=latest: 1 registre per estació (amb fallback si no hi ha dades al rang)
-// - mode=range: registres del rang (i opcionalment ensure=1 per garantir 1 valor antic si falta)
+// HIDRO (tal qual el teu original)
 app.get('/api/v1/hidro/darreres', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '200', 10) || 200, 5000);
   const codi = req.query.codi || null;
@@ -479,12 +509,9 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
 
   const { start, end, source } = getWindowFromQuery(req);
   const hasWindow = !!(start || end || (source !== 'none'));
-
-  // Per defecte: si hi ha rang → latest (resum). Si no hi ha rang → comportament antic (llista desc limit)
   const effectiveMode = mode || (hasWindow ? 'latest' : 'raw');
 
   try {
-    // ── Cas 1: raw (comportament antic)
     if (effectiveMode === 'raw') {
       const params = [];
       let where = '';
@@ -508,26 +535,14 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       return res.json({ ok: true, items: rows });
     }
 
-    // Preparem filtre de rang
     const wParams = [];
     const wConds = [];
-    if (codi) {
-      wParams.push(codi);
-      wConds.push(`e.codi = $${wParams.length}`);
-    }
-    if (start) {
-      wParams.push(start.toISOString());
-      wConds.push(`h.instant >= $${wParams.length}`);
-    }
-    if (end) {
-      wParams.push(end.toISOString());
-      wConds.push(`h.instant < $${wParams.length}`);
-    }
+    if (codi) { wParams.push(codi); wConds.push(`e.codi = $${wParams.length}`); }
+    if (start) { wParams.push(start.toISOString()); wConds.push(`h.instant >= $${wParams.length}`); }
+    if (end) { wParams.push(end.toISOString()); wConds.push(`h.instant < $${wParams.length}`); }
     const wWhere = wConds.length ? `WHERE ${wConds.join(' AND ')}` : '';
 
-    // ── Cas 2: mode=range (històric dins del rang)
     if (effectiveMode === 'range') {
-      // Si hi ha codi → simple (i opcional fallback si no hi ha res al rang)
       if (codi) {
         const sqlRange = `
           SELECT
@@ -544,12 +559,8 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
           LIMIT ${limit}
         `;
         const { rows } = await pool.query(sqlRange, wParams);
+        if (rows.length || !ensure) return res.json({ ok: true, items: rows, fallback: false });
 
-        if (rows.length || !ensure) {
-          return res.json({ ok: true, items: rows, fallback: false });
-        }
-
-        // ensure=1 i no hi ha res al rang → torna l’últim registre existent
         const sqlFallback = `
           SELECT
             h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
@@ -568,9 +579,6 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
         return res.json({ ok: true, items: fb.rows, fallback: true });
       }
 
-      // Sense codi:
-      //  - retornen tots els registres dins del rang (limit)
-      //  - si ensure=1: per cada estació “important” que no tingui dades al rang, afegim l’últim registre existent
       const sqlAllRange = `
         SELECT
           h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
@@ -587,19 +595,14 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       `;
       const rangeRes = await pool.query(sqlAllRange, wParams);
       let items = rangeRes.rows;
+      if (!ensure) return res.json({ ok: true, items });
 
-      if (!ensure) {
-        return res.json({ ok: true, items });
-      }
-
-      // Estacions “objectiu”: millor limitar a les que uses a la UI (env), per no inflar.
       const targets = [
         process.env.ACA_CODI_CARDENER,
         process.env.ACA_CODI_VALLS,
         process.env.ACA_CODI_LLOSA,
       ].filter(Boolean);
 
-      // si no hi ha env, fallback: totes les estacions
       let targetCodis = targets;
       if (!targetCodis.length) {
         const allStations = await pool.query(`SELECT codi FROM estacions_hidro WHERE activa = true`);
@@ -607,13 +610,9 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       }
 
       const present = new Set(items.map(r => r.codi));
-
       const missing = targetCodis.filter(c => !present.has(c));
-      if (!missing.length) {
-        return res.json({ ok: true, items });
-      }
+      if (!missing.length) return res.json({ ok: true, items });
 
-      // Agafem l’últim registre per cada codi absent
       const sqlLatestMissing = `
         WITH wanted AS (
           SELECT unnest($1::text[]) AS codi
@@ -638,24 +637,19 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       const missRes = await pool.query(sqlLatestMissing, [missing]);
 
       items = items.concat(missRes.rows);
-
-      // Ordenem: primer els del rang (ja ho estan), després els fallback (i tots junts desc per instant)
       items.sort((a, b) => new Date(b.instant).getTime() - new Date(a.instant).getTime());
 
       return res.json({ ok: true, items });
     }
 
-    // ── Cas 3: mode=latest (resum per estació amb fallback)
-    // Retorna 1 registre per estació (en rang si n’hi ha; sinó el global com fallback)
+    // mode=latest
     {
-      // Target codis (igual que abans): els 3 que uses a la UI
       const targets = [
         process.env.ACA_CODI_CARDENER,
         process.env.ACA_CODI_VALLS,
         process.env.ACA_CODI_LLOSA,
       ].filter(Boolean);
 
-      // Si passes codi -> fem latest dins rang i fallback global
       if (codi) {
         const sqlLatestInRange = `
           SELECT
@@ -672,9 +666,7 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
           LIMIT 1
         `;
         const inRange = await pool.query(sqlLatestInRange, wParams);
-        if (inRange.rows.length) {
-          return res.json({ ok: true, items: inRange.rows, fallback: false });
-        }
+        if (inRange.rows.length) return res.json({ ok: true, items: inRange.rows, fallback: false });
 
         const sqlFallback = `
           SELECT
@@ -694,7 +686,6 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
         return res.json({ ok: true, items: fb.rows, fallback: true });
       }
 
-      // Sense codi: 1 per estació (targets). Si no hi ha targets → totes.
       let targetCodis = targets;
       if (!targetCodis.length) {
         const allStations = await pool.query(`SELECT codi FROM estacions_hidro WHERE activa = true`);
@@ -753,7 +744,6 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       const { rows } = await pool.query(sql, params);
       return res.json({ ok: true, items: rows });
     }
-
   } catch (e) {
     console.error(e);
     res.status(500).json({ ok:false, error:'db query error' });
@@ -771,7 +761,7 @@ function checkApiKey(req, res, next) {
 }
 
 // ──────────────────────────────────────────────────────────
-// Pull d’Ecowitt → meteo.mesures
+// Pull d’Ecowitt → meteo.mesures (amb fallback)
 async function pullEcowittAndSave() {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
   const codi = process.env.ESTACIO_CODI || process.env.STATION_ID || process.env.STATION_CODE || 'home';
@@ -781,10 +771,37 @@ async function pullEcowittAndSave() {
   const estacioId = await assegurarEstacio(codi, nom, adminId);
   await assegurarMembreEstacio(adminId, estacioId, 'propietari');
 
-  const r = await fetch(ecowittURL());
-  if (!r.ok) throw new Error('ecowitt status ' + r.status);
-  const p = await r.json();
+  // 1) Primary
+  const primary = await fetchEcowitt('ECW');
+  let chosen = primary;
+
+  // 2) Fallback si cal
+  if (!primary.ok) {
+    if (hasEcw('ECW_FB')) {
+      console.warn(`[ecowitt] primary failed (${primary.reason}) -> trying fallback`);
+      const fb = await fetchEcowitt('ECW_FB');
+      chosen = fb.ok ? fb : fb;
+      if (!fb.ok) console.warn(`[ecowitt] fallback failed (${fb.reason}) -> skipped`);
+    } else {
+      console.warn(`[ecowitt] primary failed (${primary.reason}) and no fallback configured -> skipped`);
+    }
+  }
+
+  // 3) Si no hi ha dades bones, no inserim (evita nulls i evita 500)
+  if (!chosen.ok) {
+    return {
+      id: null,
+      estacio: codi,
+      instant: null,
+      skipped: true,
+      source: chosen.prefix,
+      reason: chosen.reason
+    };
+  }
+
+  const p = chosen.payload;
   const d = p?.data;
+
   const epochSec = Number(p?.time);
   const instant = !Number.isNaN(epochSec) ? new Date(epochSec * 1000).toISOString() : new Date().toISOString();
 
@@ -805,7 +822,7 @@ async function pullEcowittAndSave() {
     +d?.rainfall?.['1_hour']?.value || null,
     +d?.rainfall?.weekly?.value || null,
     +d?.rainfall?.monthly?.value || null,
-    null,
+    +d?.rainfall?.yearly?.value || null,
 
     kmhToMs(+d?.wind?.wind_speed?.value || null),
     kmhToMs(+d?.wind?.wind_gust?.value || null),
@@ -818,7 +835,7 @@ async function pullEcowittAndSave() {
       ? (parseInt(d.battery.sensor_array.value,10) ? 100 : 0)
       : null,
 
-    JSON.stringify({ indoor: d?.indoor ?? null })
+    JSON.stringify({ indoor: d?.indoor ?? null, ecowitt_source: chosen.prefix })
   ];
 
   const sql = `
@@ -839,10 +856,10 @@ async function pullEcowittAndSave() {
   `;
 
   const { rows } = await pool.query(sql, params);
-  return { id: rows[0]?.id || null, estacio: codi, instant };
+  return { id: rows[0]?.id || null, estacio: codi, instant, skipped: false, source: chosen.prefix };
 }
 
-// Pull ACA → meteo.lectures_hidro
+// Pull ACA → meteo.lectures_hidro (igual que el teu)
 async function pullACAAndSave() {
   const [riversRes, reservoirsRes] = await Promise.all([
     fetch(ACA_RIVER_URL),
@@ -1001,7 +1018,10 @@ app.post(['/tasks/pull-ecowitt','/api/tasks/pull-ecowitt'], checkApiKey, async (
   try {
     const meteo = await pullEcowittAndSave();
     const hidro = await pullACAAndSave();
-    return res.status(meteo.id ? 201 : 200).json({ ok: true, meteo, hidro });
+
+    // Si ecowitt va skip, NO retornem 500: retornem 200 amb info de skipped
+    const status = meteo.id ? 201 : 200;
+    return res.status(status).json({ ok: true, meteo, hidro });
   } catch (e) {
     console.error('pull-ecowitt error:', e);
     return res.status(500).json({ ok:false, error:'pull failed' });
@@ -1018,8 +1038,6 @@ app.post(['/tasks/pull-aca','/api/tasks/pull-aca'], checkApiKey, async (_req, re
   }
 });
 
-// ──────────────────────────────────────────────────────────
-// Task: Pull PREVI (forecast) i guardar a BD
 app.post(['/tasks/pull-previ','/api/tasks/pull-previ'], checkApiKey, async (_req, res) => {
   try {
     const previ = await pullPreviAndSave();
@@ -1029,7 +1047,6 @@ app.post(['/tasks/pull-previ','/api/tasks/pull-previ'], checkApiKey, async (_req
     return res.status(500).json({ ok:false, error:'pull previ failed' });
   }
 });
-
 
 // ──────────────────────────────────────────────────────────
 // Arrencada
