@@ -90,18 +90,107 @@ async function assegurarHidro(codi, tipus, nom) {
 // Helpers de mapping i URLs
 const kmhToMs = v => (v == null || v === '' ? null : Number(v) / 3.6);
 
-function ecowittURL() {
+function ecowittURLFrom(cfg) {
   const params = new URLSearchParams({
+    application_key: cfg.application_key,
+    api_key: cfg.api_key,
+    mac: cfg.mac,
+    call_back: 'all',
+    temp_unitid: cfg.temp_unitid || '1',
+    wind_speed_unitid: cfg.wind_speed_unitid || '8',
+    rainfall_unitid: cfg.rainfall_unitid || '12',
+    pressure_unitid: cfg.pressure_unitid || '3',
+  });
+  return `https://api.ecowitt.net/api/v3/device/real_time?${params.toString()}`;
+}
+
+// Compat: continua funcionant si només tens les variables ECW_* “de sempre”.
+function ecowittURL() {
+  return ecowittURLFrom({
     application_key: process.env.ECW_APPLICATION_KEY,
     api_key: process.env.ECW_API_KEY,
     mac: process.env.ECW_MAC,
-    call_back: 'all',
-    temp_unitid: process.env.ECW_TEMP_UNITID || '1',
-    wind_speed_unitid: process.env.ECW_WIND_SPEED_UNITID || '8',
-    rainfall_unitid: process.env.ECW_RAINFALL_UNITID || '12',
-    pressure_unitid: process.env.ECW_PRESSURE_UNITID || '3',
+    temp_unitid: process.env.ECW_TEMP_UNITID,
+    wind_speed_unitid: process.env.ECW_WIND_SPEED_UNITID,
+    rainfall_unitid: process.env.ECW_RAINFALL_UNITID,
+    pressure_unitid: process.env.ECW_PRESSURE_UNITID,
   });
-  return `https://api.ecowitt.net/api/v3/device/real_time?${params.toString()}`;
+}
+
+// Permet definir fallback(s) sense tocar codi:
+// - Opció A: ECW_FALLBACKS_JSON='[{"application_key":"...","api_key":"...","mac":".."}, ...]'
+// - Opció B: ECW_FB1_APPLICATION_KEY / ECW_FB1_API_KEY / ECW_FB1_MAC (i successius FB2, FB3...)
+function getEcowittConfigs() {
+  const out = [];
+
+  // primary (legacy)
+  if (process.env.ECW_APPLICATION_KEY && process.env.ECW_API_KEY && process.env.ECW_MAC) {
+    out.push({
+      name: 'primary',
+      application_key: process.env.ECW_APPLICATION_KEY,
+      api_key: process.env.ECW_API_KEY,
+      mac: process.env.ECW_MAC,
+      temp_unitid: process.env.ECW_TEMP_UNITID,
+      wind_speed_unitid: process.env.ECW_WIND_SPEED_UNITID,
+      rainfall_unitid: process.env.ECW_RAINFALL_UNITID,
+      pressure_unitid: process.env.ECW_PRESSURE_UNITID,
+    });
+  }
+
+  // JSON list
+  const raw = process.env.ECW_FALLBACKS_JSON;
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        for (let i = 0; i < arr.length; i++) {
+          const c = arr[i] || {};
+          if (c.application_key && c.api_key && c.mac) {
+            out.push({
+              name: c.name || `fallback_json_${i + 1}`,
+              application_key: c.application_key,
+              api_key: c.api_key,
+              mac: c.mac,
+              temp_unitid: c.temp_unitid || process.env.ECW_TEMP_UNITID,
+              wind_speed_unitid: c.wind_speed_unitid || process.env.ECW_WIND_SPEED_UNITID,
+              rainfall_unitid: c.rainfall_unitid || process.env.ECW_RAINFALL_UNITID,
+              pressure_unitid: c.pressure_unitid || process.env.ECW_PRESSURE_UNITID,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[ecowitt] ECW_FALLBACKS_JSON invalid JSON:', e?.message || e);
+    }
+  }
+
+  // FB1/FB2/FB3...
+  for (let i = 1; i <= 5; i++) {
+    const ak = process.env[`ECW_FB${i}_APPLICATION_KEY`];
+    const ap = process.env[`ECW_FB${i}_API_KEY`];
+    const mac = process.env[`ECW_FB${i}_MAC`];
+    if (ak && ap && mac) {
+      out.push({
+        name: `fallback_${i}`,
+        application_key: ak,
+        api_key: ap,
+        mac,
+        temp_unitid: process.env[`ECW_FB${i}_TEMP_UNITID`] || process.env.ECW_TEMP_UNITID,
+        wind_speed_unitid: process.env[`ECW_FB${i}_WIND_SPEED_UNITID`] || process.env.ECW_WIND_SPEED_UNITID,
+        rainfall_unitid: process.env[`ECW_FB${i}_RAINFALL_UNITID`] || process.env.ECW_RAINFALL_UNITID,
+        pressure_unitid: process.env[`ECW_FB${i}_PRESSURE_UNITID`] || process.env.ECW_PRESSURE_UNITID,
+      });
+    }
+  }
+
+  // dedupe by (application_key, api_key, mac)
+  const seen = new Set();
+  return out.filter(c => {
+    const k = `${c.application_key}::${c.api_key}::${c.mac}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 const ACA_RIVER_URL = 'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/rivergauges/river_flow_6min';
@@ -408,7 +497,32 @@ app.get('/api/v1/mesures/darreres', async (req, res) => {
     }
 
     const whereSql = wheres.length ? `WHERE ${wheres.join(' AND ')}` : '';
-    const sql = `SELECT m.* FROM mesures m ${whereSql} ORDER BY instant DESC LIMIT ${limit}`;
+  
+  // Evitem inserir “files buides” (tots els sensors null) que després embruten històric.
+  const anySensor =
+    params[2] != null || // temp_c
+    params[5] != null || // humitat_pct
+    params[19] != null || // pressio_rel_hpa
+    params[16] != null || // vent_ms
+    params[8] != null;    // taxa_pluja_mm_h
+
+  if (!anySensor) {
+    throw new Error('ecowitt returned empty sensor data (all null)');
+  }
+
+  // Marquem si hem fet servir fallback
+  if (usedCfg && usedCfg.name !== 'primary') {
+    try {
+      const ext = JSON.parse(params[21] || '{}');
+      ext.source = 'ecowitt';
+      ext.used_fallback = true;
+      ext.fallback = { name: usedCfg.name, mac: usedCfg.mac };
+      params[21] = JSON.stringify(ext);
+    } catch (_) {
+      params[21] = JSON.stringify({ source: 'ecowitt', used_fallback: true, fallback: { name: usedCfg.name, mac: usedCfg.mac } });
+    }
+  }
+  const sql = `SELECT m.* FROM mesures m ${whereSql} ORDER BY instant DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, params);
 
     res.json({ ok: true, items: rows });
@@ -781,12 +895,32 @@ async function pullEcowittAndSave() {
   const estacioId = await assegurarEstacio(codi, nom, adminId);
   await assegurarMembreEstacio(adminId, estacioId, 'propietari');
 
-  const r = await fetch(ecowittURL());
-  if (!r.ok) throw new Error('ecowitt status ' + r.status);
-  const p = await r.json();
-  const d = p?.data;
-  const epochSec = Number(p?.time);
-  const instant = !Number.isNaN(epochSec) ? new Date(epochSec * 1000).toISOString() : new Date().toISOString();
+  // Ecowitt primary + fallback(s)
+  const configs = getEcowittConfigs();
+  if (!configs.length) throw new Error('missing ecowitt env (ECW_APPLICATION_KEY/ECW_API_KEY/ECW_MAC)');
+
+  let p = null;
+  let d = null;
+  let instant = null;
+  let usedCfg = null;
+  let lastErr = null;
+
+  for (const cfg of configs) {
+    try {
+      const url = ecowittURLFrom(cfg);
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('ecowitt status ' + r.status);
+      p = await r.json();
+      d = p?.data;
+      const epochSec = Number(p?.time);
+      instant = !Number.isNaN(epochSec) ? new Date(epochSec * 1000).toISOString() : new Date().toISOString();
+      usedCfg = cfg;
+      break;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (!usedCfg) throw lastErr || new Error('ecowitt fetch failed');
 
   const params = [
     estacioId, instant,
