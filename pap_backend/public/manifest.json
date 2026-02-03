@@ -8,10 +8,10 @@
   "description": "Calendari Porta a Porta Sant Llorenç de Morunys",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/542/542711.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+        "src": "icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
     }
-  ]
+    ]
 }
