@@ -1,32 +1,46 @@
 tecnolord.cat, www.tecnolord.cat {
   encode gzip zstd
 
+  # Redirecció de l'arrel a MeteoLord
   @root path /
   redir @root /meteo/ 302
 
+  # Rutes api_py (IA/Forecast)
   @py path /api/v1/kpis* /api/v1/forecast* /health
   handle @py {
     reverse_proxy api_py:8000
   }
-  
+
+  # ORIENTATRACK: API i Frontend
   handle_path /api/orienta* {
     reverse_proxy orienta_backend:4000
   }
+  handle_path /orientatrack* {
+    reverse_proxy orienta_backend:4000
+  }
 
+  # OPOS: API i Frontend
+  handle_path /api/opos* {
+    reverse_proxy opos_backend:5000
+  }
+  handle_path /opos* {
+    reverse_proxy opos_backend:5000
+  }
+
+  # METEOLORD: API genèrica
   @api path /api/* /api/v1/*
   handle @api {
     reverse_proxy backend:3000
   }
 
+  # METEOLORD: Frontend estàtic
   handle_path /meteo* {
     root * /srv
     try_files {path} /index.html
     file_server
   }
-  handle_path /orientatrack* {
-    # Si de moment només vols proxy al backend:
-    reverse_proxy orienta_backend:4000
-  }
+
+  # Redirecció per defecte
   handle / {
     redir /meteo/ 302
   }
