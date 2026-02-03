@@ -8,15 +8,15 @@
     <style>
         :root {
             --bg-color: #f4f7f6;
-            --organica: #b59a6d; /* Marró suau */
-            --envasos: #e6e600;  /* Groc */
-            --paper: #add8e6;    /* Blau cel */
-            --resta: #a9a9a9;    /* Gris */
+            --organica: #b59a6d;
+            --envasos: #e6e600;
+            --paper: #add8e6;
+            --resta: #a9a9a9;
             --text: #2d3748;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: sans-serif;
             background-color: var(--bg-color);
             color: var(--text);
             margin: 0;
@@ -26,16 +26,8 @@
             padding: 20px;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header img {
-            max-width: 100px;
-            margin-bottom: 10px;
-        }
-
+        .header { text-align: center; margin-bottom: 30px; }
+        
         .status-card {
             background: white;
             border-radius: 20px;
@@ -60,16 +52,8 @@
         .badge-success { background: #c6f6d5; color: #22543d; }
         .badge-error { background: #fed7d7; color: #822727; }
 
-        .residu-avui {
-            font-size: 2.5rem;
-            margin: 15px 0;
-            font-weight: 800;
-        }
-
-        .icon-box {
-            font-size: 4rem;
-            margin: 20px 0;
-        }
+        .residu-avui { font-size: 2.2rem; margin: 15px 0; font-weight: 800; }
+        .icon-box { font-size: 4rem; margin: 20px 0; }
 
         .properes-container {
             width: 100%;
@@ -83,14 +67,9 @@
         .proxima-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid #edf2f7;
         }
-
-        .proxima-item:last-child { border: none; }
-
-        .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 10px; }
 
         footer { margin-top: 40px; font-size: 0.8rem; color: #718096; }
     </style>
@@ -99,27 +78,24 @@
 
     <div class="header">
         <h1>📍 PaP Sant Llorenç</h1>
-        <p id="data-actual">Carregant...</p>
+        <p id="data-actual">Carregant data...</p>
     </div>
 
-    <div class="status-card" id="card-principal">
-        <div id="status-badge" class="badge">Comprovant...</div>
+    <div class="status-card">
+        <div id="status-badge" class="badge">Sincronitzant...</div>
         <div class="icon-box" id="icona-gran">
-            <i class="fas fa-trash-alt"></i>
+            <i class="fas fa-spinner fa-spin"></i>
         </div>
-        <div class="residu-avui" id="text-avui">...</div>
-        <p id="missatge-hora" style="color: #4a5568;"></p>
+        <div class="residu-avui" id="text-avui">Carregant...</div>
+        <p id="missatge-hora"></p>
     </div>
 
     <div class="properes-container">
         <h3 style="margin-top:0"><i class="far fa-calendar-alt"></i> Properes recollides</h3>
-        <div id="llista-properes">
-            </div>
+        <div id="llista-properes"></div>
     </div>
 
-    <footer>
-        Recollida abans de les 08:00h del matí
-    </footer>
+    <footer>Recollida abans de les 08:00h del matí</footer>
 
     <script>
         const icones = {
@@ -132,29 +108,28 @@
 
         const colors = {
             "organica": "#b59a6d",
-            "envasos": "#e6e600",
-            "paper_cartro": "#add8e6",
-            "resta": "#a9a9a9"
+            "envasos": "#d4d400",
+            "paper_cartro": "#3182ce",
+            "resta": "#718096"
         };
 
         async function carregarEstat() {
             try {
-                const res = await fetch('/api/pap/estat/');
+                // Fem servir ruta relativa 'estat' perquè Caddy ens redirigeix al backend correcte
+                const res = await fetch('estat'); 
                 const data = await res.json();
 
-                // 1. Data i hora
-                const d = new Date(data.data);
-                document.getElementById('data-actual').innerText = d.toLocaleDateString('ca-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const d = new Date(data.data_servidor);
+                document.getElementById('data-actual').innerText = d.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
-                // 2. Estat actual (Què toca treure)
                 const badge = document.getElementById('status-badge');
                 const textAvui = document.getElementById('text-avui');
                 const icona = document.getElementById('icona-gran');
                 
                 if (data.passatHora) {
                     badge.className = "badge badge-error";
-                    badge.innerText = "Recollida finalitzada";
-                    document.getElementById('missatge-hora').innerText = "Ja és tard! Les escombraries s'han recollit a les 08:00h.";
+                    badge.innerText = "Recollida realitzada";
+                    document.getElementById('missatge-hora').innerText = "El camió ja ha passat (08:00h).";
                 } else {
                     badge.className = "badge badge-success";
                     badge.innerText = "Pots treure la brossa";
@@ -163,7 +138,6 @@
 
                 if (data.avui.length > 0) {
                     textAvui.innerText = data.avui.map(r => r.nom).join(' + ');
-                    // Canviem icona per la del primer residu que toqui
                     icona.innerHTML = `<i class="fas ${icones[data.avui[0].id] || 'fa-trash'}"></i>`;
                     icona.style.color = colors[data.avui[0].id] || '#2d3748';
                 } else {
@@ -172,21 +146,19 @@
                     icona.style.color = "#cbd5e0";
                 }
 
-                // 3. Properes recollides
                 const llista = document.getElementById('llista-properes');
                 llista.innerHTML = '';
                 for (const [nom, temps] of Object.entries(data.properes_recollides)) {
                     llista.innerHTML += `
                         <div class="proxima-item">
                             <span><strong>${nom}</strong></span>
-                            <span style="color: #718096">${temps}</span>
-                        </div>
-                    `;
+                            <span>${temps}</span>
+                        </div>`;
                 }
 
             } catch (error) {
-                console.error("Error carregantt dades:", error);
                 document.getElementById('text-avui').innerText = "Error de connexió";
+                console.error(error);
             }
         }
 

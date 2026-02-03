@@ -21,22 +21,21 @@ const nomsResidus = {
 };
 
 // --- SERVIR ESTÀTICS ---
-app.use('/', express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // --- RUTES API ---
 
-// Ping de diagnòstic
+// Ruta de diagnòstic
 app.get('/ping', (req, res) => {
     res.json({ ok: true, msg: "Backend de PaP operatiu" });
 });
 
-// Ruta d'estat (Caddy envia /estat)
-app.get('/estat', (req, res) => {
+// Ruta d'estat (Caddy envia /estat o /api/pap/estat)
+app.get(['/estat', '/api/pap/estat'], (req, res) => {
   const ara = new Date();
   const diaSetmana = ara.getDay(); // 0 (dg) a 6 (ds)
   const hora = ara.getHours();
   
-  // Dilluns=1, ..., Diumenge=7
   const diaAjustat = diaSetmana === 0 ? 7 : diaSetmana;
 
   // 1. Què toca avui
@@ -53,7 +52,7 @@ app.get('/estat', (req, res) => {
     let diesFaltants = Infinity;
     dies.forEach(diaRecollida => {
       let diff = diaRecollida - diaAjustat;
-      // Si el dia ja ha passat o és avui després de les 8:00, mirem la setmana que ve
+      // Si és avui i ja han passat les 8:00, o si el dia ja ha passat: mirem la setmana que ve
       if (diff < 0 || (diff === 0 && hora >= 8)) diff += 7;
       if (diff < diesFaltants) diesFaltants = diff;
     });
@@ -66,15 +65,13 @@ app.get('/estat', (req, res) => {
     properes[nomsResidus[residu]] = text;
   }
 
-  const passatHora = hora >= 8;
-
   res.json({
     ok: true,
     data_servidor: ara,
     avui: queTocaAvui,
-    passatHora: passatHora,
+    passatHora: hora >= 8,
     properes_recollides: properes,
-    missatge: passatHora ? "La recollida ja s'ha fet (08:00h)" : "Encara ets a temps!"
+    missatge: hora >= 8 ? "La recollida ja s'ha fet (08:00h)" : "Encara ets a temps!"
   });
 });
 
