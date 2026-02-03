@@ -1,0 +1,17 @@
+{
+  "name": "PaP Sant Llorenç",
+  "short_name": "PaP",
+  "start_url": "/pap/",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#f0f2f5",
+  "description": "Calendari Porta a Porta Sant Llorenç de Morunys",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/542/542711.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

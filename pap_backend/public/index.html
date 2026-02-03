@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PaP Sant Llorenç</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f0f2f5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PaP">
+
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/542/542711.png">
     <style>
         :root { --bg: #f0f2f5; --card: #ffffff; --text: #1a202c; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
@@ -17,6 +24,9 @@
         .properes { width: 100%; max-width: 450px; margin-top: 20px; background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .proxima-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #edf2f7; }
         .proxima-row:last-child { border: none; }
+        body {
+            overscroll-behavior-y: contain; /* Evita el refrescament de Chrome en estirar cap avall */
+        }
     </style>
 </head>
 <body>
@@ -95,6 +105,13 @@
             }
         }
         updateUI();
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+        });
+    }
     </script>
 </body>
 </html>
