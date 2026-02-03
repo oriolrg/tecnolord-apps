@@ -1,18 +1,196 @@
-mkdir -p /home/deploy/tecnolord-apps/opos_backend/public
-cat <<EOF > /home/deploy/tecnolord-apps/opos_backend/public/index.html
 <!DOCTYPE html>
-<html>
-<head><title>PaP Test</title></head>
-<body style="background: orange; padding: 50px; text-align: center;">
-    <h1>📍 Estàs a PaP</h1>
-    <p>Si veus això taronja, el frontend funciona.</p>
-    <div id="res">Esperant API...</div>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaP Sant Llorenç - Què toca avui?</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --organica: #b59a6d; /* Marró suau */
+            --envasos: #e6e600;  /* Groc */
+            --paper: #add8e6;    /* Blau cel */
+            --resta: #a9a9a9;    /* Gris */
+            --text: #2d3748;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header img {
+            max-width: 100px;
+            margin-bottom: 10px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+        }
+
+        .badge-success { background: #c6f6d5; color: #22543d; }
+        .badge-error { background: #fed7d7; color: #822727; }
+
+        .residu-avui {
+            font-size: 2.5rem;
+            margin: 15px 0;
+            font-weight: 800;
+        }
+
+        .icon-box {
+            font-size: 4rem;
+            margin: 20px 0;
+        }
+
+        .properes-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        .proxima-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .proxima-item:last-child { border: none; }
+
+        .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+
+        footer { margin-top: 40px; font-size: 0.8rem; color: #718096; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📍 PaP Sant Llorenç</h1>
+        <p id="data-actual">Carregant...</p>
+    </div>
+
+    <div class="status-card" id="card-principal">
+        <div id="status-badge" class="badge">Comprovant...</div>
+        <div class="icon-box" id="icona-gran">
+            <i class="fas fa-trash-alt"></i>
+        </div>
+        <div class="residu-avui" id="text-avui">...</div>
+        <p id="missatge-hora" style="color: #4a5568;"></p>
+    </div>
+
+    <div class="properes-container">
+        <h3 style="margin-top:0"><i class="far fa-calendar-alt"></i> Properes recollides</h3>
+        <div id="llista-properes">
+            </div>
+    </div>
+
+    <footer>
+        Recollida abans de les 08:00h del matí
+    </footer>
+
     <script>
-        fetch('/api/opos/ping')
-            .then(r => r.json())
-            .then(d => document.getElementById('res').innerText = 'API OK: ' + d.msg)
-            .catch(e => document.getElementById('res').innerText = 'Error API');
+        const icones = {
+            "organica": "fa-apple-whole",
+            "envasos": "fa-bottle-water",
+            "paper_cartro": "fa-box-open",
+            "resta": "fa-dumpster",
+            "bolquers": "fa-baby"
+        };
+
+        const colors = {
+            "organica": "#b59a6d",
+            "envasos": "#e6e600",
+            "paper_cartro": "#add8e6",
+            "resta": "#a9a9a9"
+        };
+
+        async function carregarEstat() {
+            try {
+                const res = await fetch('/api/pap/estat');
+                const data = await res.json();
+
+                // 1. Data i hora
+                const d = new Date(data.data);
+                document.getElementById('data-actual').innerText = d.toLocaleDateString('ca-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+                // 2. Estat actual (Què toca treure)
+                const badge = document.getElementById('status-badge');
+                const textAvui = document.getElementById('text-avui');
+                const icona = document.getElementById('icona-gran');
+                
+                if (data.passatHora) {
+                    badge.className = "badge badge-error";
+                    badge.innerText = "Recollida finalitzada";
+                    document.getElementById('missatge-hora').innerText = "Ja és tard! Les escombraries s'han recollit a les 08:00h.";
+                } else {
+                    badge.className = "badge badge-success";
+                    badge.innerText = "Pots treure la brossa";
+                    document.getElementById('missatge-hora').innerText = "Recorda treure-la abans de les 08:00h.";
+                }
+
+                if (data.avui.length > 0) {
+                    textAvui.innerText = data.avui.map(r => r.nom).join(' + ');
+                    // Canviem icona per la del primer residu que toqui
+                    icona.innerHTML = `<i class="fas ${icones[data.avui[0].id] || 'fa-trash'}"></i>`;
+                    icona.style.color = colors[data.avui[0].id] || '#2d3748';
+                } else {
+                    textAvui.innerText = "Avui no hi ha recollida";
+                    icona.innerHTML = `<i class="fas fa-bed"></i>`;
+                    icona.style.color = "#cbd5e0";
+                }
+
+                // 3. Properes recollides
+                const llista = document.getElementById('llista-properes');
+                llista.innerHTML = '';
+                for (const [nom, temps] of Object.entries(data.properes_recollides)) {
+                    llista.innerHTML += `
+                        <div class="proxima-item">
+                            <span><strong>${nom}</strong></span>
+                            <span style="color: #718096">${temps}</span>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error("Error carregant dades:", error);
+                document.getElementById('text-avui').innerText = "Error de connexió";
+            }
+        }
+
+        carregarEstat();
     </script>
 </body>
 </html>
-EOF
