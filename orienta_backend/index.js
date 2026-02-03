@@ -1,45 +1,28 @@
 const express = require('express');
+const path = require('path');
 const { Pool } = require('pg');
 const app = express();
 const port = 4000;
 
-// Connexió a la base de dades (usant la variable d'entorn del docker-compose)
+// Connexió a la DB (per quan la necessitem)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-app.get('/ping', (req, res) => {
-  res.json({ ok: true, msg: 'pong', db: 'connected' });
+// 1. Endpoints de l'API
+app.get('/api/ping', (req, res) => {
+  res.json({ ok: true, msg: 'Backend d’OrientaTrack operatiu' });
 });
 
-// Endpoint per llistar les rutes de la Fase 1
-app.get('/routes', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT id, name, description FROM ot_routes ORDER BY id DESC');
-    res.json({ ok: true, data: result.rows });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
+// 2. Servir el Frontend (fitxers estàtics)
+// Quan entris a /orientatrack, Express buscarà a la carpeta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Endpoint per veure els punts (checkpoints) d'una ruta
-app.get('/routes/:id/checkpoints', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query(
-      `SELECT id, name, sequence_order, radius_meters, 
-       ST_X(location::geometry) as lng, ST_Y(location::geometry) as lat 
-       FROM ot_checkpoints 
-       WHERE route_id = $1 
-       ORDER BY sequence_order ASC`, 
-      [id]
-    );
-    res.json({ ok: true, data: result.rows });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
+// Qualsevol ruta que no sigui l'API, serveix el frontend (per a SPAs)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`OrientaTrack API corrent al port ${port}`);
+  console.log(`OrientaTrack funcionant a http://localhost:${port}`);
 });

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <title>OrientaTrack - Properament</title>
+    <style>
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f4f8; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        h1 { color: #2d3748; }
+        .status { color: #48bb78; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📍 OrientaTrack</h1>
+        <p>Benvingut al nou servei de Tecnolord.</p>
+        <p class="status">✓ Frontend i Backend connectats</p>
+        <div id="api-status">Comprovant API...</div>
+    </div>
+
+    <script>
+        // Prova de connexió amb el backend
+        fetch('/api/orienta/api/ping')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('api-status').innerText = 'Resposta del backend: ' + data.msg;
+            })
+            .catch(() => {
+                document.getElementById('api-status').innerText = 'Error connectant amb l’API';
+            });
+    </script>
+</body>
+</html>
