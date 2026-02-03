@@ -20,10 +20,11 @@ const nomsResidus = {
   bolquers: "Bolquers i Compreses"
 };
 
-// 1. Servir fitxers estàtics de la carpeta 'public'
+// 1. PRIORITAT MÀXIMA: Servir fitxers reals de la carpeta 'public'
+// Això permet que /icon-512.png o /manifest.json es trobin abans que qualsevol ruta
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 2. Ruta de diagnòstic
+// 2. Rutes de diagnòstic
 app.get('/ping', (req, res) => {
     res.json({ ok: true, msg: "Backend de PaP operatiu" });
 });
@@ -45,7 +46,7 @@ app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) =
     diaObjectiu = (diaAvuiReal === 7 ? 1 : diaAvuiReal + 1);
   }
 
-  // 1. Què toca treure ARA o AQUESTA NIT?
+  // Què toca treure ARA o AQUESTA NIT?
   let queTocaTreure = [];
   for (const [residu, dies] of Object.entries(calendariPaP)) {
     if (dies.includes(diaObjectiu)) {
@@ -53,13 +54,12 @@ app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) =
     }
   }
 
-  // 2. Càlcul de la llista de properes recollides (respecte al moment actual)
+  // Càlcul de la llista de properes recollides
   let properes = {};
   for (const [residu, dies] of Object.entries(calendariPaP)) {
     let diesFaltants = Infinity;
     dies.forEach(diaRecollida => {
       let diff = diaRecollida - diaAvuiReal;
-      // Si ja han passat les 8am d'avui o el dia ja ha passat, mirem setmana vinent
       if (diff < 0 || (diff === 0 && passatHora)) diff += 7;
       if (diff < diesFaltants) diesFaltants = diff;
     });
@@ -75,15 +75,16 @@ app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) =
   res.json({
     ok: true,
     data_servidor: ara,
-    treure: queTocaTreure, // El que l'usuari ha de preparar
+    treure: queTocaTreure, 
     passatHora: passatHora,
     dia_objectiu: diaObjectiu,
     properes_recollides: properes,
-    missatge: passatHora ? "Prepara el que toca per demà al matí" : "Encara pots treure el d'avui!"
+    missatge: passatHora ? "Prepara el que toca per demà al matí" : "Encara ets a temps!"
   });
 });
 
-// 4. Qualsevol altra ruta serveix l'index.html
+// 4. L'ÚLTIM RECURS: Qualsevol altra ruta serveix l'index.html
+// Això permet que les rutes de Caddy com /pap/ funcionin sempre
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
