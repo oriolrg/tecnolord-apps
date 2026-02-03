@@ -1,28 +1,24 @@
 const express = require('express');
 const path = require('path');
-const { Pool } = require('pg');
 const app = express();
-const port = 4000;
+const port = 5000; // 4000 per a orientatrack
 
-// Connexió a la DB (per quan la necessitem)
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-// 1. Endpoints de l'API
-app.get('/api/ping', (req, res) => {
-  res.json({ ok: true, msg: 'Backend Opos operatiu' });
-});
-
-// 2. Servir el Frontend (fitxers estàtics)
-// Quan entris a /opos, Express buscarà a la carpeta 'public'
+// SERVIR EL FRONTEND
+// Qualsevol fitxer dins de la carpeta 'public' es veurà a tecnolord.cat/opos/
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Qualsevol ruta que no sigui l'API, serveix el frontend (per a SPAs)
+// API PING
+// Caddy ja ha retallat el prefix, així que aquí només posem /ping
+app.get('/ping', (req, res) => {
+  res.json({ ok: true, msg: "Backend d’Opos operatiu" });
+});
+
+// FALLBACK PER AL FRONTEND
+// Això permet que si recarregues la pàgina, segueixi funcionant
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`OrientaTrack funcionant a http://localhost:${port}`);
+  console.log(`Servidor opos corrent al port ${port}`);
 });
