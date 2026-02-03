@@ -39,7 +39,13 @@ tecnolord.cat, www.tecnolord.cat {
     try_files {path} /index.html
     file_server
   }
-
+  # PaP: API i Frontend
+  handle_path /api/pap* {
+    reverse_proxy pap_backend:6000
+  }
+  handle_path /pap* {
+    reverse_proxy pap_backend:6000
+  }
   # Redirecció per defecte
   handle / {
     redir /meteo/ 302

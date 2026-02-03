@@ -89,7 +89,7 @@ services:
       - db
     expose:
       - "5000"
-
+  
   # --- UMAMI DB ---
   umami_db:
     image: postgres:16
@@ -118,7 +118,20 @@ services:
       APP_SECRET: ${UMAMI_APP_SECRET}
     expose:
       - "3000"
-
+  # --- PaP (Nou Servei) ---
+  pap_backend:
+    build: 
+      context: ./pap_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - PORT=6000
+    depends_on:
+      - db
+    expose:
+      - "6000"
+  # --- CADDY REVERSE PROXY ---
   caddy:
     image: caddy:2
     restart: unless-stopped
