@@ -57,35 +57,33 @@
             try {
                 // Fem servir 'estat' sense barra inicial per ser relatius al path de Caddy
                 const r = await fetch('estat');
-                if (!r.ok) throw new Error('404');
                 const data = await r.json();
 
-                // Data
-                const dateObj = new Date(data.data_servidor);
-                document.getElementById('current-date').innerText = dateObj.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                const d = new Date(data.data_servidor);
+                document.getElementById('current-date').innerText = d.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
-                // Badge & Msg
                 const badge = document.getElementById('status-badge');
+                const textAvui = document.getElementById('residu-avui');
+                const iconDiv = document.getElementById('main-icon');
+                const timeMsg = document.getElementById('time-msg');
+                
                 if (data.passatHora) {
-                    badge.innerText = "Recollida finalitzada";
-                    badge.className = "badge badge-ko";
-                    document.getElementById('time-msg').innerText = "El camió ha passat a les 08:00h.";
+                    badge.innerText = "Preparar per demà";
+                    badge.className = "badge badge-ok"; // Posem verd perquè "estem a temps" de demà
+                    timeMsg.innerHTML = `<i class="fas fa-moon"></i> Treure aquesta nit (Recollida a les 08:00h)`;
                 } else {
-                    badge.innerText = "Pots treure la brossa";
+                    badge.innerText = "Encara a temps per avui";
                     badge.className = "badge badge-ok";
-                    document.getElementById('time-msg').innerText = "Encara ets a temps (fins les 08:00h).";
+                    timeMsg.innerHTML = `<i class="fas fa-sun"></i> Treure ara mateix! El camió encara no ha passat.`;
                 }
 
-                // Residu Avui
-                const resText = document.getElementById('residu-avui');
-                const iconDiv = document.getElementById('main-icon');
-                if (data.avui.length > 0) {
-                    resText.innerText = data.avui.map(x => x.nom).join(' + ');
-                    const firstId = data.avui[0].id;
+                if (data.treure.length > 0) {
+                    textAvui.innerText = data.treure.map(x => x.nom).join(' + ');
+                    const firstId = data.treure[0].id;
                     iconDiv.innerHTML = `<i class="fas ${ICONS[firstId]}"></i>`;
                     iconDiv.style.color = COLORS[firstId] || '#4a5568';
                 } else {
-                    resText.innerText = "Avui no hi ha recollida";
+                    textAvui.innerText = "Demà no hi ha recollida";
                     iconDiv.innerHTML = `<i class="fas fa-bed"></i>`;
                     iconDiv.style.color = "#cbd5e0";
                 }
