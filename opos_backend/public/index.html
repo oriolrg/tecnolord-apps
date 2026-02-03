@@ -1,5 +1,18 @@
-<h1>Hola! Estàs a OPOS</h1>
-<script>
-  // Prova l'API
-  fetch('/api/opos/ping').then(r => r.json()).then(console.log);
-</script>
+mkdir -p /home/deploy/tecnolord-apps/opos_backend/public
+cat <<EOF > /home/deploy/tecnolord-apps/opos_backend/public/index.html
+<!DOCTYPE html>
+<html>
+<head><title>OPOS Test</title></head>
+<body style="background: orange; padding: 50px; text-align: center;">
+    <h1>📍 Estàs a OPOS</h1>
+    <p>Si veus això taronja, el frontend funciona.</p>
+    <div id="res">Esperant API...</div>
+    <script>
+        fetch('/api/opos/ping')
+            .then(r => r.json())
+            .then(d => document.getElementById('res').innerText = 'API OK: ' + d.msg)
+            .catch(e => document.getElementById('res').innerText = 'Error API');
+    </script>
+</body>
+</html>
+EOF
