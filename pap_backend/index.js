@@ -3,66 +3,37 @@ const path = require('path');
 const app = express();
 const port = 6000;
 
-// --- DADES DEL CALENDARI ---
 const calendariPaP = {
-  organica: [1, 3, 6],    // Dilluns, Dimecres, Dissabte
-  envasos: [1, 5],        // Dilluns, Divendres
-  paper_cartro: [5],      // Divendres
-  resta: [3],             // Dimecres
-  bolquers: [1, 3, 5, 6]  // Dilluns, Dimecres, Divendres, Dissabte
+  organica: [1, 3, 6], envasos: [1, 5], paper_cartro: [5], resta: [3], bolquers: [1, 3, 5, 6]
 };
-
 const nomsResidus = {
-  organica: "Brossa Orgànica",
-  envasos: "Envasos",
-  paper_cartro: "Paper i Cartró",
-  resta: "Resta",
-  bolquers: "Bolquers i Compreses"
+  organica: "Brossa Orgànica", envasos: "Envasos", paper_cartro: "Paper i Cartró", resta: "Resta", bolquers: "Bolquers i Compreses"
 };
 
-// --- SERVIR ESTÀTICS ---
+// 1. Servir estàtics primer
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- RUTES API ---
-
-// Ruta de diagnòstic
-app.get('/ping', (req, res) => {
-    res.json({ ok: true, msg: "Backend de PaP operatiu" });
-});
-
-// Ruta d'estat (Caddy envia /estat o /api/pap/estat)
-app.get(['/estat', '/api/pap/estat'], (req, res) => {
+// 2. Rutes d'API blindades (accepten amb barra i sense barra)
+app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) => {
   const ara = new Date();
-  const diaSetmana = ara.getDay(); // 0 (dg) a 6 (ds)
+  const diaSetmana = ara.getDay();
   const hora = ara.getHours();
-  
   const diaAjustat = diaSetmana === 0 ? 7 : diaSetmana;
 
-  // 1. Què toca avui
   let queTocaAvui = [];
   for (const [residu, dies] of Object.entries(calendariPaP)) {
-    if (dies.includes(diaAjustat)) {
-      queTocaAvui.push({ id: residu, nom: nomsResidus[residu] });
-    }
+    if (dies.includes(diaAjustat)) queTocaAvui.push({ id: residu, nom: nomsResidus[residu] });
   }
 
-  // 2. Calcular propera recollida
   let properes = {};
   for (const [residu, dies] of Object.entries(calendariPaP)) {
     let diesFaltants = Infinity;
     dies.forEach(diaRecollida => {
       let diff = diaRecollida - diaAjustat;
-      // Si és avui i ja han passat les 8:00, o si el dia ja ha passat: mirem la setmana que ve
       if (diff < 0 || (diff === 0 && hora >= 8)) diff += 7;
       if (diff < diesFaltants) diesFaltants = diff;
     });
-    
-    let text = "";
-    if (diesFaltants === 0) text = "Avui mateix";
-    else if (diesFaltants === 1) text = "Demà";
-    else text = `D'aquí a ${diesFaltants} dies`;
-    
-    properes[nomsResidus[residu]] = text;
+    properes[nomsResidus[residu]] = diesFaltants === 0 ? "Avui mateix" : (diesFaltants === 1 ? "Demà" : `D'aquí a ${diesFaltants} dies`);
   }
 
   res.json({
@@ -70,16 +41,13 @@ app.get(['/estat', '/api/pap/estat'], (req, res) => {
     data_servidor: ara,
     avui: queTocaAvui,
     passatHora: hora >= 8,
-    properes_recollides: properes,
-    missatge: hora >= 8 ? "La recollida ja s'ha fet (08:00h)" : "Encara ets a temps!"
+    properes_recollides: properes
   });
 });
 
-// --- EL COMODÍ (*) SEMPRE AL FINAL ---
+// 3. Fallback per HTML
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(port, '0.0.0.0', () => {
-    console.log(`PaP backend corrent al port ${port}`);
-});
+app.listen(port, '0.0.0.0', () => console.log("PaP Backend Running"));

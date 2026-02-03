@@ -115,50 +115,16 @@
 
         async function carregarEstat() {
             try {
-                // Fem servir ruta relativa 'estat' perquè Caddy ens redirigeix al backend correcte
+                // Crida relativa al directori actual
                 const res = await fetch('estat'); 
+                if (!res.ok) throw new Error('Error en la resposta del servidor');
                 const data = await res.json();
-
-                const d = new Date(data.data_servidor);
-                document.getElementById('data-actual').innerText = d.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-
-                const badge = document.getElementById('status-badge');
-                const textAvui = document.getElementById('text-avui');
-                const icona = document.getElementById('icona-gran');
                 
-                if (data.passatHora) {
-                    badge.className = "badge badge-error";
-                    badge.innerText = "Recollida realitzada";
-                    document.getElementById('missatge-hora').innerText = "El camió ja ha passat (08:00h).";
-                } else {
-                    badge.className = "badge badge-success";
-                    badge.innerText = "Pots treure la brossa";
-                    document.getElementById('missatge-hora').innerText = "Recorda treure-la abans de les 08:00h.";
-                }
-
-                if (data.avui.length > 0) {
-                    textAvui.innerText = data.avui.map(r => r.nom).join(' + ');
-                    icona.innerHTML = `<i class="fas ${icones[data.avui[0].id] || 'fa-trash'}"></i>`;
-                    icona.style.color = colors[data.avui[0].id] || '#2d3748';
-                } else {
-                    textAvui.innerText = "Avui no hi ha recollida";
-                    icona.innerHTML = `<i class="fas fa-bed"></i>`;
-                    icona.style.color = "#cbd5e0";
-                }
-
-                const llista = document.getElementById('llista-properes');
-                llista.innerHTML = '';
-                for (const [nom, temps] of Object.entries(data.properes_recollides)) {
-                    llista.innerHTML += `
-                        <div class="proxima-item">
-                            <span><strong>${nom}</strong></span>
-                            <span>${temps}</span>
-                        </div>`;
-                }
-
+                // ... resta del codi que ja tens per pintar la pantalla ...
+                
             } catch (error) {
-                document.getElementById('text-avui').innerText = "Error de connexió";
-                console.error(error);
+                console.error("Error detallat:", error);
+                document.getElementById('text-avui').innerText = "Error de dades";
             }
         }
 
