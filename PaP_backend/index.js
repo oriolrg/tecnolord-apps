@@ -14,5 +14,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, '0.0.0.0', () => {
-    console.log("PaP backend a punt al port 6000");
+    console.log("PaP backend a punt al portt 6000");
 });
