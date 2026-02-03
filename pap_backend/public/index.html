@@ -3,25 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PaP Sant Llorenç - Estat</title>
+    <title>PaP Sant Llorenç</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --bg: #f0f2f5;
-            --card: #ffffff;
-            --text: #1a202c;
-            --organica: #8d6e63;
-            --envasos: #f6e05e;
-            --success: #48bb78;
-            --error: #f56565;
-        }
+        :root { --bg: #f0f2f5; --card: #ffffff; --text: #1a202c; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .header { text-align: center; margin-bottom: 20px; }
         .card { background: var(--card); border-radius: 15px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
         .badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; }
         .badge-ok { background: #c6f6d5; color: #22543d; }
-        .badge-ko { background: #fed7d7; color: #822727; }
-        .icon { font-size: 3.5rem; margin: 15px 0; color: #4a5568; }
+        .icon { font-size: 3.5rem; margin: 15px 0; }
         .residu-nom { font-size: 1.8rem; font-weight: bold; margin-bottom: 5px; }
         .properes { width: 100%; max-width: 450px; margin-top: 20px; background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .proxima-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #edf2f7; }
@@ -37,17 +28,15 @@
 
     <div class="card">
         <div id="status-badge" class="badge">Sincronitzant...</div>
-        <div id="main-icon" class="icon"><i class="fas fa-circle-notch fa-spin"></i></div>
-        <div id="residu-avui" class="residu-nom">Carregant...</div>
-        <p id="time-msg" style="font-size: 0.9rem;"></p>
+        <div id="main-icon" class="icon"><i class="fas fa-sync fa-spin"></i></div>
+        <div id="residu-text" class="residu-nom">Carregant...</div>
+        <p id="time-msg" style="font-size: 0.9rem; color: #4a5568;"></p>
     </div>
 
     <div class="properes">
-        <h4 style="margin: 0 0 10px 0;">Calendari de recollida</h4>
+        <h4 style="margin: 0 0 10px 0;">Properes recollides</h4>
         <div id="next-list"></div>
     </div>
-
-    <footer><p style="font-size: 0.7rem; color: #a0aec0; margin-top: 30px;">Recollida diària a les 08:00h</p></footer>
 
     <script>
         const ICONS = { "organica": "fa-apple-whole", "envasos": "fa-bottle-water", "paper_cartro": "fa-box-open", "resta": "fa-dumpster", "bolquers": "fa-baby" };
@@ -55,51 +44,54 @@
 
         async function updateUI() {
             try {
-                // Fem servir 'estat' sense barra inicial per ser relatius al path de Caddy
-                const r = await fetch('estat');
+                // Afegim un timestamp per saltar-nos la cache del navegador
+                const r = await fetch('estat?v=' + Date.now());
                 const data = await r.json();
 
-                const d = new Date(data.data_servidor);
-                document.getElementById('current-date').innerText = d.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                // Data actual
+                const dateObj = new Date(data.data_servidor);
+                document.getElementById('current-date').innerText = dateObj.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
+                // Missatges segons l'hora
                 const badge = document.getElementById('status-badge');
-                const textAvui = document.getElementById('residu-avui');
-                const iconDiv = document.getElementById('main-icon');
                 const timeMsg = document.getElementById('time-msg');
                 
                 if (data.passatHora) {
                     badge.innerText = "Preparar per demà";
-                    badge.className = "badge badge-ok"; // Posem verd perquè "estem a temps" de demà
-                    timeMsg.innerHTML = `<i class="fas fa-moon"></i> Treure aquesta nit (Recollida a les 08:00h)`;
-                } else {
-                    badge.innerText = "Encara a temps per avui";
                     badge.className = "badge badge-ok";
-                    timeMsg.innerHTML = `<i class="fas fa-sun"></i> Treure ara mateix! El camió encara no ha passat.`;
+                    timeMsg.innerHTML = `<i class="fas fa-moon"></i> Treure aquesta nit`;
+                } else {
+                    badge.innerText = "Encara a temps";
+                    badge.className = "badge badge-ok";
+                    timeMsg.innerHTML = `<i class="fas fa-sun"></i> Treure abans de les 08:00h`;
                 }
 
-                if (data.treure.length > 0) {
-                    textAvui.innerText = data.treure.map(x => x.nom).join(' + ');
+                // MOSTRAR RESIDU (clau 'treure' del nou backend)
+                const resText = document.getElementById('residu-text');
+                const iconDiv = document.getElementById('main-icon');
+                
+                if (data.treure && data.treure.length > 0) {
+                    resText.innerText = data.treure.map(x => x.nom).join(' + ');
                     const firstId = data.treure[0].id;
                     iconDiv.innerHTML = `<i class="fas ${ICONS[firstId]}"></i>`;
                     iconDiv.style.color = COLORS[firstId] || '#4a5568';
                 } else {
-                    textAvui.innerText = "Demà no hi ha recollida";
+                    resText.innerText = "No hi ha recollida";
                     iconDiv.innerHTML = `<i class="fas fa-bed"></i>`;
                     iconDiv.style.color = "#cbd5e0";
                 }
 
-                // Llista properes
+                // Llista inferior
                 const list = document.getElementById('next-list');
                 list.innerHTML = Object.entries(data.properes_recollides).map(([nom, temps]) => `
                     <div class="proxima-row">
                         <span><strong>${nom}</strong></span>
-                        <span style="color: #4a5568">${temps}</span>
+                        <span>${temps}</span>
                     </div>
                 `).join('');
 
             } catch (e) {
-                document.getElementById('residu-avui').innerText = "Error de connexió";
-                console.error("Fetch error:", e);
+                document.getElementById('residu-text').innerText = "Error de connexió";
             }
         }
         updateUI();
