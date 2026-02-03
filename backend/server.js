@@ -762,6 +762,9 @@ function checkApiKey(req, res, next) {
 
 // ──────────────────────────────────────────────────────────
 // Pull d’Ecowitt → meteo.mesures (amb fallback)
+//“Si Ecowitt retorna data buida -> usar fallback”
+//“Mai inserir all-null”
+//“instant sempre ve d’epoch Ecowitt, no de now()”
 async function pullEcowittAndSave() {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
   const codi = process.env.ESTACIO_CODI || process.env.STATION_ID || process.env.STATION_CODE || 'home';

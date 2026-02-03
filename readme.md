@@ -301,3 +301,11 @@ Opcional futur:
 * El control temporal és exclusivament a cron
 * Els endpoints `/api/tasks/*` són interns
 
+
+Títol: “Fallback Ecowitt quan no hi ha dades”
+
+Què es considera fallada (ex: data: {} o tots els camps null)
+
+Què fa el sistema (no inserir registre buit; intentar font alternativa; si també falla, només log i sortir 200/500 segons decideixis)
+
+Com provar-ho (comanda de test manual)

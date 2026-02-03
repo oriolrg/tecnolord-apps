@@ -8,6 +8,10 @@ tecnolord.cat, www.tecnolord.cat {
   handle @py {
     reverse_proxy api_py:8000
   }
+  
+  handle_path /api/orienta* {
+    reverse_proxy orienta_backend:4000
+  }
 
   @api path /api/* /api/v1/*
   handle @api {
@@ -19,7 +23,10 @@ tecnolord.cat, www.tecnolord.cat {
     try_files {path} /index.html
     file_server
   }
-
+  handle_path /orientatrack* {
+    # Si de moment només vols proxy al backend:
+    reverse_proxy orienta_backend:4000
+  }
   handle / {
     redir /meteo/ 302
   }
