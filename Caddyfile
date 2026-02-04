@@ -1,12 +1,12 @@
 tecnolord.cat, www.tecnolord.cat {
   encode gzip zstd
 
-  # --- APIs específiques ---
+  # --- APIs ---
   handle_path /api/pap* {
     reverse_proxy pap_backend:6000
   }
 
-  # Unifiquem l'API d'OrientaTrack al port 4000 (com hem posat al teu index.js)
+  # L'API d'OrientaTrack
   handle_path /api/orienta* {
     reverse_proxy orientatrack:4000
   }
@@ -15,43 +15,30 @@ tecnolord.cat, www.tecnolord.cat {
     reverse_proxy opos_backend:5000
   }
 
-  # --- FRONTENDS (subdirectoris) ---
+  # --- FRONTENDS ---
 
-  # OrientaTrack: DELEGEM TOT A NODE.JS
-  # Ja no usem /srv/, així Express serveix el JS de la seva carpeta 'public'
-  handle_path /orientatrack* {
+  # OrientaTrack (Frontend + Backend unificats)
+  # Fem servir handle (sense path) per passar la ruta sencera a Node
+  handle /orientatrack* {
     header -Content-Security-Policy
     reverse_proxy orientatrack:4000
   }
 
-  # PaP (Porta a Porta)
   handle_path /pap* {
     reverse_proxy pap_backend:6000
   }
 
-  # Opos
   handle_path /opos* {
     reverse_proxy opos_backend:5000
   }
 
-  # --- Rutes preexistents (MeteoLord i IA) ---
-  @py path /api/v1/kpis* /api/v1/forecast* /health
-  handle @py {
-    reverse_proxy api_py:8000
-  }
-
-  @api path /api/* /api/v1/*
-  handle @api {
-    reverse_proxy backend:3000
-  }
-
+  # --- Altres ---
   handle_path /meteo* {
     root * /srv
     try_files {path} /index.html
     file_server
   }
 
-  # --- Redirecció d'arrel ---
   handle / {
     redir /meteo/ 302
   }
