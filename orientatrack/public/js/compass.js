@@ -167,8 +167,9 @@ document.getElementById('btn-permis').onclick = async () => {
     // OPCIÓ GUANYADORA: ICGC (Topogràfic d'alta qualitat)
     // Funciona sempre, és ràpid i perfecte per a Rogaine a Catalunya.
     // =========================================================================
-    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
-        attribution: 'ICGC',
+   // Aquest és el mapa de Relleu Ombrejat (Molt més net)
+    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/relleu/GRID3857/{z}/{x}/{y}.jpeg', {
+        attribution: 'ICGC Relleu',
         maxZoom: 18,
         minZoom: 7
     }).addTo(map);
