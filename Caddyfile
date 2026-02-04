@@ -6,8 +6,9 @@ tecnolord.cat, www.tecnolord.cat {
     reverse_proxy pap_backend:6000
   }
 
+  # Unifiquem l'API d'OrientaTrack al port 6000 (com hem posat al teu index.js)
   handle_path /api/orienta* {
-    reverse_proxy orientatrack:4000
+    reverse_proxy orientatrack:6000
   }
 
   handle_path /api/opos* {
@@ -16,24 +17,19 @@ tecnolord.cat, www.tecnolord.cat {
 
   # --- FRONTENDS (subdirectoris) ---
 
-  # OrientaTrack FRONTEND estàtic (SPA/PWA)
+  # OrientaTrack: DELEGEM TOT A NODE.JS
+  # Ja no usem /srv/, així Express serveix el JS de la seva carpeta 'public'
   handle_path /orientatrack* {
-    # Per evitar CSP heretat o headers que trenquin scripts
-    header {
-      -Content-Security-Policy
-    }
-
-    root * /srv/orientatrack
-    try_files {path} /index.html
-    file_server
+    header -Content-Security-Policy
+    reverse_proxy orientatrack:6000
   }
 
-  # PaP (ara mateix el tens com a backend; si és frontend, canvia'l com orientatrack)
+  # PaP (Porta a Porta)
   handle_path /pap* {
     reverse_proxy pap_backend:6000
   }
 
-  # Opos (idem)
+  # Opos
   handle_path /opos* {
     reverse_proxy opos_backend:5000
   }
