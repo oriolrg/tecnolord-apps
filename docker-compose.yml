@@ -67,7 +67,8 @@ services:
   # --- ORIENTATRACK (BACKEND API) ---
   orientatrack:
     build:
-      context: ./orientatrack/backend
+      context: ./orientatrack          # Pugem el context a la carpeta pare
+      dockerfile: backend/Dockerfile   # Indiquem on és el Dockerfile realment
     restart: unless-stopped
     env_file: .env
     environment:
