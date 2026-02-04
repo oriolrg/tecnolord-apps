@@ -1,6 +1,5 @@
 import { calcularDistancia, calcularRumb } from './geo.js';
 
-// --- CONFIGURACIÓ ---
 const PUNT_OBJECTIU = { 
     id: "cp-1",
     lat: 42.1363379, 
@@ -12,52 +11,36 @@ const PUNT_OBJECTIU = {
 let map;
 let segonsDinsRadi = 0;
 
-// --- MOTOR D'ESCALA CARTOGRÀFICA ---
-function actualitzarEscala() {
+function actualitzarLlegenda() {
     if (!map) return;
     
-    // 1. Càlcul del Regle de la Brúixola (Metres per cada cm físic)
-    const center = map.getCenter();
+    // 1. Calculem metres en 38 píxels (aprox 1cm físic)
     const y = map.getSize().y / 2;
     const x = map.getSize().x / 2;
-    
-    // Calculem la distància que representen 38 píxels (~1cm)
     const p1 = map.containerPointToLatLng([x, y]);
     const p2 = map.containerPointToLatLng([x + 38, y]);
     const metresPerCm = map.distance(p1, p2);
 
-    // Actualitzem les etiquetes del regle (0, 1, 2, 3, 4)
-    const marks = document.querySelectorAll('.ruler span');
-    marks.forEach((span, i) => {
-        if (i === 0) return;
-        const d = Math.round(metresPerCm * i);
-        const label = d >= 1000 ? (d/1000).toFixed(1) + 'k' : d + 'm';
-        span.setAttribute('data-dist', label);
-    });
+    // 2. Busquem una unitat mètrica visual per la barra (100, 200, 500...)
+    let unitatMetres = 100;
+    if (metresPerCm > 150) unitatMetres = 200;
+    if (metresPerCm > 350) unitatMetres = 500;
+    if (metresPerCm > 750) unitatMetres = 1000;
 
-    // 2. Càlcul de la Llegenda Gràfica (Barra d'escala)
-    // Busquem una unitat "rodona" (100m, 200m, 500m, 1km...)
-    let unitatRodona = 100;
-    if (metresPerCm > 150) unitatRodona = 200;
-    if (metresPerCm > 350) unitatRodona = 500;
-    if (metresPerCm > 750) unitatRodona = 1000;
-
-    // Calculem quants píxels ha de tenir la barra per representar aquesta unitat
     const pixelsPerMetre = 38 / metresPerCm;
-    const barWidth = unitatRodona * pixelsPerMetre;
+    const barWidth = unitatMetres * pixelsPerMetre;
 
     const scaleBar = document.getElementById('scale-bar');
     scaleBar.style.width = `${barWidth}px`;
-    scaleBar.style.backgroundSize = `${barWidth / 2}px 6px`; // Efecte cebra
+    scaleBar.style.backgroundSize = `${barWidth / 2}px 6px`;
     
-    document.getElementById('scale-label').innerText = unitatRodona >= 1000 ? (unitatRodona/1000) + ' km' : unitatRodona + ' m';
+    document.getElementById('scale-label').innerText = unitatMetres >= 1000 ? (unitatMetres/1000) + ' km' : unitatMetres + ' m';
     
-    // Escala Numèrica aproximada (Metres en 1cm * 100 per treure cm)
+    // Escala Numèrica (1:X) - 1cm de mapa : X cm de realitat
     const escalaNum = Math.round(metresPerCm * 100);
     document.getElementById('numeric-scale').innerText = `1 : ${escalaNum.toLocaleString()}`;
 }
 
-// --- MAPA ---
 function inicialitzarMapa() {
     map = L.map('map', {
         zoomControl: false,
@@ -70,16 +53,15 @@ function inicialitzarMapa() {
         maxZoom: 18, minZoom: 14
     }).addTo(map);
 
-    // Escoltadors d'esdeveniments per l'escala
-    map.on('zoomend moveend load', actualitzarEscala);
-    actualitzarEscala(); // Inicial
+    map.on('zoomend moveend load', actualitzarLlegenda);
+    actualitzarLlegenda();
 
     L.circle([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], {
         color: '#ff00ff', weight: 3, fillOpacity: 0.1, radius: PUNT_OBJECTIU.radius_m
     }).addTo(map);
 }
 
-// --- ARROSSEGAMENT BRÚIXOLA ---
+// Draggable
 interact('.draggable').draggable({
     listeners: {
         move(event) {
@@ -93,7 +75,6 @@ interact('.draggable').draggable({
     }
 });
 
-// --- SENSORS ---
 function handleOrientation(event) {
     let heading = event.webkitCompassHeading || (360 - event.alpha);
     if (heading !== undefined && heading !== null) {
