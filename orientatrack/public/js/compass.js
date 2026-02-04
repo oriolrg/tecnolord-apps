@@ -10,13 +10,12 @@ const PUNT_OBJECTIU = {
 
 let map;
 let segonsDinsRadi = 0;
-let lastHeading = 0;
+let lastAngle = 0;
 
 // MOTOR D'ESCALA CARTOGRÀFICA
 function actualitzarLlegenda() {
     if (!map) return;
     
-    // Calculem metres en 38 píxels (~1cm físic) al centre del mapa
     const y = map.getSize().y / 2;
     const x = map.getSize().x / 2;
     const p1 = map.containerPointToLatLng([x, y]);
@@ -83,19 +82,21 @@ interact('.draggable').draggable({
 
 function handleOrientation(event) {
     let heading = event.webkitCompassHeading || (360 - event.alpha);
-    
     if (heading !== undefined && heading !== null) {
         const angle = Math.round(heading);
         
-        // Evitar el gir erratic al salt 360 -> 0
-        // No apliquem lògica complexa per ara, però el "transition linear" al CSS ajuda molt
-        const display = document.getElementById('heading-display');
+        // Suavització per evitar el gir erratic al salt 0/360
+        // Si el canvi és massa gran (ex. de 359 a 1), no fem transició llarga
         const bezel = document.getElementById('bezel');
-        
-        if (display) display.innerText = `${angle}°`;
-        if (bezel) bezel.style.transform = `rotate(${-angle}deg)`;
-        
-        lastHeading = angle;
+        if (Math.abs(angle - lastAngle) > 180) {
+            bezel.style.transition = 'none';
+        } else {
+            bezel.style.transition = 'transform 0.1s linear';
+        }
+
+        document.getElementById('heading-display').innerText = `${angle}°`;
+        bezel.style.transform = `rotate(${-angle}deg)`;
+        lastAngle = angle;
     }
 }
 
