@@ -12,21 +12,21 @@ const PUNT_OBJECTIU = {
 let map;
 let segonsDinsRadi = 0;
 
-// --- LÒGICA D'ESCALA DINÀMICA ---
+// --- MOTOR D'ESCALA CARTOGRÀFICA ---
 function actualitzarEscala() {
     if (!map) return;
     
-    // Calculem la distància real que representen 100px al centre del mapa
+    // 1. Càlcul del Regle de la Brúixola (Metres per cada cm físic)
+    const center = map.getCenter();
     const y = map.getSize().y / 2;
     const x = map.getSize().x / 2;
+    
+    // Calculem la distància que representen 38 píxels (~1cm)
     const p1 = map.containerPointToLatLng([x, y]);
-    const p2 = map.containerPointToLatLng([x + 100, y]);
-    const metresPer100px = map.distance(p1, p2);
+    const p2 = map.containerPointToLatLng([x + 38, y]);
+    const metresPerCm = map.distance(p1, p2);
 
-    // Suposem que 1cm físic a la pantalla són aprox 38 píxels (mitjana mòbil)
-    const metresPerCm = (metresPer100px / 100) * 38;
-
-    // Actualitzem les marques del regle (0, 1, 2, 3, 4 cm)
+    // Actualitzem les etiquetes del regle (0, 1, 2, 3, 4)
     const marks = document.querySelectorAll('.ruler span');
     marks.forEach((span, i) => {
         if (i === 0) return;
@@ -35,10 +35,26 @@ function actualitzarEscala() {
         span.setAttribute('data-dist', label);
     });
 
-    // Actualitzem escala numèrica al visor superior
-    // Nota: L'escala numèrica és aproximada ja que depèn de la DPI del dispositiu
-    const zoom = map.getZoom();
-    document.getElementById('map-scale-text').innerText = `Zoom: ${zoom} | 1cm ≈ ${Math.round(metresPerCm)}m`;
+    // 2. Càlcul de la Llegenda Gràfica (Barra d'escala)
+    // Busquem una unitat "rodona" (100m, 200m, 500m, 1km...)
+    let unitatRodona = 100;
+    if (metresPerCm > 150) unitatRodona = 200;
+    if (metresPerCm > 350) unitatRodona = 500;
+    if (metresPerCm > 750) unitatRodona = 1000;
+
+    // Calculem quants píxels ha de tenir la barra per representar aquesta unitat
+    const pixelsPerMetre = 38 / metresPerCm;
+    const barWidth = unitatRodona * pixelsPerMetre;
+
+    const scaleBar = document.getElementById('scale-bar');
+    scaleBar.style.width = `${barWidth}px`;
+    scaleBar.style.backgroundSize = `${barWidth / 2}px 6px`; // Efecte cebra
+    
+    document.getElementById('scale-label').innerText = unitatRodona >= 1000 ? (unitatRodona/1000) + ' km' : unitatRodona + ' m';
+    
+    // Escala Numèrica aproximada (Metres en 1cm * 100 per treure cm)
+    const escalaNum = Math.round(metresPerCm * 100);
+    document.getElementById('numeric-scale').innerText = `1 : ${escalaNum.toLocaleString()}`;
 }
 
 // --- MAPA ---
@@ -54,16 +70,16 @@ function inicialitzarMapa() {
         maxZoom: 18, minZoom: 14
     }).addTo(map);
 
-    // Escoltadors per actualitzar el regle
-    map.on('zoomend moveend', actualitzarEscala);
-    actualitzarEscala(); // Primera càrrega
+    // Escoltadors d'esdeveniments per l'escala
+    map.on('zoomend moveend load', actualitzarEscala);
+    actualitzarEscala(); // Inicial
 
     L.circle([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], {
         color: '#ff00ff', weight: 3, fillOpacity: 0.1, radius: PUNT_OBJECTIU.radius_m
     }).addTo(map);
 }
 
-// --- ARROSSEGAMENT ---
+// --- ARROSSEGAMENT BRÚIXOLA ---
 interact('.draggable').draggable({
     listeners: {
         move(event) {
@@ -74,8 +90,7 @@ interact('.draggable').draggable({
             t.setAttribute('data-x', x);
             t.setAttribute('data-y', y);
         }
-    },
-    inertia: true
+    }
 });
 
 // --- SENSORS ---
