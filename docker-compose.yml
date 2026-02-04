@@ -65,7 +65,7 @@ services:
   # --- ORIENTATRACK ---
   orientatrack:
     build: 
-      context: ./orientatrack
+      context: ./orientatrack/backend
     restart: unless-stopped
     env_file: .env
     environment:
