@@ -163,17 +163,18 @@ document.getElementById('btn-permis').onclick = async () => {
     }).setView([42.135, 1.592], 15);
 
     // =========================================================================
-    // OPCIÓ A: MAPANT (Cartografia específica d'Orientació)
+    // OPCIÓ A: MAPANT (URL CORREGIDA)
     // =========================================================================
-    L.tileLayer('https://tiles.mapant.es/tiles/{z}/{x}/{y}.png', {
+    // He tret el "tiles." del principi i he ajustat la ruta
+    L.tileLayer('https://mapant.es/tiles/{z}/{x}/{y}.png', {
         minZoom: 4,
         maxZoom: 18,
-        tms: false, // Mapant usa l'estàndard XYZ, no TMS
-        attribution: 'Mapant.es | Cartografia d\'Orientació'
+        opacity: 1.0,
+        attribution: 'Mapant.es'
     }).addTo(map);
 
     // =========================================================================
-    // OPCIÓ B: ICGC (Topogràfic clàssic) - COMENTAT PER DEFECTE
+    // OPCIÓ B: ICGC (Capa de seguretat si l'anterior falla)
     // =========================================================================
     /*
     L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
@@ -181,7 +182,6 @@ document.getElementById('btn-permis').onclick = async () => {
         maxZoom: 18
     }).addTo(map);
     */
-    // =========================================================================
 
     map.on('zoomend moveend load', actualitzarLlegenda);
     
