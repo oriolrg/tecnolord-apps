@@ -44,14 +44,15 @@
 
         /* BRÚIXOLA DE PLACA */
         #compass-plate {
-            position: absolute; top: 100px; right: 20px;
-            width: 180px; height: 280px;
+            position: absolute; top: 80px; right: 10px;
+            /* Mida proporcional: 45% de l'ample i alçada basada en ràtio 1.6 */
+            width: 45vw; max-width: 180px; 
+            height: 72vw; max-height: 288px;
             background: var(--glass);
-            backdrop-filter: blur(2px);
-            border: 1px solid rgba(0,0,0,0.1);
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(0,0,0,0.3);
             z-index: 100; touch-action: none; cursor: move;
             border-top-left-radius: 0;
-            overflow: hidden; /* Manté els regles dins */
         }
 
         /* REGLE SUPERIOR (Marge extrem) */
