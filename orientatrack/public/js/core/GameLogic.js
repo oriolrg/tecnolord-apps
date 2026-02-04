@@ -38,20 +38,24 @@ export class GameLogic {
     }
 
     // AQUESTA FUNCIÓ FA FUNCIONAR EL TEU MENÚ
+    // Dins de la classe GameLogic a js/core/GameLogic.js
     generarLlistaFitesHTML(contenidor, callbackSeleccio) {
-        contenidor.innerHTML = '<h4 style="margin:10px; color:#333">Selecciona Objectiu:</h4>';
+        // Netegem i posem títol
+        contenidor.innerHTML = '<div style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Objectius de la ruta</div>';
+        
         this.fites.forEach((f, i) => {
             const div = document.createElement('div');
-            div.className = 'fita-item';
-            const esActual = (i === this.indexFitaActual);
-            div.style.padding = "10px";
-            div.style.borderBottom = "1px solid #eee";
-            div.style.background = esActual ? "#e6f4ff" : "white";
-            
+            div.style.padding = "15px";
+            div.style.borderBottom = "1px solid #f0f0f0";
+            div.style.display = "flex";
+            div.style.justifyContent = "space-between";
+            div.style.background = (i === this.indexFitaActual) ? "#ebf8ff" : "white";
+
             div.innerHTML = `
-                <span>${f.nom}</span>
-                <small style="float:right">${esActual ? '📍' : 'Anar-hi'}</small>
+                <span style="font-weight:${i === this.indexFitaActual ? 'bold' : 'normal'}">${f.nom}</span>
+                <span style="color:#3182ce; font-size:0.8rem;">${i === this.indexFitaActual ? '📍 ACTUAL' : 'Seleccionar'}</span>
             `;
+
             div.onclick = () => callbackSeleccio(i);
             contenidor.appendChild(div);
         });
