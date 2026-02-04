@@ -5,7 +5,7 @@ let fites = [];
 let indexFitaActual = 0;
 let segonsDinsRadi = 0;
 
-// --- PROCESSAR GPX PER DISTÀNCIA (1 cada 1km real) ---
+// --- 1. PROCESSAR GPX PER DISTÀNCIA (1 cada 1km real) ---
 async function carregarRutaGPX() {
     try {
         const response = await fetch('data/ruta.gpx');
@@ -28,7 +28,7 @@ async function carregarRutaGPX() {
                 const prevLon = parseFloat(pts[i-1].getAttribute("lon"));
                 acumuladorDistancia += calcularDistancia(prevLat, prevLon, lat, lon);
 
-                // Només creem fita quan hem recorregut 1000 metres des de l'última
+                // Quan portem 1000m acumulats des de l'última fita, en creem una de nova
                 if (acumuladorDistancia >= 1000) {
                     afegirFita(llista, lat, lon);
                     acumuladorDistancia = 0;
@@ -52,14 +52,29 @@ function afegirFita(llista, lat, lon) {
     });
 }
 
+// --- 2. DIBUIXAR FITES AMB NÚMERO ---
 function dibuixarFitesMapa() {
-    fites.forEach(f => {
+    if (!map) return;
+    fites.forEach((f, i) => {
+        const num = i + 1;
+        
+        // Cercle de validació (molt subtil)
         L.circle([f.lat, f.lon], { 
             color: '#ff00ff', 
-            weight: 2, 
+            weight: 1, 
             fillOpacity: 0.05, 
             radius: f.radius_m 
         }).addTo(map);
+
+        // Marcador amb número (Estil orientació)
+        const fitaIcon = L.divIcon({
+            className: 'fita-icon',
+            html: `<span>${num}</span>`,
+            iconSize: [24, 24]
+        });
+
+        L.marker([f.lat, f.lon], { icon: fitaIcon }).addTo(map)
+         .on('click', () => seleccionarFita(i));
     });
 }
 
@@ -69,19 +84,23 @@ function actualitzarUIObjectiu() {
     }
 }
 
-// --- LÒGICA ARROSSEGAMENT (RECUPERADA) ---
+function seleccionarFita(index) {
+    indexFitaActual = index;
+    actualitzarUIObjectiu();
+    document.getElementById('fites-menu').style.display = 'none';
+    
+    // Centrem el mapa una mica cap a la fita per ajudar a localitzar-la
+    map.panTo([fites[index].lat, fites[index].lon]);
+}
+
+// --- 3. LÒGICA ARROSSEGAMENT BRÚIXOLA ---
 interact('.draggable').draggable({
     listeners: {
         move(event) {
             const t = event.target;
-            // Recuperem x i y de data-attrs o 0
             const x = (parseFloat(t.getAttribute('data-x')) || 0) + event.dx;
             const y = (parseFloat(t.getAttribute('data-y')) || 0) + event.dy;
-
-            // Apliquem la transformació
             t.style.transform = `translate(${x}px, ${y}px)`;
-
-            // Guardem la posició nova
             t.setAttribute('data-x', x);
             t.setAttribute('data-y', y);
         }
@@ -89,7 +108,7 @@ interact('.draggable').draggable({
     inertia: true
 });
 
-// --- SENSORS I NAVEGACIÓ ---
+// --- 4. SENSORS I NAVEGACIÓ ---
 function handleOrientation(event) {
     let heading = event.webkitCompassHeading || (360 - event.alpha);
     if (heading !== undefined) {
@@ -109,7 +128,6 @@ function actualitzarNavegacio(pos) {
     document.getElementById('target-bearing').innerText = Math.round(r) + "°";
     document.getElementById('target-distance').innerText = Math.round(d) + " m";
 
-    // Validació 3 segons
     if (d <= target.radius_m && accuracy < 30) {
         segonsDinsRadi++;
         if (segonsDinsRadi >= 3) {
@@ -119,8 +137,6 @@ function actualitzarNavegacio(pos) {
             if (indexFitaActual < fites.length - 1) {
                 indexFitaActual++;
                 actualitzarUIObjectiu();
-            } else {
-                alert("🏆 Ruta Finalitzada!");
             }
         }
     } else { segonsDinsRadi = 0; }
@@ -130,7 +146,7 @@ function actualitzarLlegenda() {
     if (!map) return;
     const center = map.getCenter();
     const p1 = map.latLngToContainerPoint(center);
-    const p2 = L.point(p1.x + 38, p1.y); // 1cm
+    const p2 = L.point(p1.x + 38, p1.y); 
     const metresPerCm = map.distance(center, map.containerPointToLatLng(p2));
 
     document.getElementById('numeric-scale').innerText = `1 : ${Math.round(metresPerCm * 100).toLocaleString()}`;
@@ -140,16 +156,39 @@ function actualitzarLlegenda() {
     document.getElementById('scale-label').innerText = unitat + " m";
 }
 
-// --- BOTÓ FITES (JS SCOPE) ---
-document.getElementById('btn-fites').onclick = () => {
+// --- 5. MENÚ SELECTOR DE FITES ---
+document.getElementById('btn-fites').onclick = (e) => {
+    e.stopPropagation();
+    const menu = document.getElementById('fites-menu');
+    
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        return;
+    }
+
     if (fites.length === 0) {
         alert("Encara no s'ha carregat cap ruta.");
-    } else {
-        alert(`Ruta activa: ${fites.length} fites.\nObjectiu: ${fites[indexFitaActual].nom}`);
+        return;
     }
+
+    menu.innerHTML = '<h4 style="margin:10px 15px; color:#4a5568">Selecciona Fita:</h4>';
+    fites.forEach((f, i) => {
+        const div = document.createElement('div');
+        div.className = 'fita-item';
+        const esActual = (i === indexFitaActual);
+        
+        div.innerHTML = `
+            <span style="${esActual ? 'font-weight:bold; color:var(--primary);' : ''}">${f.nom}</span>
+            <small style="color:#a0aec0">${esActual ? '📍 Destí' : 'Anar-hi'}</small>
+        `;
+        div.onclick = () => seleccionarFita(i);
+        menu.appendChild(div);
+    });
+
+    menu.style.display = 'block';
 };
 
-// --- ACTIVACIÓ ---
+// --- 6. ACTIVACIÓ ---
 document.getElementById('btn-permis').onclick = async () => {
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         await DeviceOrientationEvent.requestPermission();
@@ -157,35 +196,16 @@ document.getElementById('btn-permis').onclick = async () => {
     window.addEventListener('deviceorientationabsolute', handleOrientation, true);
     navigator.geolocation.watchPosition(actualitzarNavegacio, null, { enableHighAccuracy: true });
     
-    // Creem el mapa centrat a la zona del teu GPX (Sant Llorenç de Morunys aprox)
-    map = L.map('map', { 
-        zoomControl: false, 
-        attributionControl: false 
-    }).setView([42.135, 1.592], 15);
-
-    // =========================================================================
-    // OPCIÓ GUANYADORA: ICGC (Topogràfic d'alta qualitat)
-    // Funciona sempre, és ràpid i perfecte per a Rogaine a Catalunya.
-    // =========================================================================
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([42.135, 1.592], 15);
+    
+    // ICGC Topogràfic Gris (Neteja visual)
     L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topogris/GRID3857/{z}/{x}/{y}.jpeg', {
-        attribution: 'ICGC',
-        maxZoom: 18,
-        minZoom: 7
+        attribution: 'ICGC', maxZoom: 18
     }).addTo(map);
-
-    // =========================================================================
-    // OPCIÓ MAPANT: Bloquejada actualment per política de seguretat externa
-    // =========================================================================
-    /*
-    L.tileLayer('https://mapant.es/tiles/{z}/{x}/{y}.png', {
-        attribution: 'Mapant.es'
-    }).addTo(map);
-    */
 
     map.on('zoomend moveend load', actualitzarLlegenda);
+    map.on('click', () => document.getElementById('fites-menu').style.display = 'none');
     
-    // Carreguem les fites del fitxer ruta.gpx
     carregarRutaGPX();
-    
     document.getElementById('btn-permis').style.display = 'none';
 };
