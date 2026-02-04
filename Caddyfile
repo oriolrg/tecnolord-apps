@@ -16,7 +16,8 @@ tecnolord.cat, www.tecnolord.cat {
   }
 
   # --- FRONTENDS (subdirectoris) ---
-
+  # 1. Forçar la barra final perquè el navegador sàpiga on és
+  redir /orientatrack /orientatrack/
   # OrientaTrack: DELEGEM TOT A NODE.JS
   # Ja no usem /srv/, així Express serveix el JS de la seva carpeta 'public'
   handle_path /orientatrack* {
