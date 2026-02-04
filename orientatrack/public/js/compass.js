@@ -12,35 +12,67 @@ const PUNT_OBJECTIU = {
 let map;
 let segonsDinsRadi = 0;
 
+// --- LÒGICA D'ESCALA DINÀMICA ---
+function actualitzarEscala() {
+    if (!map) return;
+    
+    // Calculem la distància real que representen 100px al centre del mapa
+    const y = map.getSize().y / 2;
+    const x = map.getSize().x / 2;
+    const p1 = map.containerPointToLatLng([x, y]);
+    const p2 = map.containerPointToLatLng([x + 100, y]);
+    const metresPer100px = map.distance(p1, p2);
+
+    // Suposem que 1cm físic a la pantalla són aprox 38 píxels (mitjana mòbil)
+    const metresPerCm = (metresPer100px / 100) * 38;
+
+    // Actualitzem les marques del regle (0, 1, 2, 3, 4 cm)
+    const marks = document.querySelectorAll('.ruler span');
+    marks.forEach((span, i) => {
+        if (i === 0) return;
+        const d = Math.round(metresPerCm * i);
+        const label = d >= 1000 ? (d/1000).toFixed(1) + 'k' : d + 'm';
+        span.setAttribute('data-dist', label);
+    });
+
+    // Actualitzem escala numèrica al visor superior
+    // Nota: L'escala numèrica és aproximada ja que depèn de la DPI del dispositiu
+    const zoom = map.getZoom();
+    document.getElementById('map-scale-text').innerText = `Zoom: ${zoom} | 1cm ≈ ${Math.round(metresPerCm)}m`;
+}
+
 // --- MAPA ---
 function inicialitzarMapa() {
-    // Zoom 15 per escala fixa (~1cm:250m)
     map = L.map('map', {
         zoomControl: false,
         attributionControl: false,
         minZoom: 14,
-        maxZoom: 17
+        maxZoom: 18
     }).setView([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], 15);
 
     L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
-        maxZoom: 17, minZoom: 14
+        maxZoom: 18, minZoom: 14
     }).addTo(map);
+
+    // Escoltadors per actualitzar el regle
+    map.on('zoomend moveend', actualitzarEscala);
+    actualitzarEscala(); // Primera càrrega
 
     L.circle([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], {
         color: '#ff00ff', weight: 3, fillOpacity: 0.1, radius: PUNT_OBJECTIU.radius_m
     }).addTo(map);
 }
 
-// --- ARROSSEGAMENT (DRAG & DROP) ---
+// --- ARROSSEGAMENT ---
 interact('.draggable').draggable({
     listeners: {
         move(event) {
-            const target = event.target;
-            const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-            const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-            target.style.transform = `translate(${x}px, ${y}px)`;
-            target.setAttribute('data-x', x);
-            target.setAttribute('data-y', y);
+            const t = event.target;
+            const x = (parseFloat(t.getAttribute('data-x')) || 0) + event.dx;
+            const y = (parseFloat(t.getAttribute('data-y')) || 0) + event.dy;
+            t.style.transform = `translate(${x}px, ${y}px)`;
+            t.setAttribute('data-x', x);
+            t.setAttribute('data-y', y);
         }
     },
     inertia: true
@@ -52,7 +84,6 @@ function handleOrientation(event) {
     if (heading !== undefined && heading !== null) {
         const angle = Math.round(heading);
         document.getElementById('heading-display').innerText = `${angle}°`;
-        // El limbe gira al revés per mantenir el Nord fix al món
         document.getElementById('bezel').style.transform = `rotate(${-angle}deg)`;
     }
 }

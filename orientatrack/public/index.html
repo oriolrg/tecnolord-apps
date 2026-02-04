@@ -24,10 +24,25 @@
 
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
+        /* Visor d'Escala Numèrica */
+        #map-scale-text {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            z-index: 500;
+            font-family: monospace;
+            pointer-events: none;
+        }
+
         /* BRÚIXOLA DE PLACA (Silva Style) */
         #compass-plate {
             position: absolute;
-            top: 20px;
+            top: 70px;
             right: 20px;
             width: 170px;
             height: 260px;
@@ -44,19 +59,35 @@
             cursor: move;
         }
 
-        /* Regle lateral */
+        /* Regle lateral dinàmic */
         .ruler {
             position: absolute;
-            left: 0; top: 15%; height: 70%; width: 25px;
-            border-right: 1px solid var(--rogaine-red);
+            left: 0; top: 15%; height: 70%; width: 50px;
+            border-right: 1.5px solid var(--rogaine-red);
             display: flex; flex-direction: column;
             justify-content: space-between;
             font-size: 0.6rem; color: var(--rogaine-red);
-            padding-left: 4px;
+        }
+        .ruler span {
+            position: relative;
+            padding-left: 5px;
+            display: flex;
+            align-items: center;
         }
         .ruler span::after {
-            content: ''; position: absolute; left: 15px;
-            width: 8px; height: 1px; background: var(--rogaine-red);
+            content: ''; position: absolute; right: 0;
+            width: 12px; height: 1.5px; background: var(--rogaine-red);
+        }
+        /* El valor en metres/km que injectem per JS */
+        .ruler span::before {
+            content: attr(data-dist);
+            position: absolute;
+            left: 20px;
+            font-size: 0.55rem;
+            font-weight: bold;
+            background: rgba(255,255,255,0.7);
+            padding: 0 2px;
+            border-radius: 2px;
         }
 
         .direction-line {
@@ -81,10 +112,9 @@
         .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
         .w { left: 6px; top: 50%; transform: translateY(-50%); }
 
-        /* Agulla magnètica simplificada */
         .needle {
             position: absolute; top: 50%; left: 50%;
-            width: 3px; height: 80%;
+            width: 3px; height: 85%;
             background: linear-gradient(to bottom, var(--rogaine-red) 50%, #3182ce 50%);
             transform: translate(-50%, -50%);
             border-radius: 2px;
@@ -92,12 +122,13 @@
 
         #heading-display { font-size: 1.6rem; font-weight: bold; margin-top: 8px; color: var(--dark); }
 
-        /* UI INFERIOR */
+        /* UI INFERIOR FIXA */
         .bottom-ui { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 200; }
 
         #target-card-full {
             background: white; padding: 12px 20px;
             border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
         }
 
         .data-row {
@@ -110,7 +141,7 @@
 
         .label { font-size: 0.6rem; color: #718096; text-transform: uppercase; }
         .target-name-val { font-size: 1rem; font-weight: bold; color: var(--primary); display: block; }
-        .value { font-size: 1.2rem; font-weight: bold; color: var(--dark); }
+        .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
 
         .main-menu {
             display: flex; background: var(--dark); padding: 10px 0;
@@ -125,7 +156,7 @@
         .menu-btn i { font-size: 1.1rem; }
 
         #btn-permis {
-            position: fixed; top: 20px; left: 20px; z-index: 300;
+            position: fixed; top: 15px; left: 15px; z-index: 600;
             padding: 10px 20px; background: var(--dark); color: white;
             border: none; border-radius: 50px; font-weight: bold;
         }
@@ -133,13 +164,18 @@
 </head>
 <body>
 
-    <button id="btn-permis">INICIAR</button>
+    <button id="btn-permis">INICIAR SESSIÓ</button>
+    <div id="map-scale-text">1 : --</div>
 
     <div id="map"></div>
 
     <div id="compass-plate" class="draggable">
         <div class="ruler">
-            <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+            <span data-dist="0m">0</span>
+            <span data-dist="--">1</span>
+            <span data-dist="--">2</span>
+            <span data-dist="--">3</span>
+            <span data-dist="--">4</span>
         </div>
         <div class="direction-line"></div>
         <div id="bezel">
@@ -156,8 +192,8 @@
         <div id="target-card-full">
             <div class="data-row">
                 <div class="target-main">
-                    <span class="label">Fita actual</span>
-                    <span id="target-name" class="target-name-val">Cercant GPS...</span>
+                    <span class="label">Objectiu</span>
+                    <span id="target-name" class="target-name-val">Localitzant...</span>
                 </div>
                 <div class="data-box">
                     <span class="label">Rumb</span>
@@ -171,10 +207,10 @@
         </div>
         <nav class="main-menu">
             <button class="menu-btn"><i class="fas fa-map"></i><span>Mapa</span></button>
-            <button class="menu-btn active"><i class="fas fa-location-crosshairs"></i><span>Joc</span></button>
-            <button class="menu-btn"><i class="fas fa-flag"></i><span>Fites</span></button>
+            <button class="menu-btn active"><i class="fas fa-compass"></i><span>Joc</span></button>
+            <button class="menu-btn"><i class="fas fa-list-ol"></i><span>Fites</span></button>
             <button class="menu-btn"><i class="fas fa-skull-crossbones"></i><span>SOS</span></button>
-            <button class="menu-btn"><i class="fas fa-user"></i><span>Perfil</span></button>
+            <button class="menu-btn"><i class="fas fa-user-circle"></i><span>Perfil</span></button>
         </nav>
     </div>
 
