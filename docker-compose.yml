@@ -21,8 +21,10 @@ services:
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.14.1
     restart: unless-stopped
-    command: mlflow server --host 0.0.0.0 --port 5000 \
-      --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlartifacts
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:///mlflow.db
+      --default-artifact-root /mlartifacts
     volumes:
       - ./mlruns:/mlartifacts
     expose: ["5000"]
@@ -134,28 +136,28 @@ services:
       - "6000"
 
   # --- CADDY REVERSE PROXY ---
-    caddy:
-      image: caddy:2
-      restart: unless-stopped
-      ports:
-        - "80:80"
-        - "443:443"
-        - "443:443/udp"
-        - "2019:2019"
-      depends_on: 
-        - backend
-        - api_py
-        - umami
-        - orientatrack
-        - opos_backend
-        - pap_backend
-      volumes:
-        - ./Caddyfile:/etc/caddy/Caddyfile:ro
-        - ./site:/srv
-        # ✅ AFEGIT: frontend orientatrack
-        - ./orientatrack/public:/srv/orientatrack:ro
-        - caddy_data:/data
-        - caddy_config:/config
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+      - "2019:2019"
+    depends_on:
+      - backend
+      - api_py
+      - umami
+      - orientatrack
+      - opos_backend
+      - pap_backend
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./site:/srv
+      # ✅ FRONTEND OrientaTrack (SPA/PWA)
+      - ./orientatrack/public:/srv/orientatrack:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   caddy_data: {}
