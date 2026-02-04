@@ -6,22 +6,23 @@ tecnolord.cat, www.tecnolord.cat {
     reverse_proxy pap_backend:6000
   }
 
-  # L'API d'OrientaTrack
-  handle_path /api/orienta* {
-    reverse_proxy orientatrack:4000
-  }
-
   handle_path /api/opos* {
     reverse_proxy opos_backend:5000
   }
 
-  # --- FRONTENDS ---
+  # --- Dins del bloc tecnolord.cat ---
 
-  # OrientaTrack (Frontend + Backend unificats)
-  # Fem servir handle (sense path) per passar la ruta sencera a Node
-  handle /orientatrack* {
-    header -Content-Security-Policy
-    reverse_proxy orientatrack:4000
+  # Redirigir /orientatrack a /orientatrack/ (molt important per a rutes relatives)
+  redir /orientatrack /orientatrack/
+
+  handle_path /orientatrack* {
+      header -Content-Security-Policy
+      reverse_proxy orientatrack:4000
+  }
+
+  # L'API (si la crides des de /api/orienta/...)
+  handle_path /api/orienta* {
+      reverse_proxy orientatrack:4000
   }
 
   handle_path /pap* {
