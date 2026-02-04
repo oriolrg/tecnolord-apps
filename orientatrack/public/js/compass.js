@@ -72,3 +72,35 @@ async function activarTot() {
 }
 
 btnPermis.addEventListener('click', activarTot);
+
+// Dins de js/compass.js
+
+let map;
+let targetMarker;
+
+function inicialitzarMapa() {
+    // Creem el mapa centrat prop del punt de prova (Sant Llorenç de Morunys)
+    map = L.map('map').setView([42.1363379, 1.5863909], 15);
+
+    // Capa Topogràfica de l'ICGC
+    const icgcTopo = L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
+        attribution: 'Institut Cartogràfic i Geològic de Catalunya',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Dibuixem el CP (Cercle de validació segons el radi del contracte)
+    // El radi_validacio_m el traiem de la definició (ex: 20m)
+    L.circle([42.1363379, 1.5863909], {
+        color: '#3182ce',
+        fillColor: '#3182ce',
+        fillOpacity: 0.2,
+        radius: 20 
+    }).addTo(map);
+
+    // Marcador del CP
+    targetMarker = L.marker([42.1363379, 1.5863909]).addTo(map)
+        .bindPopup('Font de la Puda');
+}
+
+// Cridem la funció d'inicialització
+inicialitzarMapa();
