@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OrientaTrack - Rogaine Mode</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -13,137 +13,206 @@
             --primary: #3182ce;
             --rogaine-red: #e53e3e;
             --dark: #1a202c;
+            --gray-bg: #f7fafc;
         }
 
         body { 
-            font-family: 'Segoe UI', sans-serif; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
             margin: 0; 
-            background: #f0f2f5; 
-            display: flex; 
-            flex-direction: column; 
+            padding: 0;
+            background: var(--gray-bg); 
             height: 100vh;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
         }
 
-        /* 1. Mapa dominant */
-        #map { flex-grow: 1; width: 100%; z-index: 1; }
+        /* 1. MAPA (Ocupa tot el fons) */
+        #map { 
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            z-index: 1;
+        }
 
-        /* 2. Placa de la brúixola (Silva Style) */
+        /* 2. BRÚIXOLA ARROSSEGABLE (Silva Style) */
         #compass-plate {
-            position: fixed;
-            bottom: 20px;
+            position: absolute;
+            top: 50px;
             right: 20px;
-            width: 180px;
-            height: 260px;
-            background: rgba(255, 255, 255, 0.9);
+            width: 160px;
+            height: 220px;
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(8px);
             border: 2px solid white;
-            border-radius: 15px;
-            z-index: 10;
+            border-radius: 12px;
+            z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            touch-action: none; /* Necessari per interact.js */
+            cursor: move;
         }
 
         .direction-line {
             width: 3px;
-            height: 40px;
+            height: 35px;
             background: var(--rogaine-red);
-            margin-top: 10px;
+            margin-top: 8px;
             position: relative;
         }
 
         #bezel {
-            width: 140px;
-            height: 140px;
-            border: 10px solid var(--dark);
+            width: 130px;
+            height: 130px;
+            border: 8px solid var(--dark);
             border-radius: 50%;
             position: relative;
             background: white;
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin-top: 5px;
             transition: transform 0.1s linear;
         }
 
         .degree-numbers span {
             position: absolute;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
-        .n { top: 5px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
-        .e { right: 8px; top: 50%; transform: translateY(-50%); }
-        .s { bottom: 5px; left: 50%; transform: translateX(-50%); }
-        .w { left: 8px; top: 50%; transform: translateY(-50%); }
+        .n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
+        .e { right: 6px; top: 50%; transform: translateY(-50%); }
+        .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+        .w { left: 6px; top: 50%; transform: translateY(-50%); }
 
         #heading-display {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 5px;
             color: var(--dark);
         }
 
-        /* 3. Targeta d'Objectiu */
-        #target-card {
+        /* 3. UI INFERIOR FIXA */
+        .bottom-ui {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 160px;
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            z-index: 10;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-left: 5px solid var(--primary);
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
         }
+
+        #target-card-full {
+            background: white;
+            padding: 15px 20px;
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .target-main { flex: 2; }
+        .data-box { flex: 1; text-align: center; border-left: 1px solid #edf2f7; }
 
         .label { font-size: 0.65rem; color: #718096; text-transform: uppercase; display: block; }
-        .value { font-size: 1.2rem; font-weight: bold; display: block; margin-bottom: 5px; }
+        .target-name-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
+        .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
 
-        .controls { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; }
-        button { 
-            padding: 12px 25px; border-radius: 50px; border: none; 
-            background: var(--dark); color: white; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        /* Menú Inferior */
+        .main-menu {
+            display: flex;
+            background: var(--dark);
+            padding: 10px 0;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
         }
-        
-        #debug-console { position: fixed; bottom: 0; left: 0; font-size: 0.6rem; color: #ccc; pointer-events: none; }
+
+        .menu-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: #a0aec0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.7rem;
+            gap: 4px;
+        }
+
+        .menu-btn.active { color: white; }
+        .menu-btn i { font-size: 1.2rem; }
+
+        /* Controls flotants (Botó inicial) */
+        #btn-permis {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 300;
+            padding: 12px 25px;
+            background: var(--dark);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        #debug-console { position: fixed; top: 70px; left: 20px; font-size: 0.6rem; color: #333; pointer-events: none; z-index: 10; }
     </style>
 </head>
 <body>
 
+    <button id="btn-permis">INICIAR SESSIÓ</button>
+    <div id="debug-console"></div>
+
     <div id="map"></div>
 
-    <div id="compass-plate">
+    <div id="compass-plate" class="draggable">
         <div class="direction-line"></div>
         <div id="bezel">
             <div class="degree-numbers">
                 <span class="n">N</span><span class="e">E</span>
                 <span class="s">S</span><span class="w">W</span>
             </div>
-            <div id="magnetic-needle" style="width: 2px; height: 100%; background: linear-gradient(to bottom, red 50%, blue 50%); position: absolute; opacity: 0.5;"></div>
+            <div style="width: 2px; height: 100%; background: linear-gradient(to bottom, var(--rogaine-red) 50%, #3182ce 50%); position: absolute; opacity: 0.3;"></div>
         </div>
         <div id="heading-display">0°</div>
     </div>
 
-    <div id="target-card">
-        <span class="label">Objectiu</span>
-        <span id="target-name" style="font-size: 0.9rem; font-weight: bold;">--</span>
-        <hr style="border: 0.5px solid #edf2f7; margin: 10px 0;">
-        <span class="label">Rumb Destí</span>
-        <span id="target-bearing" class="value">--°</span>
-        <span class="label">Distància</span>
-        <span id="target-distance" class="value">-- m</span>
+    <div class="bottom-ui">
+        <div id="target-card-full">
+            <div class="data-row">
+                <div class="target-main">
+                    <span class="label">Punt actual</span>
+                    <span id="target-name" class="target-name-val">Cercant...</span>
+                </div>
+                <div class="data-box">
+                    <span class="label">Rumb</span>
+                    <span id="target-bearing" class="value">--°</span>
+                </div>
+                <div class="data-box">
+                    <span class="label">Distància</span>
+                    <span id="target-distance" class="value">-- m</span>
+                </div>
+            </div>
+        </div>
+        <nav class="main-menu">
+            <button class="menu-btn"><i class="fas fa-map"></i><span>Mapa</span></button>
+            <button class="menu-btn active"><i class="fas fa-bullseye"></i><span>Joc</span></button>
+            <button class="menu-btn"><i class="fas fa-flag-checkered"></i><span>Fites</span></button>
+            <button class="menu-btn"><i class="fas fa-user"></i><span>Perfil</span></button>
+        </nav>
     </div>
-
-    <div class="controls">
-        <button id="btn-permis">ACTIVA BRÚIXOLA</button>
-    </div>
-
-    <div id="debug-console"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <script type="module" src="js/compass.js"></script>
 </body>
 </html>
