@@ -11,32 +11,33 @@ const PUNT_OBJECTIU = {
 let map;
 let segonsDinsRadi = 0;
 
+// MOTOR D'ESCALA CARTOGRÀFICA
 function actualitzarLlegenda() {
     if (!map) return;
     
-    // 1. Calculem metres en 38 píxels (aprox 1cm físic)
+    // Calculem metres en 38 píxels (~1cm físic) al centre del mapa
     const y = map.getSize().y / 2;
     const x = map.getSize().x / 2;
     const p1 = map.containerPointToLatLng([x, y]);
     const p2 = map.containerPointToLatLng([x + 38, y]);
     const metresPerCm = map.distance(p1, p2);
 
-    // 2. Busquem una unitat mètrica visual per la barra (100, 200, 500...)
+    // 1. Busquem una unitat mètrica "rodona" per la barra de la llegenda
     let unitatMetres = 100;
-    if (metresPerCm > 150) unitatMetres = 200;
-    if (metresPerCm > 350) unitatMetres = 500;
-    if (metresPerCm > 750) unitatMetres = 1000;
+    if (metresPerCm > 150) unitatMetres = 250;
+    if (metresPerCm > 400) unitatMetres = 500;
+    if (metresPerCm > 850) unitatMetres = 1000;
 
     const pixelsPerMetre = 38 / metresPerCm;
     const barWidth = unitatMetres * pixelsPerMetre;
 
     const scaleBar = document.getElementById('scale-bar');
     scaleBar.style.width = `${barWidth}px`;
-    scaleBar.style.backgroundSize = `${barWidth / 2}px 6px`;
+    scaleBar.style.backgroundSize = `${barWidth / 2}px 5px`;
     
     document.getElementById('scale-label').innerText = unitatMetres >= 1000 ? (unitatMetres/1000) + ' km' : unitatMetres + ' m';
     
-    // Escala Numèrica (1:X) - 1cm de mapa : X cm de realitat
+    // 2. Escala Numèrica (1:X)
     const escalaNum = Math.round(metresPerCm * 100);
     document.getElementById('numeric-scale').innerText = `1 : ${escalaNum.toLocaleString()}`;
 }
@@ -61,7 +62,7 @@ function inicialitzarMapa() {
     }).addTo(map);
 }
 
-// Draggable
+// Draggable (interact.js)
 interact('.draggable').draggable({
     listeners: {
         move(event) {

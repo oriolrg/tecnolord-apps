@@ -13,7 +13,7 @@
             --primary: #3182ce;
             --rogaine-red: #e53e3e;
             --dark: #1a202c;
-            --glass: rgba(255, 255, 255, 0.25);
+            --glass: rgba(255, 255, 255, 0.2);
         }
 
         body { 
@@ -24,12 +24,12 @@
 
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* LLEGENDA CARTOGRÀFICA ESTIL OFICIAL */
+        /* LLEGENDA CARTOGRÀFICA PROFESSIONAL */
         #map-legend {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             padding: 8px 12px;
             border: 1px solid #333;
             z-index: 500;
@@ -41,7 +41,7 @@
         }
 
         #scale-bar {
-            width: 100px; /* Dinàmic per JS */
+            width: 100px; /* Es calcula per JS */
             height: 5px;
             background: white;
             border: 1px solid black;
@@ -62,56 +62,65 @@
             position: absolute;
             top: 100px;
             right: 20px;
-            width: 170px;
-            height: 250px;
+            width: 180px;
+            height: 260px;
             background: var(--glass);
-            backdrop-filter: blur(3px);
-            border: 1.5px solid rgba(0,0,0,0.1);
-            border-radius: 4px;
+            backdrop-filter: blur(2px);
+            border: 1.5px solid rgba(0,0,0,0.15);
             z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             touch-action: none;
             cursor: move;
+            border-top-left-radius: 0; /* Cantonada recta per mesurar */
         }
 
-        /* Regle lateral pur en CM */
-        .ruler {
+        /* Regle Lateral (Eix Y) */
+        .ruler-left {
             position: absolute;
-            left: 0; top: 15px; 
-            height: 152px; /* 4cm * 38px */
-            width: 35px;
+            left: 0; top: 0;
+            width: 30px; height: 190px;
             border-right: 1.5px solid var(--rogaine-red);
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
-
-        .cm-mark {
-            height: 38px; /* 1cm real aprox */
-            position: relative;
-            padding-left: 6px;
-            font-size: 0.8rem;
+        .ruler-left span {
+            height: 38px; /* 1cm físic aprox */
+            border-top: 1px solid var(--rogaine-red);
+            padding-left: 4px;
+            font-size: 0.7rem;
             font-weight: bold;
             color: var(--rogaine-red);
-            display: flex;
-            align-items: flex-start;
         }
 
-        .cm-mark::after {
-            content: ''; position: absolute; right: 0; top: 0;
-            width: 12px; height: 1.5px; background: var(--rogaine-red);
+        /* Regle Superior (Eix X) */
+        .ruler-top {
+            position: absolute;
+            top: 0; left: 0;
+            width: 152px; height: 30px;
+            border-bottom: 1.5px solid var(--rogaine-red);
+            display: flex;
+        }
+        .ruler-top span {
+            width: 38px; /* 1cm físic aprox */
+            border-left: 1px solid var(--rogaine-red);
+            padding-top: 2px;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: var(--rogaine-red);
         }
 
         .direction-line {
             width: 3px; height: 45px;
             background: var(--rogaine-red);
-            margin-top: 15px; position: relative;
+            margin-top: 35px; /* Deixem espai pel regle superior */
+            position: relative;
         }
 
         #bezel {
-            width: 125px; height: 125px;
+            width: 120px; height: 120px;
             border: 8px solid var(--dark);
             border-radius: 50%;
             position: relative;
@@ -120,11 +129,11 @@
             transition: transform 0.1s linear;
         }
 
-        .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.9rem; }
+        .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.85rem; }
         .n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
-        .e { right: 8px; top: 50%; transform: translateY(-50%); }
+        .e { right: 6px; top: 50%; transform: translateY(-50%); }
         .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
-        .w { left: 8px; top: 50%; transform: translateY(-50%); }
+        .w { left: 6px; top: 50%; transform: translateY(-50%); }
 
         .needle {
             position: absolute; top: 50%; left: 50%;
@@ -133,7 +142,7 @@
             transform: translate(-50%, -50%);
         }
 
-        #heading-display { font-size: 1.8rem; font-weight: bold; margin-top: 10px; color: var(--dark); }
+        #heading-display { font-size: 1.7rem; font-weight: bold; margin-top: 10px; color: var(--dark); }
 
         /* UI INFERIOR */
         .bottom-ui { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 200; }
@@ -142,8 +151,8 @@
         .target-main { flex: 2; }
         .data-box { flex: 1; text-align: center; border-left: 1px solid #edf2f7; }
         .label { font-size: 0.65rem; color: #718096; text-transform: uppercase; }
-        .target-name-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); display: block; }
-        .value { font-size: 1.4rem; font-weight: bold; color: var(--dark); }
+        .target-name-val { font-size: 1rem; font-weight: bold; color: var(--primary); display: block; }
+        .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
 
         .main-menu {
             display: flex; background: var(--dark); padding: 10px 0;
@@ -155,7 +164,7 @@
             display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 3px;
         }
         .menu-btn.active { color: white; }
-        .menu-btn i { font-size: 1.2rem; }
+        .menu-btn i { font-size: 1.1rem; }
 
         #btn-permis {
             position: fixed; top: 15px; left: 15px; z-index: 600;
@@ -177,11 +186,11 @@
     <div id="map"></div>
 
     <div id="compass-plate" class="draggable">
-        <div class="ruler">
-            <span class="cm-mark">1</span>
-            <span class="cm-mark">2</span>
-            <span class="cm-mark">3</span>
-            <span class="cm-mark">4</span>
+        <div class="ruler-top">
+            <span>0</span><span>1</span><span>2</span><span>3</span>
+        </div>
+        <div class="ruler-left">
+            <span>1</span><span>2</span><span>3</span><span>4</span>
         </div>
         <div class="direction-line"></div>
         <div id="bezel">
@@ -198,7 +207,7 @@
         <div id="target-card-full">
             <div class="data-row">
                 <div class="target-main">
-                    <span class="label">Punt actual</span>
+                    <span class="label">Objectiu</span>
                     <span id="target-name" class="target-name-val">Localitzant...</span>
                 </div>
                 <div class="data-box">
@@ -213,8 +222,8 @@
         </div>
         <nav class="main-menu">
             <button class="menu-btn"><i class="fas fa-map"></i><span>Mapa</span></button>
-            <button class="menu-btn active"><i class="fas fa-location-crosshairs"></i><span>Joc</span></button>
-            <button class="menu-btn"><i class="fas fa-flag"></i><span>Fites</span></button>
+            <button class="menu-btn active"><i class="fas fa-compass"></i><span>Joc</span></button>
+            <button class="menu-btn"><i class="fas fa-list-ol"></i><span>Fites</span></button>
             <button class="menu-btn"><i class="fas fa-skull-crossbones"></i><span>SOS</span></button>
             <button class="menu-btn"><i class="fas fa-user-circle"></i><span>Perfil</span></button>
         </nav>
