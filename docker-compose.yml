@@ -63,9 +63,9 @@ services:
       - "3000"
 
   # --- ORIENTATRACK ---
-  orienta_backend:
+  orientatrack:
     build: 
-      context: ./orienta_backend
+      context: ./orientatrack
     restart: unless-stopped
     env_file: .env
     environment:
@@ -144,7 +144,7 @@ services:
       - backend
       - api_py
       - umami
-      - orienta_backend
+      - orientatrack
       - opos_backend
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
