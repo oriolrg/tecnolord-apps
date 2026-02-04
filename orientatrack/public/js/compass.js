@@ -158,8 +158,15 @@ document.getElementById('btn-permis').onclick = async () => {
     navigator.geolocation.watchPosition(actualitzarNavegacio, null, { enableHighAccuracy: true });
     
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([42.135, 1.592], 15);
-    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg').addTo(map);
-    
+    //IGCC
+    //L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg').addTo(map);
+    //Mapant
+    // Substitueix la capa de l'ICGC per la de Mapant.es
+    L.tileLayer('https://mapant.es/tiles/{z}/{x}/{y}.png', {
+        minZoom: 4,
+        maxZoom: 18,
+        attribution: 'Mapant.es | Cartografia d\'Orientació'
+    }).addTo(map);
     map.on('zoomend moveend load', actualitzarLlegenda);
     
     carregarRutaGPX();
