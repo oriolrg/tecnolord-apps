@@ -134,29 +134,28 @@ services:
       - "6000"
 
   # --- CADDY REVERSE PROXY ---
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-      - "2019:2019"
-    depends_on:
-      - backend
-      - api_py
-      - umami
-      - orientatrack
-      - opos_backend
-      - pap_backend
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./site:/srv
-      # ✅ Frontend OrientaTrack servit com a estàtic (SPA/PWA)
-      #    Si el build és "dist", canvia public -> dist
-      - ./orientatrack/public:/srv/orientatrack:ro
-      - caddy_data:/data
-      - caddy_config:/config
+    caddy:
+      image: caddy:2
+      restart: unless-stopped
+      ports:
+        - "80:80"
+        - "443:443"
+        - "443:443/udp"
+        - "2019:2019"
+      depends_on: 
+        - backend
+        - api_py
+        - umami
+        - orientatrack
+        - opos_backend
+        - pap_backend
+      volumes:
+        - ./Caddyfile:/etc/caddy/Caddyfile:ro
+        - ./site:/srv
+        # ✅ AFEGIT: frontend orientatrack
+        - ./orientatrack/public:/srv/orientatrack:ro
+        - caddy_data:/data
+        - caddy_config:/config
 
 volumes:
   caddy_data: {}
