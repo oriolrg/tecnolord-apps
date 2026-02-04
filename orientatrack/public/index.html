@@ -14,6 +14,7 @@
             --rogaine-red: #e53e3e;
             --dark: #1a202c;
             --glass: rgba(255, 255, 255, 0.2);
+            --ruler-color: #000000; /* Regle en negre */
         }
 
         body { 
@@ -41,7 +42,7 @@
         }
 
         #scale-bar {
-            width: 100px; /* Es calcula per JS */
+            width: 100px;
             height: 5px;
             background: white;
             border: 1px solid black;
@@ -66,7 +67,7 @@
             height: 260px;
             background: var(--glass);
             backdrop-filter: blur(2px);
-            border: 1.5px solid rgba(0,0,0,0.15);
+            border: 1px solid rgba(0,0,0,0.15);
             z-index: 100;
             display: flex;
             flex-direction: column;
@@ -74,24 +75,24 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             touch-action: none;
             cursor: move;
-            border-top-left-radius: 0; /* Cantonada recta per mesurar */
+            border-top-left-radius: 0;
         }
 
-        /* Regle Lateral (Eix Y) */
+        /* Regle Lateral Esquerre (Eix Y) */
         .ruler-left {
             position: absolute;
             left: 0; top: 0;
             width: 30px; height: 190px;
-            border-right: 1.5px solid var(--rogaine-red);
+            border-right: 1px solid var(--ruler-color);
             display: flex; flex-direction: column;
         }
         .ruler-left span {
-            height: 38px; /* 1cm físic aprox */
-            border-top: 1px solid var(--rogaine-red);
-            padding-left: 4px;
-            font-size: 0.7rem;
+            height: 38px; /* 1cm real aprox */
+            border-top: 1px solid var(--ruler-color);
+            padding-left: 3px;
+            font-size: 0.65rem;
             font-weight: bold;
-            color: var(--rogaine-red);
+            color: var(--ruler-color);
         }
 
         /* Regle Superior (Eix X) */
@@ -99,23 +100,23 @@
             position: absolute;
             top: 0; left: 0;
             width: 152px; height: 30px;
-            border-bottom: 1.5px solid var(--rogaine-red);
+            border-bottom: 1px solid var(--ruler-color);
             display: flex;
         }
         .ruler-top span {
-            width: 38px; /* 1cm físic aprox */
-            border-left: 1px solid var(--rogaine-red);
-            padding-top: 2px;
+            width: 38px; /* 1cm real aprox */
+            border-left: 1px solid var(--ruler-color);
+            padding-top: 1px;
             text-align: center;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: bold;
-            color: var(--rogaine-red);
+            color: var(--ruler-color);
         }
 
         .direction-line {
-            width: 3px; height: 45px;
+            width: 2px; height: 45px;
             background: var(--rogaine-red);
-            margin-top: 35px; /* Deixem espai pel regle superior */
+            margin-top: 35px;
             position: relative;
         }
 
@@ -137,14 +138,14 @@
 
         .needle {
             position: absolute; top: 50%; left: 50%;
-            width: 3px; height: 80%;
+            width: 2px; height: 80%;
             background: linear-gradient(to bottom, var(--rogaine-red) 50%, #3182ce 50%);
             transform: translate(-50%, -50%);
         }
 
         #heading-display { font-size: 1.7rem; font-weight: bold; margin-top: 10px; color: var(--dark); }
 
-        /* UI INFERIOR */
+        /* UI INFERIOR FIXA */
         .bottom-ui { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 200; }
         #target-card-full { background: white; padding: 12px 20px; border-top: 1px solid #e2e8f0; }
         .data-row { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto; }
@@ -170,61 +171,8 @@
             position: fixed; top: 15px; left: 15px; z-index: 600;
             padding: 10px 25px; background: var(--dark); color: white;
             border: none; border-radius: 50px; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        :root { --primary: #3182ce; --rogaine-red: #e53e3e; --dark: #1a202c; }
-        body { font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
-
-        /* LLEGENDA CARTOGRÀFICA */
-        #map-legend {
-            position: fixed; top: 20px; right: 20px; background: rgba(255,255,255,0.9);
-            padding: 8px 12px; border: 1px solid #333; z-index: 500;
-            display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-        #scale-bar { width: 100px; height: 5px; border: 1px solid black; background: linear-gradient(90deg, black 50%, white 50%); margin-bottom: 4px; }
-        #scale-label, #numeric-scale { font-size: 0.7rem; font-family: monospace; font-weight: bold; }
-
-        /* BRÚIXOLA DE PLACA (CANTONADES MÈTRIQUES) */
-        #compass-plate {
-            position: absolute; top: 120px; right: 20px; width: 180px; height: 260px;
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(2px);
-            border: 1px solid rgba(0,0,0,0.1); z-index: 100; touch-action: none; cursor: move;
-        }
-
-        /* Regle Lateral Esquerre */
-        .ruler-v {
-            position: absolute; left: 0; top: 0; width: 30px; height: 100%;
-            border-right: 1.5px solid var(--rogaine-red); display: flex; flex-direction: column;
-        }
-        .ruler-v span {
-            height: 38px; border-top: 1px solid var(--rogaine-red);
-            padding: 2px 0 0 4px; font-size: 0.65rem; color: var(--rogaine-red); font-weight: bold;
-        }
-
-        /* Regle Superior */
-        .ruler-h {
-            position: absolute; top: 0; left: 0; height: 30px; width: 100%;
-            border-bottom: 1.5px solid var(--rogaine-red); display: flex;
-        }
-        .ruler-h span {
-            width: 38px; border-left: 1px solid var(--rogaine-red);
-            padding: 2px 0 0 0; text-align: center; font-size: 0.65rem; color: var(--rogaine-red); font-weight: bold;
-        }
-
-        /* Elements interiors */
-        .direction-line { width: 2px; height: 40px; background: var(--rogaine-red); margin-top: 40px; }
-        #bezel { width: 120px; height: 120px; border: 8px solid var(--dark); border-radius: 50%; position: relative; background: rgba(255,255,255,0.3); margin-top: 5px; }
-        .n { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); color: red; font-weight: bold; }
-        .needle { position: absolute; top: 50%; left: 50%; width: 2px; height: 80%; background: linear-gradient(to bottom, red 50%, blue 50%); transform: translate(-50%, -50%); }
-        #heading-display { font-size: 1.8rem; font-weight: bold; margin-top: 10px; }
-
-        /* UI INFERIOR */
-        .bottom-ui { position: fixed; bottom: 0; width: 100%; z-index: 200; background: white; border-top: 1px solid #ccc; }
-        .data-row { display: flex; padding: 10px 20px; align-items: center; justify-content: space-between; }
-        .main-menu { display: flex; background: var(--dark); padding-bottom: env(safe-area-inset-bottom); }
-        .menu-btn { flex: 1; padding: 10px; color: #a0aec0; border: none; background: none; font-size: 0.7rem; display: flex; flex-direction: column; align-items: center; }
-        .menu-btn.active { color: white; }
     </style>
 </head>
 <body>
@@ -233,8 +181,8 @@
 
     <div id="map-legend">
         <div id="scale-bar"></div>
-        <div id="scale-label">100 m</div>
-        <div id="numeric-scale">1 : 5.000</div>
+        <div id="scale-label">--- m</div>
+        <div id="numeric-scale">1 : ---</div>
     </div>
 
     <div id="map"></div>
@@ -246,6 +194,7 @@
         <div class="ruler-left">
             <span>1</span><span>2</span><span>3</span><span>4</span>
         </div>
+        
         <div class="direction-line"></div>
         <div id="bezel">
             <div class="degree-numbers">

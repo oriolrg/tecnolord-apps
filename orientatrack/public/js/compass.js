@@ -32,14 +32,20 @@ function actualitzarLlegenda() {
     const barWidth = unitatMetres * pixelsPerMetre;
 
     const scaleBar = document.getElementById('scale-bar');
-    scaleBar.style.width = `${barWidth}px`;
-    scaleBar.style.backgroundSize = `${barWidth / 2}px 5px`;
+    if (scaleBar) {
+        scaleBar.style.width = `${barWidth}px`;
+        scaleBar.style.backgroundSize = `${barWidth / 2}px 5px`;
+    }
     
-    document.getElementById('scale-label').innerText = unitatMetres >= 1000 ? (unitatMetres/1000) + ' km' : unitatMetres + ' m';
+    const label = document.getElementById('scale-label');
+    if (label) label.innerText = unitatMetres >= 1000 ? (unitatMetres/1000) + ' km' : unitatMetres + ' m';
     
     // 2. Escala Numèrica (1:X)
-    const escalaNum = Math.round(metresPerCm * 100);
-    document.getElementById('numeric-scale').innerText = `1 : ${escalaNum.toLocaleString()}`;
+    const numericScale = document.getElementById('numeric-scale');
+    if (numericScale) {
+        const escalaNum = Math.round(metresPerCm * 100);
+        numericScale.innerText = `1 : ${escalaNum.toLocaleString()}`;
+    }
 }
 
 function inicialitzarMapa() {
@@ -80,8 +86,10 @@ function handleOrientation(event) {
     let heading = event.webkitCompassHeading || (360 - event.alpha);
     if (heading !== undefined && heading !== null) {
         const angle = Math.round(heading);
-        document.getElementById('heading-display').innerText = `${angle}°`;
-        document.getElementById('bezel').style.transform = `rotate(${-angle}deg)`;
+        const display = document.getElementById('heading-display');
+        const bezel = document.getElementById('bezel');
+        if (display) display.innerText = `${angle}°`;
+        if (bezel) bezel.style.transform = `rotate(${-angle}deg)`;
     }
 }
 
