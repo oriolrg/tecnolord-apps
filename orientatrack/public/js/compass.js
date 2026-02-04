@@ -157,16 +157,32 @@ document.getElementById('btn-permis').onclick = async () => {
     window.addEventListener('deviceorientationabsolute', handleOrientation, true);
     navigator.geolocation.watchPosition(actualitzarNavegacio, null, { enableHighAccuracy: true });
     
-    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([42.135, 1.592], 15);
-    //IGCC
-    //L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg').addTo(map);
-    //Mapant
-    // Substitueix la capa de l'ICGC per la de Mapant.es
-    L.tileLayer('https://mapant.es/tiles/{z}/{x}/{y}.png', {
+    map = L.map('map', { 
+        zoomControl: false, 
+        attributionControl: false 
+    }).setView([42.135, 1.592], 15);
+
+    // =========================================================================
+    // OPCIÓ A: MAPANT (Cartografia específica d'Orientació)
+    // =========================================================================
+    L.tileLayer('https://tiles.mapant.es/tiles/{z}/{x}/{y}.png', {
         minZoom: 4,
         maxZoom: 18,
+        tms: false, // Mapant usa l'estàndard XYZ, no TMS
         attribution: 'Mapant.es | Cartografia d\'Orientació'
     }).addTo(map);
+
+    // =========================================================================
+    // OPCIÓ B: ICGC (Topogràfic clàssic) - COMENTAT PER DEFECTE
+    // =========================================================================
+    /*
+    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
+        attribution: 'ICGC',
+        maxZoom: 18
+    }).addTo(map);
+    */
+    // =========================================================================
+
     map.on('zoomend moveend load', actualitzarLlegenda);
     
     carregarRutaGPX();
