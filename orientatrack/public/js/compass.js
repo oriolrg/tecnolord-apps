@@ -12,31 +12,26 @@ const PUNT_OBJECTIU = {
 let map;
 let segonsDinsRadi = 0;
 
-// --- INICIALITZACIÓ MAPA ---
+// --- MAPA ---
 function inicialitzarMapa() {
-    // Límits de Sant Llorenç de Morunys
-    const areaJoc = L.latLngBounds([42.10, 1.55], [42.16, 1.62]);
-
+    // Zoom 15 per escala fixa (~1cm:250m)
     map = L.map('map', {
-        maxBounds: areaJoc,
-        maxBoundsViscosity: 1.0,
-        minZoom: 14,
-        maxZoom: 17,
         zoomControl: false,
-        attributionControl: false
+        attributionControl: false,
+        minZoom: 14,
+        maxZoom: 17
     }).setView([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], 15);
 
     L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
         maxZoom: 17, minZoom: 14
     }).addTo(map);
 
-    // Dibuixar CP
     L.circle([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], {
-        color: '#ff00ff', weight: 4, fillOpacity: 0.1, radius: PUNT_OBJECTIU.radius_m
+        color: '#ff00ff', weight: 3, fillOpacity: 0.1, radius: PUNT_OBJECTIU.radius_m
     }).addTo(map);
 }
 
-// --- LÒGICA ARROSSEGAMENT (INTERACT.JS) ---
+// --- ARROSSEGAMENT (DRAG & DROP) ---
 interact('.draggable').draggable({
     listeners: {
         move(event) {
@@ -47,15 +42,17 @@ interact('.draggable').draggable({
             target.setAttribute('data-x', x);
             target.setAttribute('data-y', y);
         }
-    }
+    },
+    inertia: true
 });
 
-// --- SENSORS I NAVEGACIÓ ---
+// --- SENSORS ---
 function handleOrientation(event) {
     let heading = event.webkitCompassHeading || (360 - event.alpha);
     if (heading !== undefined && heading !== null) {
         const angle = Math.round(heading);
         document.getElementById('heading-display').innerText = `${angle}°`;
+        // El limbe gira al revés per mantenir el Nord fix al món
         document.getElementById('bezel').style.transform = `rotate(${-angle}deg)`;
     }
 }
@@ -73,7 +70,7 @@ function actualitzarNavegacio(pos) {
         segonsDinsRadi++;
         if (segonsDinsRadi >= 3) {
             if ("vibrate" in navigator) navigator.vibrate([200, 100, 500]);
-            alert("🎯 BALISA TROBADA!");
+            alert("🎯 BALISA VALIDADA!");
             segonsDinsRadi = -999;
         }
     } else {

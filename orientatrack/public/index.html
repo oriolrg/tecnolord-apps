@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>OrientaTrack - Rogaine Mode</title>
+    <title>OrientaTrack - Professional Rogaine</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -13,175 +13,141 @@
             --primary: #3182ce;
             --rogaine-red: #e53e3e;
             --dark: #1a202c;
-            --gray-bg: #f7fafc;
+            --glass: rgba(255, 255, 255, 0.35);
         }
 
         body { 
             font-family: 'Segoe UI', system-ui, sans-serif; 
-            margin: 0; 
-            padding: 0;
-            background: var(--gray-bg); 
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* 1. MAPA (Ocupa tot el fons) */
-        #map { 
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 100%;
-            z-index: 1;
-        }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* 2. BRÚIXOLA ARROSSEGABLE (Silva Style) */
+        /* BRÚIXOLA DE PLACA (Silva Style) */
         #compass-plate {
             position: absolute;
-            top: 50px;
+            top: 20px;
             right: 20px;
-            width: 160px;
-            height: 220px;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(8px);
-            border: 2px solid white;
-            border-radius: 12px;
+            width: 170px;
+            height: 260px;
+            background: var(--glass);
+            backdrop-filter: blur(4px);
+            border: 1.5px solid rgba(0,0,0,0.15);
+            border-radius: 4px;
             z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-            touch-action: none; /* Necessari per interact.js */
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            touch-action: none;
             cursor: move;
         }
 
+        /* Regle lateral */
+        .ruler {
+            position: absolute;
+            left: 0; top: 15%; height: 70%; width: 25px;
+            border-right: 1px solid var(--rogaine-red);
+            display: flex; flex-direction: column;
+            justify-content: space-between;
+            font-size: 0.6rem; color: var(--rogaine-red);
+            padding-left: 4px;
+        }
+        .ruler span::after {
+            content: ''; position: absolute; left: 15px;
+            width: 8px; height: 1px; background: var(--rogaine-red);
+        }
+
         .direction-line {
-            width: 3px;
-            height: 35px;
+            width: 3px; height: 45px;
             background: var(--rogaine-red);
-            margin-top: 8px;
-            position: relative;
+            margin-top: 10px; position: relative;
         }
 
         #bezel {
-            width: 130px;
-            height: 130px;
+            width: 130px; height: 130px;
             border: 8px solid var(--dark);
             border-radius: 50%;
             position: relative;
-            background: white;
+            background: rgba(255, 255, 255, 0.5);
             margin-top: 5px;
             transition: transform 0.1s linear;
         }
 
-        .degree-numbers span {
-            position: absolute;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
+        .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.9rem; }
         .n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
         .e { right: 6px; top: 50%; transform: translateY(-50%); }
         .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
         .w { left: 6px; top: 50%; transform: translateY(-50%); }
 
-        #heading-display {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-top: 5px;
-            color: var(--dark);
+        /* Agulla magnètica simplificada */
+        .needle {
+            position: absolute; top: 50%; left: 50%;
+            width: 3px; height: 80%;
+            background: linear-gradient(to bottom, var(--rogaine-red) 50%, #3182ce 50%);
+            transform: translate(-50%, -50%);
+            border-radius: 2px;
         }
 
-        /* 3. UI INFERIOR FIXA */
-        .bottom-ui {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            z-index: 200;
-            display: flex;
-            flex-direction: column;
-        }
+        #heading-display { font-size: 1.6rem; font-weight: bold; margin-top: 8px; color: var(--dark); }
+
+        /* UI INFERIOR */
+        .bottom-ui { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 200; }
 
         #target-card-full {
-            background: white;
-            padding: 15px 20px;
+            background: white; padding: 12px 20px;
             border-top: 1px solid #e2e8f0;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
         }
 
         .data-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 900px; margin: 0 auto;
         }
 
         .target-main { flex: 2; }
         .data-box { flex: 1; text-align: center; border-left: 1px solid #edf2f7; }
 
-        .label { font-size: 0.65rem; color: #718096; text-transform: uppercase; display: block; }
-        .target-name-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
-        .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
+        .label { font-size: 0.6rem; color: #718096; text-transform: uppercase; }
+        .target-name-val { font-size: 1rem; font-weight: bold; color: var(--primary); display: block; }
+        .value { font-size: 1.2rem; font-weight: bold; color: var(--dark); }
 
-        /* Menú Inferior */
         .main-menu {
-            display: flex;
-            background: var(--dark);
-            padding: 10px 0;
+            display: flex; background: var(--dark); padding: 10px 0;
             padding-bottom: calc(10px + env(safe-area-inset-bottom));
         }
 
         .menu-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            color: #a0aec0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 0.7rem;
-            gap: 4px;
+            flex: 1; background: none; border: none; color: #a0aec0;
+            display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 3px;
         }
-
         .menu-btn.active { color: white; }
-        .menu-btn i { font-size: 1.2rem; }
+        .menu-btn i { font-size: 1.1rem; }
 
-        /* Controls flotants (Botó inicial) */
         #btn-permis {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 300;
-            padding: 12px 25px;
-            background: var(--dark);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            position: fixed; top: 20px; left: 20px; z-index: 300;
+            padding: 10px 20px; background: var(--dark); color: white;
+            border: none; border-radius: 50px; font-weight: bold;
         }
-
-        #debug-console { position: fixed; top: 70px; left: 20px; font-size: 0.6rem; color: #333; pointer-events: none; z-index: 10; }
     </style>
 </head>
 <body>
 
-    <button id="btn-permis">INICIAR SESSIÓ</button>
-    <div id="debug-console"></div>
+    <button id="btn-permis">INICIAR</button>
 
     <div id="map"></div>
 
     <div id="compass-plate" class="draggable">
+        <div class="ruler">
+            <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+        </div>
         <div class="direction-line"></div>
         <div id="bezel">
             <div class="degree-numbers">
                 <span class="n">N</span><span class="e">E</span>
                 <span class="s">S</span><span class="w">W</span>
             </div>
-            <div style="width: 2px; height: 100%; background: linear-gradient(to bottom, var(--rogaine-red) 50%, #3182ce 50%); position: absolute; opacity: 0.3;"></div>
+            <div class="needle"></div>
         </div>
         <div id="heading-display">0°</div>
     </div>
@@ -190,8 +156,8 @@
         <div id="target-card-full">
             <div class="data-row">
                 <div class="target-main">
-                    <span class="label">Punt actual</span>
-                    <span id="target-name" class="target-name-val">Cercant...</span>
+                    <span class="label">Fita actual</span>
+                    <span id="target-name" class="target-name-val">Cercant GPS...</span>
                 </div>
                 <div class="data-box">
                     <span class="label">Rumb</span>
@@ -205,8 +171,9 @@
         </div>
         <nav class="main-menu">
             <button class="menu-btn"><i class="fas fa-map"></i><span>Mapa</span></button>
-            <button class="menu-btn active"><i class="fas fa-bullseye"></i><span>Joc</span></button>
-            <button class="menu-btn"><i class="fas fa-flag-checkered"></i><span>Fites</span></button>
+            <button class="menu-btn active"><i class="fas fa-location-crosshairs"></i><span>Joc</span></button>
+            <button class="menu-btn"><i class="fas fa-flag"></i><span>Fites</span></button>
+            <button class="menu-btn"><i class="fas fa-skull-crossbones"></i><span>SOS</span></button>
             <button class="menu-btn"><i class="fas fa-user"></i><span>Perfil</span></button>
         </nav>
     </div>
