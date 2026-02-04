@@ -29,4 +29,22 @@ export class NavigationPanel {
         document.getElementById('target-bearing').innerText = `${Math.round(rumb)}°`;
         document.getElementById('target-distance').innerText = `${Math.round(dist)} m`;
     }
+    // Dins de NavigationPanel.js afegeix aquest mètode:
+    injectStyles() {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            #target-card-full {
+                background: white; margin: 10px; padding: 15px;
+                border-radius: 15px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+                border-top: 4px solid var(--primary);
+            }
+            .data-row { display: flex; justify-content: space-around; align-items: center; }
+            .target-main { flex: 2; }
+            .data-box { flex: 1; text-align: center; border-left: 1px solid #eee; }
+            .label { font-size: 10px; color: #718096; text-transform: uppercase; letter-spacing: 1px; }
+            .target-name-val { font-size: 16px; font-weight: bold; color: var(--dark); display: block; }
+            .value { font-size: 20px; font-weight: 800; color: var(--primary); }
+        `;
+        document.head.appendChild(style);
+    }
 }

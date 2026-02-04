@@ -9,6 +9,7 @@ document.getElementById('btn-permis').onclick = async () => {
     // 1. Inicialització de components (Injecten el seu propi HTML)
     compass = new Compass('compass-container');
     map = new MapManager('map');
+    new Legend('map-legend-container', map.map); // Passem el mapa de Leaflet
     navPanel = new NavigationPanel('navigation-panel-container');
     game = new GameLogic();
 
