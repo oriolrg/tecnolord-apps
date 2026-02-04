@@ -12,175 +12,136 @@
         :root {
             --primary: #3182ce;
             --rogaine-red: #e53e3e;
-            --dark: #2d3748;
-            --bg: #f7fafc;
+            --dark: #1a202c;
         }
 
         body { 
             font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            background: #f0f2f5; 
             display: flex; 
             flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh; 
-            margin: 0; 
-            background: var(--bg); 
-            color: var(--dark);
-            overflow-x: hidden;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        header { width: 100%; padding: 15px; text-align: center; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10; }
+        /* 1. Mapa dominant */
+        #map { flex-grow: 1; width: 100%; z-index: 1; }
 
-        /* Mapa estilitzat */
-        #map {
-            width: 100%;
-            height: 40vh; /* Ocupa la part superior */
-            background: #eee;
-            z-index: 1;
-        }
-
-        /* BRÚIXOLA DE PLACA (Silva Style) */
+        /* 2. Placa de la brúixola (Silva Style) */
         #compass-plate {
-            position: relative;
-            width: 240px;
-            height: 320px;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(5px);
-            border: 2px solid rgba(0,0,0,0.1);
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 180px;
+            height: 260px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 2px solid white;
             border-radius: 15px;
-            margin-top: -50px; /* Sobreposada al mapa */
-            z-index: 5;
+            z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
 
-        /* Fletxa de direcció de la placa (fixa) */
         .direction-line {
-            width: 4px;
-            height: 60px;
+            width: 3px;
+            height: 40px;
             background: var(--rogaine-red);
             margin-top: 10px;
             position: relative;
         }
-        .direction-line::after {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: -8px;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-bottom: 15px solid var(--rogaine-red);
-        }
 
-        /* Limbe giratori (Bezel) */
         #bezel {
-            position: relative;
-            width: 200px;
-            height: 200px;
-            border: 12px solid #1a202c;
+            width: 140px;
+            height: 140px;
+            border: 10px solid var(--dark);
             border-radius: 50%;
+            position: relative;
             background: white;
-            transition: transform 0.1s ease-out;
+            margin-top: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            transition: transform 0.1s linear;
         }
 
-        /* Línies de fe (vermelles a l'interior del limbe) */
-        .orienting-lines {
+        .degree-numbers span {
             position: absolute;
-            width: 100%;
-            height: 100%;
-            background: 
-                linear-gradient(90deg, transparent 49%, var(--rogaine-red) 49.5%, var(--rogaine-red) 50.5%, transparent 51%),
-                linear-gradient(0deg, transparent 49%, var(--rogaine-red) 49.5%, var(--rogaine-red) 50.5%, transparent 51%);
-            opacity: 0.3;
-            border-radius: 50%;
-        }
-
-        .north-mark {
-            position: absolute;
-            top: 5px;
             font-weight: bold;
-            color: var(--rogaine-red);
-            font-size: 1.2rem;
+            font-size: 1rem;
+        }
+        .n { top: 5px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
+        .e { right: 8px; top: 50%; transform: translateY(-50%); }
+        .s { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .w { left: 8px; top: 50%; transform: translateY(-50%); }
+
+        #heading-display {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-top: 10px;
+            color: var(--dark);
         }
 
-        /* Targeta d'Objectiu */
+        /* 3. Targeta d'Objectiu */
         #target-card {
-            width: 90%;
-            max-width: 350px;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 160px;
             background: white;
             padding: 15px;
             border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin: 20px 0;
-            text-align: center;
-            border-bottom: 4px solid var(--primary);
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--primary);
         }
 
-        .target-data { display: flex; justify-content: space-around; margin-top: 10px; }
-        .data-box { display: flex; flex-direction: column; }
-        .label { font-size: 0.7rem; color: #718096; text-transform: uppercase; }
-        .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
+        .label { font-size: 0.65rem; color: #718096; text-transform: uppercase; display: block; }
+        .value { font-size: 1.2rem; font-weight: bold; display: block; margin-bottom: 5px; }
 
-        /* Controls */
-        .controls { padding-bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .controls { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; }
         button { 
-            padding: 12px 30px; 
-            font-size: 1rem; 
-            border-radius: 50px; 
-            border: none; 
-            background: var(--dark); 
-            color: white; 
-            font-weight: bold;
-            cursor: pointer;
+            padding: 12px 25px; border-radius: 50px; border: none; 
+            background: var(--dark); color: white; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
-
-        #heading-display { font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
-        #debug-console { font-size: 0.6rem; color: #cbd5e0; width: 90%; text-align: left; }
+        
+        #debug-console { position: fixed; bottom: 0; left: 0; font-size: 0.6rem; color: #ccc; pointer-events: none; }
     </style>
 </head>
 <body>
-
-    <header>
-        <strong>OrientaTrack</strong>
-    </header>
 
     <div id="map"></div>
 
     <div id="compass-plate">
         <div class="direction-line"></div>
         <div id="bezel">
-            <div class="orienting-lines"></div>
-            <div class="north-mark">N</div>
-            <i id="arrow" class="fas fa-long-arrow-alt-up" style="font-size: 4rem; color: var(--rogaine-red); z-index: 2;"></i>
+            <div class="degree-numbers">
+                <span class="n">N</span><span class="e">E</span>
+                <span class="s">S</span><span class="w">W</span>
+            </div>
+            <div id="magnetic-needle" style="width: 2px; height: 100%; background: linear-gradient(to bottom, red 50%, blue 50%); position: absolute; opacity: 0.5;"></div>
         </div>
         <div id="heading-display">0°</div>
     </div>
 
     <div id="target-card">
-        <span class="label">Proxim Objectiu</span>
-        <div id="target-name" style="font-weight: bold; color: var(--primary);">--</div>
-        
-        <div class="target-data">
-            <div class="data-box">
-                <span class="label">Rumb Destí</span>
-                <span id="target-bearing" class="value">--°</span>
-            </div>
-            <div class="data-box">
-                <span class="label">Distància</span>
-                <span id="target-distance" class="value">-- m</span>
-            </div>
-        </div>
+        <span class="label">Objectiu</span>
+        <span id="target-name" style="font-size: 0.9rem; font-weight: bold;">--</span>
+        <hr style="border: 0.5px solid #edf2f7; margin: 10px 0;">
+        <span class="label">Rumb Destí</span>
+        <span id="target-bearing" class="value">--°</span>
+        <span class="label">Distància</span>
+        <span id="target-distance" class="value">-- m</span>
     </div>
 
     <div class="controls">
-        <button id="btn-permis">Començar sessió</button>
-        <div id="debug-console"></div>
+        <button id="btn-permis">ACTIVA BRÚIXOLA</button>
     </div>
+
+    <div id="debug-console"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="js/compass.js"></script>
