@@ -12,9 +12,8 @@ export class GameLogic {
         const text = await response.text();
         const xml = new DOMParser().parseFromString(text, "text/xml");
         const pts = xml.querySelectorAll("trkpt");
-
-        let acumuladorDistancia = 0;
         let llista = [];
+        let acumulador = 0;
 
         pts.forEach((pt, i) => {
             const lat = parseFloat(pt.getAttribute("lat"));
@@ -23,10 +22,10 @@ export class GameLogic {
                 this._afegirFita(llista, lat, lon);
             } else {
                 const prev = { lat: parseFloat(pts[i-1].getAttribute("lat")), lon: parseFloat(pts[i-1].getAttribute("lon")) };
-                acumuladorDistancia += calcularDistancia(prev.lat, prev.lon, lat, lon);
-                if (acumuladorDistancia >= 1000) {
+                acumulador += calcularDistancia(prev.lat, prev.lon, lat, lon);
+                if (acumulador >= 1000) {
                     this._afegirFita(llista, lat, lon);
-                    acumuladorDistancia = 0;
+                    acumulador = 0;
                 }
             }
         });
@@ -35,60 +34,46 @@ export class GameLogic {
     }
 
     _afegirFita(llista, lat, lon) {
-        llista.push({
-            id: `CP-${llista.length + 1}`,
-            lat, lon,
-            nom: `Fita ${llista.length + 1}`,
-            radius_m: 20
+        llista.push({ nom: `Fita ${llista.length + 1}`, lat, lon, radius_m: 20 });
+    }
+
+    // AQUESTA FUNCIÓ FA FUNCIONAR EL TEU MENÚ
+    generarLlistaFitesHTML(contenidor, callbackSeleccio) {
+        contenidor.innerHTML = '<h4 style="margin:10px; color:#333">Selecciona Objectiu:</h4>';
+        this.fites.forEach((f, i) => {
+            const div = document.createElement('div');
+            div.className = 'fita-item';
+            const esActual = (i === this.indexFitaActual);
+            div.style.padding = "10px";
+            div.style.borderBottom = "1px solid #eee";
+            div.style.background = esActual ? "#e6f4ff" : "white";
+            
+            div.innerHTML = `
+                <span>${f.nom}</span>
+                <small style="float:right">${esActual ? '📍' : 'Anar-hi'}</small>
+            `;
+            div.onclick = () => callbackSeleccio(i);
+            contenidor.appendChild(div);
         });
     }
 
     processarPosicio(pos) {
         if (this.fites.length === 0) return null;
-        
-        const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+        const { latitude: lat, longitude: lon } = pos.coords;
         const target = this.fites[this.indexFitaActual];
-        
         const dist = calcularDistancia(lat, lon, target.lat, target.lon);
         const rumb = calcularRumb(lat, lon, target.lat, target.lon);
 
         let fitaTrobada = false;
-        if (dist <= target.radius_m && accuracy < 30) {
+        if (dist <= target.radius_m) {
             this.segonsDinsRadi++;
             if (this.segonsDinsRadi >= 3) {
                 fitaTrobada = true;
                 this.segonsDinsRadi = 0;
-                if (this.indexFitaActual < this.fites.length - 1) {
-                    this.indexFitaActual++;
-                }
+                if (this.indexFitaActual < this.fites.length - 1) this.indexFitaActual++;
             }
-        } else {
-            this.segonsDinsRadi = 0;
-        }
+        } else { this.segonsDinsRadi = 0; }
 
         return { dist, rumb, fitaTrobada, fitaNom: target.nom };
-    }
-    // Afegeix això dins de la classe GameLogic a GameLogic.js
-    generarLlistaFitesHTML(contenidor, callbackSeleccio) {
-        contenidor.innerHTML = '<h4 style="margin:10px 15px; color:#4a5568">Selecciona Fita:</h4>';
-        
-        this.fites.forEach((f, i) => {
-            const div = document.createElement('div');
-            div.className = 'fita-item'; // Recorda que l'estil ja el tens a l'index.html
-            const esActual = (i === this.indexFitaActual);
-            
-            div.innerHTML = `
-                <div style="display: flex; flex-direction: column;">
-                    <span style="${esActual ? 'font-weight:bold; color:var(--primary);' : 'color:#2d3748'}">${f.nom}</span>
-                    <small style="color:#a0aec0; font-size: 10px;">Punt de control ${i + 1}</small>
-                </div>
-                <small style="color:${esActual ? 'var(--primary)' : '#cbd5e0'}">
-                    ${esActual ? '📍 Destí' : 'Seleccionar'}
-                </small>
-            `;
-            
-            div.onclick = () => callbackSeleccio(i);
-            contenidor.appendChild(div);
-        });
     }
 }
