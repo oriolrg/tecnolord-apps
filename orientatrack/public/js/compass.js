@@ -71,15 +71,18 @@ function inicialitzarMapa() {
     }).addTo(map);
 }
 
-// --- SENSORS: BRÚIXOLA ---
 function handleOrientation(event) {
-    // webkitCompassHeading per iOS, alpha per Android
+    // Obtenim el rumb del Nord (0-360)
     let heading = event.webkitCompassHeading || (360 - event.alpha);
+    
     if (heading !== undefined && heading !== null) {
         const angle = Math.round(heading);
+        
+        // El limbe gira en sentit contrari al moviment per mantenir el Nord fix
+        bezel.style.transform = `rotate(${-angle}deg)`;
+        
+        // El rumb actual és el que marca la fletxa de direcció
         headingText.innerText = `${angle}°`;
-        // Rotem la fletxa (ajust de -45deg segons la icona de FontAwesome)
-        arrow.style.transform = `rotate(${angle - 45}deg)`;
     }
 }
 
