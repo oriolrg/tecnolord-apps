@@ -109,18 +109,19 @@ export class Compass {
         const display = document.getElementById('heading-display');
         if (!bezel) return;
 
-        // Càlcul de la distància més curta per evitar salts de 360º
-        let delta = newHeading - this.lastHeading;
-        if (delta > 180) delta -= 360;
-        if (delta < -180) delta += 360;
+        // 1. Calculem la diferència més curta (-180 a +180)
+        let diff = newHeading - this.lastHeading;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
 
-        this.currentRotation += delta;
+        // 2. Acumulem la rotació total
+        this.currentRotation += diff;
         this.lastHeading = newHeading;
 
-        // Fem servir requestAnimationFrame per una suavitat màxima de 60fps
-        window.requestAnimationFrame(() => {
-            bezel.style.transform = `rotate(${-this.currentRotation}deg)`;
-            if (display) display.innerText = `${Math.round(newHeading)}°`;
-        });
+        // 3. Apliquem el gir de forma immediata
+        // Usem 'translate' per assegurar-nos que no perdem el centratge
+        bezel.style.transform = `rotate(${-this.currentRotation}deg)`;
+
+        if (display) display.innerText = `${Math.round(newHeading)}°`;
     }
 }
