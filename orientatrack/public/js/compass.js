@@ -30,23 +30,58 @@ function handleOrientation(event) {
     }
 }
 
+// Variable per controlar la histèresi (estabilitat)
+let entersCount = 0;
+const MIN_FIXES_REQUIRED = 3; // Calen 3 lectures seguides dins del radi
+
 function actualitzarNavegacio(pos) {
+    const accuracy = pos.coords.accuracy;
     laMevaPosicio = {
         lat: pos.coords.latitude,
         lon: pos.coords.longitude
     };
 
+    // 1. Calcular dades geoespacials (segons ADR-0002)
     const dist = calcularDistancia(laMevaPosicio.lat, laMevaPosicio.lon, PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon);
     const rumbObj = calcularRumb(laMevaPosicio.lat, laMevaPosicio.lon, PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon);
 
-    targetName.innerText = PUNT_OBJECTIU.nom;
+    // Actualitzar UI
     targetBearing.innerText = `${Math.round(rumbObj)}°`;
     targetDistance.innerText = `${Math.round(dist)} m`;
 
-    if (dist < 20) {
-        if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-        debug("PUNT ASSOLIT!");
+    // 2. Motor de Validació amb Histèresi
+    // Només validem si la precisió GPS és millor que 20m
+    if (accuracy < 20) {
+        if (dist <= PUNT_OBJECTIU.radius_m) {
+            entersCount++;
+            debug(`Dins del radi... (${entersCount}/${MIN_FIXES_REQUIRED})`);
+            
+            if (entersCount >= MIN_FIXES_REQUIRED) {
+                validarPunt();
+            }
+        } else {
+            entersCount = 0; // Si surt del radi, reiniciem el comptador
+        }
     }
+}
+
+function validarPunt() {
+    // 1. Notificar a l'usuari (Vibració + Alerta)
+    if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500]);
+    
+    // 2. Enviar event al Backend (segons Contractes API)
+    fetch(`/api/v1/sessions/CURRENT_SESSION_ID/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            ts: new Date().toISOString(),
+            type: 'CP_VALIDATED',
+            payload: { cp_id: PUNT_OBJECTIU.id, lat: laMevaPosicio.lat, lon: laMevaPosicio.lon }
+        })
+    });
+
+    alert("🏆 BALISA VALIDADA!");
+    // Aquí podries carregar el següent CP de la ruta lineal
 }
 
 async function activarTot() {
@@ -79,27 +114,25 @@ let map;
 let targetMarker;
 
 function inicialitzarMapa() {
-    // Creem el mapa centrat prop del punt de prova (Sant Llorenç de Morunys)
-    map = L.map('map').setView([42.1363379, 1.5863909], 15);
+    // Definir els límits del mapa (ex: un quadrat de 5km al voltant del punt)
+    const bounds = L.latLngBounds(
+        [42.10, 1.55], // Sud-oest
+        [42.16, 1.62]  // Nord-est
+    );
 
-    // Capa Topogràfica de l'ICGC
-    const icgcTopo = L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
-        attribution: 'Institut Cartogràfic i Geològic de Catalunya',
-        maxZoom: 19
+    map = L.map('map', {
+        maxBounds: bounds,         // No permet sortir d'aquesta zona
+        maxBoundsViscosity: 1.0,   // Efecte "rebot" si s'intenta sortir
+        minZoom: 13,               // No permet veure massa territori (mantenir escala orientació)
+        maxZoom: 17,               // No permet veure "massa detall" urbà
+        zoomControl: false         // Treure botons +/- per netejar la UI
+    }).setView([42.1363, 1.5863], 15);
+
+    // Afegim la capa de l'ICGC
+    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
+        attribution: 'ICGC',
+        bounds: bounds
     }).addTo(map);
-
-    // Dibuixem el CP (Cercle de validació segons el radi del contracte)
-    // El radi_validacio_m el traiem de la definició (ex: 20m)
-    L.circle([42.1363379, 1.5863909], {
-        color: '#3182ce',
-        fillColor: '#3182ce',
-        fillOpacity: 0.2,
-        radius: 20 
-    }).addTo(map);
-
-    // Marcador del CP
-    targetMarker = L.marker([42.1363379, 1.5863909]).addTo(map)
-        .bindPopup('Font de la Puda');
 }
 
 // Cridem la funció d'inicialització
