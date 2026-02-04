@@ -9,7 +9,7 @@ tecnolord.cat, www.tecnolord.cat {
   }
 
   handle_path /api/orienta* {
-    reverse_proxy orienta_backend:4000
+    reverse_proxy orientatrack:4000
   }
 
   handle_path /api/opos* {
@@ -22,7 +22,7 @@ tecnolord.cat, www.tecnolord.cat {
   }
 
   handle_path /orientatrack* {
-    reverse_proxy orienta_backend:4000
+    reverse_proxy orientatrack:4000
   }
 
   handle_path /opos* {
