@@ -1,6 +1,8 @@
 export class Compass {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
+        this.currentRotation = 0; // Guardem la rotació acumulada real
+        this.lastHeading = 0;    // Guardem l'últim rumb rebut
         this.render();
         this.initDraggable();
     }
@@ -44,10 +46,27 @@ export class Compass {
         });
     }
 
-    updateHeading(heading) {
+    updateHeading(newHeading) {
         const bezel = document.getElementById('bezel');
         const display = document.getElementById('heading-display');
-        if (bezel) bezel.style.transform = `rotate(${-heading}deg)`;
-        if (display) display.innerText = `${Math.round(heading)}°`;
+        
+        if (!bezel) return;
+
+        // --- LÒGICA PER EVITAR EL SALT DEL NORD ---
+        // Calculem la diferència més curta entre el rumb nou i l'anterior
+        let diff = newHeading - this.lastHeading;
+
+        // Si la diferència és més de 180°, vol dir que estem creuant el Nord
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+
+        // Sumem aquesta diferència a la nostra rotació acumulada
+        this.currentRotation += diff;
+        this.lastHeading = newHeading;
+
+        // Apliquem la rotació inversa al bezel (perquè el Nord es mantingui fix al món)
+        bezel.style.transform = `rotate(${-this.currentRotation}deg)`;
+
+        if (display) display.innerText = `${Math.round(newHeading)}°`;
     }
 }
