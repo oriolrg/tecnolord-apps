@@ -1,5 +1,21 @@
 import { calcularDistancia, calcularRumb } from './geo.js';
 
+// --- CONFIGURACIÓ I ESTATS ---
+const PUNT_OBJECTIU = { 
+    id: "cp-1",
+    lat: 42.1363379, 
+    lon: 1.5863909, 
+    nom: "Font de la Puda",
+    radius_m: 20 
+};
+
+let map;
+let laMevaPosicio = null;
+let segonsDinsRadi = 0;
+const SEGONS_REQUERITS = 3; // Histèresi temporal
+const ACCURACY_THRESHOLD = 25; // No validem si el GPS falla per més de 25m
+
+// --- ELEMENTS UI ---
 const arrow = document.getElementById('arrow');
 const headingText = document.getElementById('heading');
 const btnPermis = document.getElementById('btn-permis');
@@ -7,70 +23,96 @@ const targetName = document.getElementById('target-name');
 const targetBearing = document.getElementById('target-bearing');
 const targetDistance = document.getElementById('target-distance');
 
-// PUNT DE PROVA (Sant Llorenç de Morunys)
-const PUNT_OBJECTIU = { 
-    lat: 42.1363379, 
-    lon: 1.5863909, 
-    nom: "Font de la Puda" 
-};
-
-let laMevaPosicio = null;
-
 function debug(msg) {
     const d = document.getElementById('debug-console');
-    if(d) d.innerHTML = `<div>> ${msg}</div>` + d.innerHTML;
+    if(d) d.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + d.innerHTML;
 }
 
+// --- LÒGICA DEL MAPA (ROGAINE MODE) ---
+function inicialitzarMapa() {
+    // Definim límits estrictes (aprox 2km al voltant del punt)
+    const areaJoc = L.latLngBounds(
+        [42.12, 1.56], 
+        [42.15, 1.61]
+    );
+
+    map = L.map('map', {
+        maxBounds: areaJoc,
+        maxBoundsViscosity: 1.0,
+        minZoom: 14,
+        maxZoom: 16,
+        zoomControl: false,
+        attributionControl: false
+    }).setView([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], 15);
+
+    // Capa Topogràfica ICGC
+    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
+        maxZoom: 16,
+        minZoom: 14
+    }).addTo(map);
+
+    // Pintem el CP (Cercle lila d'orientació oficial)
+    const cpColor = '#ff00ff';
+    L.circle([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], {
+        color: cpColor,
+        weight: 3,
+        fillColor: cpColor,
+        fillOpacity: 0.1,
+        radius: PUNT_OBJECTIU.radius_m
+    }).addTo(map);
+
+    // Etiqueta del número de balisa
+    L.marker([PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon], {
+        icon: L.divIcon({
+            className: 'cp-label',
+            html: `<b style="color:${cpColor}; font-size:18px; text-shadow: 2px 2px white;">1</b>`,
+            iconAnchor: [5, 10]
+        })
+    }).addTo(map);
+}
+
+// --- SENSORS: BRÚIXOLA ---
 function handleOrientation(event) {
+    // webkitCompassHeading per iOS, alpha per Android
     let heading = event.webkitCompassHeading || (360 - event.alpha);
-    if (heading) {
+    if (heading !== undefined && heading !== null) {
         const angle = Math.round(heading);
         headingText.innerText = `${angle}°`;
+        // Rotem la fletxa (ajust de -45deg segons la icona de FontAwesome)
         arrow.style.transform = `rotate(${angle - 45}deg)`;
     }
 }
 
-// Variable per controlar la histèresi (estabilitat)
-let entersCount = 0;
-const MIN_FIXES_REQUIRED = 3; // Calen 3 lectures seguides dins del radi
-
+// --- SENSORS: GPS I VALIDACIÓ ---
 function actualitzarNavegacio(pos) {
-    const accuracy = pos.coords.accuracy;
-    laMevaPosicio = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude
-    };
+    const { latitude, longitude, accuracy } = pos.coords;
+    laMevaPosicio = { lat: latitude, lon: longitude };
 
-    // 1. Calcular dades geoespacials (segons ADR-0002)
+    // Càlculs segons ADR-0002
     const dist = calcularDistancia(laMevaPosicio.lat, laMevaPosicio.lon, PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon);
     const rumbObj = calcularRumb(laMevaPosicio.lat, laMevaPosicio.lon, PUNT_OBJECTIU.lat, PUNT_OBJECTIU.lon);
 
-    // Actualitzar UI
+    // Actualització UI
+    targetName.innerText = PUNT_OBJECTIU.nom;
     targetBearing.innerText = `${Math.round(rumbObj)}°`;
     targetDistance.innerText = `${Math.round(dist)} m`;
 
-    // 2. Motor de Validació amb Histèresi
-    // Només validem si la precisió GPS és millor que 20m
-    if (accuracy < 20) {
-        if (dist <= PUNT_OBJECTIU.radius_m) {
-            entersCount++;
-            debug(`Dins del radi... (${entersCount}/${MIN_FIXES_REQUIRED})`);
-            
-            if (entersCount >= MIN_FIXES_REQUIRED) {
-                validarPunt();
-            }
-        } else {
-            entersCount = 0; // Si surt del radi, reiniciem el comptador
+    // Lògica de validació amb histèresi
+    if (dist <= PUNT_OBJECTIU.radius_m && accuracy < ACCURACY_THRESHOLD) {
+        segonsDinsRadi++;
+        if (segonsDinsRadi >= SEGONS_REQUERITS) {
+            validarPunt();
         }
+    } else {
+        segonsDinsRadi = 0; 
     }
 }
 
 function validarPunt() {
-    // 1. Notificar a l'usuari (Vibració + Alerta)
     if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500]);
     
-    // 2. Enviar event al Backend (segons Contractes API)
-    fetch(`/api/v1/sessions/CURRENT_SESSION_ID/events`, {
+    // Notificar al backend segons el contracte d'events
+    fetch('/api/v1/sessions/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,62 +120,45 @@ function validarPunt() {
             type: 'CP_VALIDATED',
             payload: { cp_id: PUNT_OBJECTIU.id, lat: laMevaPosicio.lat, lon: laMevaPosicio.lon }
         })
-    });
+    }).catch(err => console.error("Error enviant event:", err));
 
-    alert("🏆 BALISA VALIDADA!");
-    // Aquí podries carregar el següent CP de la ruta lineal
+    alert("🏆 BALISA TROBADA!");
+    segonsDinsRadi = -999; // Evitem múltiples alertes seguint al mateix punt
 }
 
+// --- ARRENCADA ---
 async function activarTot() {
-    debug("Demanant permisos...");
+    debug("Iniciant sensors...");
     
-    // 1. Activar Brúixola
+    // Permisos Brúixola (iOS requereix interacció d'usuari)
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const p = await DeviceOrientationEvent.requestPermission();
-        if (p === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+        try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission === 'granted') {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        } catch (err) {
+            debug("Error permisos brúixola: " + err);
+        }
     } else {
         window.addEventListener('deviceorientationabsolute', handleOrientation);
     }
 
-    // 2. Activar GPS
+    // Activar GPS d'alta precisió
     if ("geolocation" in navigator) {
         navigator.geolocation.watchPosition(actualitzarNavegacio, 
             (err) => debug(`Error GPS: ${err.message}`), 
-            { enableHighAccuracy: true }
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
         );
+    } else {
+        debug("GPS no disponible");
     }
 
     btnPermis.style.display = 'none';
 }
 
-btnPermis.addEventListener('click', activarTot);
-
-// Dins de js/compass.js
-
-let map;
-let targetMarker;
-
-function inicialitzarMapa() {
-    // Definir els límits del mapa (ex: un quadrat de 5km al voltant del punt)
-    const bounds = L.latLngBounds(
-        [42.10, 1.55], // Sud-oest
-        [42.16, 1.62]  // Nord-est
-    );
-
-    map = L.map('map', {
-        maxBounds: bounds,         // No permet sortir d'aquesta zona
-        maxBoundsViscosity: 1.0,   // Efecte "rebot" si s'intenta sortir
-        minZoom: 13,               // No permet veure massa territori (mantenir escala orientació)
-        maxZoom: 17,               // No permet veure "massa detall" urbà
-        zoomControl: false         // Treure botons +/- per netejar la UI
-    }).setView([42.1363, 1.5863], 15);
-
-    // Afegim la capa de l'ICGC
-    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
-        attribution: 'ICGC',
-        bounds: bounds
-    }).addTo(map);
-}
-
-// Cridem la funció d'inicialització
-inicialitzarMapa();
+// Inicialització
+document.addEventListener('DOMContentLoaded', () => {
+    inicialitzarMapa();
+    btnPermis.addEventListener('click', activarTot);
+});
