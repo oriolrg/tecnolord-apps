@@ -2,6 +2,7 @@ import { Compass } from './components/Compass.js';
 import { MapManager } from './components/MapManager.js';
 import { NavigationPanel } from './components/NavigationPanel.js';
 import { GameLogic } from './core/GameLogic.js';
+import { Legend } from './components/Legend.js'; // <--- AFEGEIX AIXÒ
 
 let compass, map, navPanel, game;
 
