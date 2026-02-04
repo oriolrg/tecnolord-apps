@@ -2,32 +2,46 @@
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
-    <title>OrientaTrack - Properament</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OrientaTrack - Test Brúixola</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f4f8; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: #2d3748; }
-        .status { color: #48bb78; font-weight: bold; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
+        
+        #compass-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #arrow {
+            font-size: 5rem;
+            color: #3182ce;
+            transition: transform 0.1s ease-out; /* Moviment suau */
+        }
+
+        .info { margin-top: 30px; text-align: center; }
+        button { padding: 15px 30px; font-size: 1rem; border-radius: 50px; border: none; background: #3182ce; color: white; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>📍 OrientaTrack</h1>
-        <p>Benvingut al nou servei de Tecnolord.</p>
-        <p class="status">✓ Frontend i Backend connectats</p>
-        <div id="api-status">Comprovant API...</div>
+
+    <div id="compass-container">
+        <i id="arrow" class="fas fa-location-arrow"></i>
     </div>
 
-    <script>
-        // Prova de connexió amb el backend
-        fetch('/api/orienta/api/ping')
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('api-status').innerText = 'Resposta del backend: ' + data.msg;
-            })
-            .catch(() => {
-                document.getElementById('api-status').innerText = 'Error connectant amb l’API';
-            });
-    </script>
+    <div class="info">
+        <h2 id="heading">0°</h2>
+        <p>Apunta el mòbil per veure el rumb</p>
+        <button id="btn-permis">Activar Brúixola</button>
+    </div>
+
+    <script src="js/compass.js"></script>
 </body>
 </html>

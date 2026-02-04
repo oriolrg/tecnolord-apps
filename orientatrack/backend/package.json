@@ -5,5 +5,18 @@
   "dependencies": {
     "express": "^4.18.2",
     "pg": "^8.11.3"
-  }
+  },
+  "description": "",
+  "directories": {
+    "test": "tests"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
