@@ -157,34 +157,35 @@ document.getElementById('btn-permis').onclick = async () => {
     window.addEventListener('deviceorientationabsolute', handleOrientation, true);
     navigator.geolocation.watchPosition(actualitzarNavegacio, null, { enableHighAccuracy: true });
     
+    // Creem el mapa centrat a la zona del teu GPX (Sant Llorenç de Morunys aprox)
     map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false 
     }).setView([42.135, 1.592], 15);
 
     // =========================================================================
-    // OPCIÓ A: MAPANT (URL CORREGIDA)
+    // OPCIÓ GUANYADORA: ICGC (Topogràfic d'alta qualitat)
+    // Funciona sempre, és ràpid i perfecte per a Rogaine a Catalunya.
     // =========================================================================
-    // He tret el "tiles." del principi i he ajustat la ruta
-    L.tileLayer('https://mapant.es/tiles/{z}/{x}/{y}.png', {
-        minZoom: 4,
+    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
+        attribution: 'ICGC',
         maxZoom: 18,
-        opacity: 1.0,
-        attribution: 'Mapant.es'
+        minZoom: 7
     }).addTo(map);
 
     // =========================================================================
-    // OPCIÓ B: ICGC (Capa de seguretat si l'anterior falla)
+    // OPCIÓ MAPANT: Bloquejada actualment per política de seguretat externa
     // =========================================================================
     /*
-    L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/topo/GRID3857/{z}/{x}/{y}.jpeg', {
-        attribution: 'ICGC',
-        maxZoom: 18
+    L.tileLayer('https://mapant.es/tiles/{z}/{x}/{y}.png', {
+        attribution: 'Mapant.es'
     }).addTo(map);
     */
 
     map.on('zoomend moveend load', actualitzarLlegenda);
     
+    // Carreguem les fites del fitxer ruta.gpx
     carregarRutaGPX();
+    
     document.getElementById('btn-permis').style.display = 'none';
 };
