@@ -13,6 +13,39 @@ document.getElementById('btn-permis').onclick = async () => {
     new Legend('map-legend-container', map.map); // Passem el mapa de Leaflet
     navPanel = new NavigationPanel('navigation-panel-container');
     game = new GameLogic();
+    const btnFites = document.getElementById('btn-fites');
+const menuFites = document.getElementById('fites-menu');
+
+btnFites.onclick = (e) => {
+    e.stopPropagation(); // Evita que el clic es propagui al mapa
+    
+    if (menuFites.style.display === 'block') {
+        menuFites.style.display = 'none';
+    } else {
+        // Generem la llista i definim què passa quan cliquem una fita
+        game.generarLlistaFitesHTML(menuFites, (index) => {
+            game.indexFitaActual = index; // Cambiem l'objectiu al motor de joc
+            
+            // Actualitzem visualment el mapa (cercles blaus/liles)
+            map.dibuixarFites(game.fites, index, (i) => {
+                game.indexFitaActual = i;
+                map.dibuixarFites(game.fites, i);
+            });
+            
+            // Centrem el mapa a la nova fita triada
+            map.centrarFita(game.fites[index]);
+            
+            // Tanquem el menú
+            menuFites.style.display = 'none';
+        });
+        menuFites.style.display = 'block';
+    }
+};
+
+// Tanquem el menú si es clica qualsevol lloc del mapa
+map.map.on('click', () => {
+    menuFites.style.display = 'none';
+});
 
     // 2. Carregar dades del GPX
     try {
@@ -29,6 +62,7 @@ document.getElementById('btn-permis').onclick = async () => {
     window.addEventListener('deviceorientationabsolute', (e) => {
         let heading = e.webkitCompassHeading || (360 - e.alpha);
         if (heading !== undefined) {
+            // En lloc d'actualitzar directament, podríem fer-ho més suau
             compass.updateHeading(heading);
         }
     }, true);

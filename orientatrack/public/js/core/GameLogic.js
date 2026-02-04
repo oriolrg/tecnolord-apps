@@ -68,4 +68,27 @@ export class GameLogic {
 
         return { dist, rumb, fitaTrobada, fitaNom: target.nom };
     }
+    // Afegeix això dins de la classe GameLogic a GameLogic.js
+    generarLlistaFitesHTML(contenidor, callbackSeleccio) {
+        contenidor.innerHTML = '<h4 style="margin:10px 15px; color:#4a5568">Selecciona Fita:</h4>';
+        
+        this.fites.forEach((f, i) => {
+            const div = document.createElement('div');
+            div.className = 'fita-item'; // Recorda que l'estil ja el tens a l'index.html
+            const esActual = (i === this.indexFitaActual);
+            
+            div.innerHTML = `
+                <div style="display: flex; flex-direction: column;">
+                    <span style="${esActual ? 'font-weight:bold; color:var(--primary);' : 'color:#2d3748'}">${f.nom}</span>
+                    <small style="color:#a0aec0; font-size: 10px;">Punt de control ${i + 1}</small>
+                </div>
+                <small style="color:${esActual ? 'var(--primary)' : '#cbd5e0'}">
+                    ${esActual ? '📍 Destí' : 'Seleccionar'}
+                </small>
+            `;
+            
+            div.onclick = () => callbackSeleccio(i);
+            contenidor.appendChild(div);
+        });
+    }
 }

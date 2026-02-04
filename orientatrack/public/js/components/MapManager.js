@@ -39,7 +39,11 @@ export class MapManager {
         });
     }
 
+    // Dins de MapManager.js
     centrarFita(fita) {
-        this.map.panTo([fita.lat, fita.lon]);
+        this.map.flyTo([fita.lat, fita.lon], 16, {
+            animate: true,
+            duration: 1.5
+        });
     }
 }
