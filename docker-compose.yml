@@ -62,9 +62,9 @@ services:
     expose:
       - "3000"
 
-  # --- ORIENTATRACK ---
+  # --- ORIENTATRACK (BACKEND API) ---
   orientatrack:
-    build: 
+    build:
       context: ./orientatrack/backend
     restart: unless-stopped
     env_file: .env
@@ -78,7 +78,7 @@ services:
 
   # --- OPOS ---
   opos_backend:
-    build: 
+    build:
       context: ./opos_backend
     restart: unless-stopped
     env_file: .env
@@ -89,7 +89,7 @@ services:
       - db
     expose:
       - "5000"
-  
+
   # --- UMAMI DB ---
   umami_db:
     image: postgres:16
@@ -118,9 +118,10 @@ services:
       APP_SECRET: ${UMAMI_APP_SECRET}
     expose:
       - "3000"
+
   # --- PaP (Nou Servei) ---
   pap_backend:
-    build: 
+    build:
       context: ./pap_backend
     restart: unless-stopped
     env_file: .env
@@ -131,6 +132,7 @@ services:
       - db
     expose:
       - "6000"
+
   # --- CADDY REVERSE PROXY ---
   caddy:
     image: caddy:2
@@ -140,15 +142,19 @@ services:
       - "443:443"
       - "443:443/udp"
       - "2019:2019"
-    depends_on: 
+    depends_on:
       - backend
       - api_py
       - umami
       - orientatrack
       - opos_backend
+      - pap_backend
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./site:/srv
+      # ✅ Frontend OrientaTrack servit com a estàtic (SPA/PWA)
+      #    Si el build és "dist", canvia public -> dist
+      - ./orientatrack/public:/srv/orientatrack:ro
       - caddy_data:/data
       - caddy_config:/config
 

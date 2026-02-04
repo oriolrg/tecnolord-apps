@@ -1,9 +1,7 @@
 tecnolord.cat, www.tecnolord.cat {
   encode gzip zstd
 
-  # 1. Rutes ultra-específiques (APIs de nous projectes)
-  # Les posem primer perquè Caddy no les confongui amb l'API genèrica
-  
+  # 1) APIs específiques
   handle_path /api/pap* {
     reverse_proxy pap_backend:6000
   }
@@ -16,20 +14,31 @@ tecnolord.cat, www.tecnolord.cat {
     reverse_proxy opos_backend:5000
   }
 
-  # 2. Rutes de Frontend (Subdirectoris)
+  # 2) Frontends (subdirectoris)
+
+  # PaP (si és frontend estàtic, aquí hauries de servir estàtics; si és backend, ok)
   handle_path /pap* {
     reverse_proxy pap_backend:6000
   }
 
+  # ✅ OrientaTrack FRONTEND estàtic (SPA)
   handle_path /orientatrack* {
-    reverse_proxy orientatrack:4000
+    # Si tens algun CSP massa restrictiu heretat, el traiem aquí
+    header {
+      -Content-Security-Policy
+    }
+
+    root * /srv/orientatrack
+    try_files {path} /index.html
+    file_server
   }
 
+  # Opos (igual: si és frontend estàtic, canviar a file_server)
   handle_path /opos* {
     reverse_proxy opos_backend:5000
   }
 
-  # 3. Rutes preexistents (MeteoLord i IA)
+  # 3) Rutes preexistents (MeteoLord i IA)
   @py path /api/v1/kpis* /api/v1/forecast* /health
   handle @py {
     reverse_proxy api_py:8000
@@ -46,7 +55,7 @@ tecnolord.cat, www.tecnolord.cat {
     file_server
   }
 
-  # 4. Redireccions d'arrel
+  # 4) Redirecció d'arrel
   handle / {
     redir /meteo/ 302
   }
