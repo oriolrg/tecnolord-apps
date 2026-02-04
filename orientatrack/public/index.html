@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>OrientaTrack Pro - Rogaine Mode</title>
+    <title>OrientaTrack - Professional Rogaine</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -13,7 +13,7 @@
             --primary: #3182ce;
             --rogaine-red: #e53e3e;
             --dark: #1a202c;
-            --glass: rgba(255, 255, 255, 0.15); /* Més transparent encara */
+            --glass: rgba(255, 255, 255, 0.2);
             --ruler-color: #000000;
         }
 
@@ -25,101 +25,108 @@
 
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* LLEGENDA CARTOGRÀFICA */
         #map-legend {
             position: fixed; top: 20px; right: 20px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 8px 12px; border: 1.5px solid #333;
+            padding: 8px 12px; border: 1px solid #333;
             z-index: 500; display: flex; flex-direction: column; align-items: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2); pointer-events: none;
         }
 
         #scale-bar {
-            width: 100px; height: 6px; background: white; border: 1px solid black;
+            width: 100px; height: 5px; background: white; border: 1px solid black;
             background-image: linear-gradient(90deg, black 50%, white 50%);
-            background-size: 50px 6px; margin-bottom: 4px;
+            background-size: 50px 5px; margin-bottom: 4px;
         }
 
         #scale-label, #numeric-scale { font-size: 0.7rem; font-family: monospace; font-weight: bold; color: black; }
 
-        /* BRÚIXOLA PROFESSIONAL ARROSSEGABLE */
+        /* PLACA DE LA BRÚIXOLA */
         #compass-plate {
             position: absolute; top: 100px; right: 20px;
-            width: 180px; height: 260px;
+            width: 180px; height: 280px;
             background: var(--glass);
             backdrop-filter: blur(2px);
-            border: 1px solid rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.15);
             z-index: 100; touch-action: none; cursor: move;
             display: flex; flex-direction: column; align-items: center;
-            border-top-left-radius: 0; /* Cantonada de mesura viva */
+            border-top-left-radius: 0;
         }
 
-        /* Regle Superior (Eix X) - Al marge extrem */
+        /* REGLE SUPERIOR (Enganxat a dalt de tot) */
         .ruler-top {
             position: absolute; top: 0; left: 0;
-            width: 100%; height: 35px;
+            width: 100%; height: 25px;
             border-bottom: 2px solid var(--ruler-color);
             display: flex;
         }
         .ruler-top span {
             width: 38px; height: 100%;
             border-left: 2px solid var(--ruler-color);
-            font-size: 0.7rem; font-weight: bold; color: var(--ruler-color);
+            font-size: 0.65rem; font-weight: bold; color: var(--ruler-color);
             display: flex; justify-content: center; align-items: flex-start;
-            padding-top: 4px;
+            padding-top: 2px; flex-shrink: 0;
         }
 
-        /* Regle Lateral (Eix Y) - Al marge extrem */
+        /* REGLE LATERAL (Enganxat a l'esquerra de tot) */
         .ruler-left {
             position: absolute; left: 0; top: 0;
-            width: 35px; height: 100%;
+            width: 30px; height: 100%;
             border-right: 2px solid var(--ruler-color);
             display: flex; flex-direction: column;
         }
         .ruler-left span {
             height: 38px; width: 100%;
             border-top: 2px solid var(--ruler-color);
-            font-size: 0.7rem; font-weight: bold; color: var(--ruler-color);
-            display: flex; align-items: center; padding-left: 6px;
+            font-size: 0.65rem; font-weight: bold; color: var(--ruler-color);
+            display: flex; align-items: center; padding-left: 4px; flex-shrink: 0;
         }
 
-        /* Línia de fe / direcció */
+        /* CONTENIDOR CENTRAL (Evita trepitjar regles) */
+        .compass-inner {
+            margin-top: 45px; /* Deixa espai pel regle top */
+            margin-left: 10px; /* Centra respecte l'espai lliure */
+            display: flex; flex-direction: column; align-items: center;
+        }
+
         .direction-line {
-            width: 2px; height: 40px;
+            width: 2px; height: 35px;
             background: var(--rogaine-red);
-            margin-top: 50px; position: relative;
+            margin-bottom: 5px;
         }
 
         #bezel {
-            width: 130px; height: 130px;
-            border: 8px solid var(--dark); border-radius: 50%;
-            position: relative; background: rgba(255, 255, 255, 0.4);
-            margin-top: 5px; 
-            transition: transform 0.1s linear; /* Gir suau */
+            width: 130px; height: 130px; /* CERCLE PERFECTE */
+            border: 8px solid var(--dark);
+            border-radius: 50%;
+            position: relative;
+            background: rgba(255, 255, 255, 0.4);
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0; /* No es deforma */
         }
 
         .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.85rem; }
         .n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
-        .e { right: 8px; top: 50%; transform: translateY(-50%); }
+        .e { right: 6px; top: 50%; transform: translateY(-50%); }
         .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
-        .w { left: 8px; top: 50%; transform: translateY(-50%); }
+        .w { left: 6px; top: 50%; transform: translateY(-50%); }
 
         .needle {
             position: absolute; top: 50%; left: 50%;
-            width: 2px; height: 80%;
+            width: 2px; height: 85%;
             background: linear-gradient(to bottom, var(--rogaine-red) 50%, #3182ce 50%);
             transform: translate(-50%, -50%);
         }
 
-        #heading-display { font-size: 1.8rem; font-weight: bold; margin-top: 10px; color: var(--dark); }
+        #heading-display { font-size: 1.8rem; font-weight: bold; margin-top: 15px; color: var(--dark); }
 
-        /* UI INFERIOR FIXA */
+        /* UI INFERIOR */
         .bottom-ui { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 200; }
         #target-card-full { background: white; padding: 12px 20px; border-top: 1px solid #e2e8f0; }
         .data-row { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto; }
         .label { font-size: 0.65rem; color: #718096; text-transform: uppercase; }
-        .target-name-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); display: block; }
-        .value { font-size: 1.4rem; font-weight: bold; color: var(--dark); }
+        .target-name-val { font-size: 1rem; font-weight: bold; color: var(--primary); display: block; }
+        .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
 
         .main-menu {
             display: flex; background: var(--dark); padding: 10px 0;
@@ -160,15 +167,17 @@
             <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
         </div>
         
-        <div class="direction-line"></div>
-        <div id="bezel">
-            <div class="degree-numbers">
-                <span class="n">N</span><span class="e">E</span>
-                <span class="s">S</span><span class="w">W</span>
+        <div class="compass-inner">
+            <div class="direction-line"></div>
+            <div id="bezel">
+                <div class="degree-numbers">
+                    <span class="n">N</span><span class="e">E</span>
+                    <span class="s">S</span><span class="w">W</span>
+                </div>
+                <div class="needle"></div>
             </div>
-            <div class="needle"></div>
+            <div id="heading-display">0°</div>
         </div>
-        <div id="heading-display">0°</div>
     </div>
 
     <div class="bottom-ui">

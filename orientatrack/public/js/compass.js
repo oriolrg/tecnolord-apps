@@ -10,12 +10,10 @@ const PUNT_OBJECTIU = {
 
 let map;
 let segonsDinsRadi = 0;
-let lastAngle = 0;
+let currentRotation = 0;
 
-// MOTOR D'ESCALA CARTOGRÀFICA
 function actualitzarLlegenda() {
     if (!map) return;
-    
     const y = map.getSize().y / 2;
     const x = map.getSize().x / 2;
     const p1 = map.containerPointToLatLng([x, y]);
@@ -27,23 +25,11 @@ function actualitzarLlegenda() {
     if (metresPerCm > 400) unitatMetres = 500;
     if (metresPerCm > 850) unitatMetres = 1000;
 
-    const pixelsPerMetre = 38 / metresPerCm;
-    const barWidth = unitatMetres * pixelsPerMetre;
-
-    const scaleBar = document.getElementById('scale-bar');
-    if (scaleBar) {
-        scaleBar.style.width = `${barWidth}px`;
-        scaleBar.style.backgroundSize = `${barWidth / 2}px 5px`;
-    }
-    
-    const label = document.getElementById('scale-label');
-    if (label) label.innerText = unitatMetres >= 1000 ? (unitatMetres/1000) + ' km' : unitatMetres + ' m';
-    
-    const numericScale = document.getElementById('numeric-scale');
-    if (numericScale) {
-        const escalaNum = Math.round(metresPerCm * 100);
-        numericScale.innerText = `1 : ${escalaNum.toLocaleString()}`;
-    }
+    const barWidth = (unitatMetres * 38) / metresPerCm;
+    document.getElementById('scale-bar').style.width = `${barWidth}px`;
+    document.getElementById('scale-bar').style.backgroundSize = `${barWidth / 2}px 5px`;
+    document.getElementById('scale-label').innerText = unitatMetres >= 1000 ? (unitatMetres/1000) + ' km' : unitatMetres + ' m';
+    document.getElementById('numeric-scale').innerText = `1 : ${Math.round(metresPerCm * 100).toLocaleString()}`;
 }
 
 function inicialitzarMapa() {
@@ -66,7 +52,6 @@ function inicialitzarMapa() {
     }).addTo(map);
 }
 
-// Draggable (interact.js)
 interact('.draggable').draggable({
     listeners: {
         move(event) {
@@ -80,23 +65,23 @@ interact('.draggable').draggable({
     }
 });
 
+// LÒGICA DE GIR SUAU (Evita salts al Nord)
+function getShortestRotation(newAngle) {
+    let delta = newAngle - (currentRotation % 360);
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    currentRotation += delta;
+    return -currentRotation; // Negatiu perquè el limbe gira al revés
+}
+
 function handleOrientation(event) {
     let heading = event.webkitCompassHeading || (360 - event.alpha);
     if (heading !== undefined && heading !== null) {
         const angle = Math.round(heading);
-        
-        // Suavització per evitar el gir erratic al salt 0/360
-        // Si el canvi és massa gran (ex. de 359 a 1), no fem transició llarga
-        const bezel = document.getElementById('bezel');
-        if (Math.abs(angle - lastAngle) > 180) {
-            bezel.style.transition = 'none';
-        } else {
-            bezel.style.transition = 'transform 0.1s linear';
-        }
-
         document.getElementById('heading-display').innerText = `${angle}°`;
-        bezel.style.transform = `rotate(${-angle}deg)`;
-        lastAngle = angle;
+        
+        const targetRotation = getShortestRotation(angle);
+        document.getElementById('bezel').style.transform = `rotate(${targetRotation}deg)`;
     }
 }
 
