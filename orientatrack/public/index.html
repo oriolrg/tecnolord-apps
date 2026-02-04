@@ -14,7 +14,7 @@
             --rogaine-red: #e53e3e;
             --dark: #1a202c;
             --glass: rgba(255, 255, 255, 0.2);
-            --ruler-color: #000000; /* Regle en negre */
+            --ruler-color: #000000;
         }
 
         body { 
@@ -25,116 +25,81 @@
 
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* LLEGENDA CARTOGRÀFICA PROFESSIONAL */
+        /* LLEGENDA CARTOGRÀFICA */
         #map-legend {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+            position: fixed; top: 20px; right: 20px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 8px 12px;
-            border: 1px solid #333;
-            z-index: 500;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            pointer-events: none;
+            padding: 8px 12px; border: 1.5px solid #333;
+            z-index: 500; display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); pointer-events: none;
         }
 
         #scale-bar {
-            width: 100px;
-            height: 5px;
-            background: white;
-            border: 1px solid black;
+            width: 100px; height: 6px; background: white; border: 1px solid black;
             background-image: linear-gradient(90deg, black 50%, white 50%);
-            background-size: 50px 5px; 
-            margin-bottom: 4px;
+            background-size: 50px 6px; margin-bottom: 4px;
         }
 
-        #scale-label, #numeric-scale {
-            font-size: 0.7rem;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            color: black;
-        }
+        #scale-label, #numeric-scale { font-size: 0.7rem; font-family: monospace; font-weight: bold; color: black; }
 
-        /* BRÚIXOLA DE PLACA (Silva Style) */
+        /* BRÚIXOLA PROFESSIONAL ARROSSEGABLE */
         #compass-plate {
-            position: absolute;
-            top: 100px;
-            right: 20px;
-            width: 180px;
-            height: 260px;
+            position: absolute; top: 100px; right: 20px;
+            width: 180px; height: 260px;
             background: var(--glass);
             backdrop-filter: blur(2px);
             border: 1px solid rgba(0,0,0,0.15);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            touch-action: none;
-            cursor: move;
-            border-top-left-radius: 0;
+            z-index: 100; touch-action: none; cursor: move;
+            display: flex; flex-direction: column; align-items: center;
         }
 
-        /* Regle Lateral Esquerre (Eix Y) */
-        .ruler-left {
-            position: absolute;
-            left: 0; top: 0;
-            width: 30px; height: 190px;
-            border-right: 1px solid var(--ruler-color);
-            display: flex; flex-direction: column;
-        }
-        .ruler-left span {
-            height: 38px; /* 1cm real aprox */
-            border-top: 1px solid var(--ruler-color);
-            padding-left: 3px;
-            font-size: 0.65rem;
-            font-weight: bold;
-            color: var(--ruler-color);
-        }
-
-        /* Regle Superior (Eix X) */
+        /* Regle Superior (Horitzontal) */
         .ruler-top {
-            position: absolute;
-            top: 0; left: 0;
-            width: 152px; height: 30px;
-            border-bottom: 1px solid var(--ruler-color);
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 30px;
+            border-bottom: 2px solid var(--ruler-color);
             display: flex;
         }
         .ruler-top span {
-            width: 38px; /* 1cm real aprox */
-            border-left: 1px solid var(--ruler-color);
-            padding-top: 1px;
-            text-align: center;
-            font-size: 0.65rem;
-            font-weight: bold;
-            color: var(--ruler-color);
+            width: 38px; height: 100%;
+            border-left: 1.5px solid var(--ruler-color);
+            font-size: 0.7rem; font-weight: bold; color: var(--ruler-color);
+            display: flex; justify-content: center; align-items: flex-start;
+            padding-top: 2px;
+        }
+
+        /* Regle Lateral (Vertical) */
+        .ruler-left {
+            position: absolute; left: 0; top: 0;
+            width: 30px; height: 100%;
+            border-right: 2px solid var(--ruler-color);
+            display: flex; flex-direction: column;
+        }
+        .ruler-left span {
+            height: 38px; width: 100%;
+            border-top: 1.5px solid var(--ruler-color);
+            font-size: 0.7rem; font-weight: bold; color: var(--ruler-color);
+            display: flex; align-items: center; padding-left: 4px;
         }
 
         .direction-line {
-            width: 2px; height: 45px;
+            width: 3px; height: 50px;
             background: var(--rogaine-red);
-            margin-top: 35px;
-            position: relative;
+            margin-top: 40px; position: relative;
         }
 
         #bezel {
-            width: 120px; height: 120px;
-            border: 8px solid var(--dark);
-            border-radius: 50%;
-            position: relative;
-            background: rgba(255, 255, 255, 0.4);
-            margin-top: 5px;
-            transition: transform 0.1s linear;
+            width: 125px; height: 125px;
+            border: 8px solid var(--dark); border-radius: 50%;
+            position: relative; background: rgba(255, 255, 255, 0.4);
+            margin-top: 5px; transition: transform 0.1s linear;
         }
 
-        .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.85rem; }
+        .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.9rem; }
         .n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
-        .e { right: 6px; top: 50%; transform: translateY(-50%); }
+        .e { right: 8px; top: 50%; transform: translateY(-50%); }
         .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
-        .w { left: 6px; top: 50%; transform: translateY(-50%); }
+        .w { left: 8px; top: 50%; transform: translateY(-50%); }
 
         .needle {
             position: absolute; top: 50%; left: 50%;
@@ -143,17 +108,15 @@
             transform: translate(-50%, -50%);
         }
 
-        #heading-display { font-size: 1.7rem; font-weight: bold; margin-top: 10px; color: var(--dark); }
+        #heading-display { font-size: 1.8rem; font-weight: bold; margin-top: 10px; color: var(--dark); }
 
-        /* UI INFERIOR FIXA */
+        /* UI INFERIOR */
         .bottom-ui { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 200; }
         #target-card-full { background: white; padding: 12px 20px; border-top: 1px solid #e2e8f0; }
         .data-row { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto; }
-        .target-main { flex: 2; }
-        .data-box { flex: 1; text-align: center; border-left: 1px solid #edf2f7; }
         .label { font-size: 0.65rem; color: #718096; text-transform: uppercase; }
-        .target-name-val { font-size: 1rem; font-weight: bold; color: var(--primary); display: block; }
-        .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
+        .target-name-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); display: block; }
+        .value { font-size: 1.4rem; font-weight: bold; color: var(--dark); }
 
         .main-menu {
             display: flex; background: var(--dark); padding: 10px 0;
@@ -165,13 +128,11 @@
             display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 3px;
         }
         .menu-btn.active { color: white; }
-        .menu-btn i { font-size: 1.1rem; }
 
         #btn-permis {
             position: fixed; top: 15px; left: 15px; z-index: 600;
             padding: 10px 25px; background: var(--dark); color: white;
-            border: none; border-radius: 50px; font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: none; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -189,10 +150,10 @@
 
     <div id="compass-plate" class="draggable">
         <div class="ruler-top">
-            <span>0</span><span>1</span><span>2</span><span>3</span>
+            <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
         </div>
         <div class="ruler-left">
-            <span>1</span><span>2</span><span>3</span><span>4</span>
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
         </div>
         
         <div class="direction-line"></div>
@@ -209,15 +170,15 @@
     <div class="bottom-ui">
         <div id="target-card-full">
             <div class="data-row">
-                <div class="target-main">
+                <div style="flex: 2;">
                     <span class="label">Objectiu</span>
                     <span id="target-name" class="target-name-val">Localitzant...</span>
                 </div>
-                <div class="data-box">
+                <div style="flex: 1; text-align: center; border-left: 1px solid #edf2f7;">
                     <span class="label">Rumb</span>
                     <span id="target-bearing" class="value">--°</span>
                 </div>
-                <div class="data-box">
+                <div style="flex: 1; text-align: center; border-left: 1px solid #edf2f7;">
                     <span class="label">Distància</span>
                     <span id="target-distance" class="value">-- m</span>
                 </div>
