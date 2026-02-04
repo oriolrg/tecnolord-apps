@@ -3,45 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OrientaTrack - Test Brúixola</title>
+    <title>OrientaTrack - Rogaine Mode</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
-        
+        :root {
+            --primary: #3182ce;
+            --dark: #2d3748;
+            --bg: #f7fafc;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            background: var(--bg); 
+            color: var(--dark);
+        }
+
+        header { width: 100%; padding: 20px; text-align: center; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Brúixola */
         #compass-container {
             position: relative;
-            width: 250px;
-            height: 250px;
+            width: 200px;
+            height: 200px;
             border-radius: 50%;
             background: white;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
             justify-content: center;
+            margin-top: 40px;
+            border: 8px solid #edf2f7;
         }
 
         #arrow {
-            font-size: 5rem;
-            color: #3182ce;
-            transition: transform 0.1s ease-out; /* Moviment suau */
+            font-size: 4rem;
+            color: var(--primary);
+            transition: transform 0.1s ease-out;
+            transform: rotate(-45deg); /* Ajust per la icona */
         }
 
-        .info { margin-top: 30px; text-align: center; }
-        button { padding: 15px 30px; font-size: 1rem; border-radius: 50px; border: none; background: #3182ce; color: white; cursor: pointer; }
+        #heading { font-size: 2.5rem; margin: 10px 0; font-weight: bold; }
+
+        /* Targeta d'Objectiu */
+        #target-card {
+            width: 90%;
+            max-width: 350px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-top: 30px;
+            text-align: center;
+            border-left: 5px solid var(--primary);
+        }
+
+        .target-data {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+
+        .data-box { display: flex; flex-direction: column; }
+        .label { font-size: 0.8rem; color: #718096; text-transform: uppercase; letter-spacing: 1px; }
+        .value { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+
+        /* Botons i Debug */
+        .controls { margin-top: auto; padding-bottom: 40px; }
+        button { 
+            padding: 15px 40px; 
+            font-size: 1rem; 
+            border-radius: 50px; 
+            border: none; 
+            background: var(--primary); 
+            color: white; 
+            font-weight: bold;
+            box-shadow: 0 4px 14px rgba(49, 130, 206, 0.4);
+            cursor: pointer;
+        }
+
+        #debug-console { font-size: 0.7rem; color: #a0aec0; width: 100%; max-height: 80px; overflow-y: auto; padding: 10px; }
     </style>
 </head>
 <body>
 
+    <header>
+        <strong>OrientaTrack</strong>
+    </header>
+
     <div id="compass-container">
         <i id="arrow" class="fas fa-location-arrow"></i>
     </div>
+    <div id="heading">0°</div>
 
-    <div class="info">
-        <h2 id="heading">0°</h2>
-        <p>Apunta el mòbil per veure el rumb</p>
-        <button id="btn-permis">Activar Brúixola</button>
+    <div id="target-card">
+        <span class="label">Proxim Objectiu</span>
+        <div id="target-name" style="font-weight: bold; margin-bottom: 5px;">Cercant senyal GPS...</div>
+        
+        <div class="target-data">
+            <div class="data-box">
+                <span class="label">Rumb</span>
+                <span id="target-bearing" class="value">--°</span>
+            </div>
+            <div class="data-box">
+                <span class="label">Distància</span>
+                <span id="target-distance" class="value">-- m</span>
+            </div>
+        </div>
     </div>
 
-    <script src="js/compass.js"></script>
+    <div class="controls">
+        <button id="btn-permis">Començar l'Orientació</button>
+    </div>
+
+    <div id="debug-console"></div>
+
+    <script type="module" src="js/compass.js"></script>
 </body>
 </html>
