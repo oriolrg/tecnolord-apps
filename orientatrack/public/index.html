@@ -13,7 +13,7 @@
             --primary: #3182ce;
             --rogaine-red: #e53e3e;
             --dark: #1a202c;
-            --glass: rgba(255, 255, 255, 0.15);
+            --glass: rgba(255, 255, 255, 0.25);
             --ruler-color: #000000;
         }
 
@@ -25,7 +25,7 @@
 
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* LLEGENDA CARTOGRÀFICA */
+        /* LLEGENDA CARTOGRÀFICA PROFESSIONAL */
         #map-legend {
             position: fixed; top: 20px; right: 20px;
             background: rgba(255, 255, 255, 0.95);
@@ -35,110 +35,114 @@
         }
 
         #scale-bar {
-            width: 100px; height: 6px; background: white; border: 1px solid black;
+            width: 100px; height: 5px; background: white; border: 1px solid black;
             background-image: linear-gradient(90deg, black 50%, white 50%);
-            background-size: 50px 6px; margin-bottom: 4px;
+            background-size: 50px 5px; margin-bottom: 4px;
         }
 
-        #scale-label, #numeric-scale { font-size: 0.7rem; font-family: monospace; font-weight: bold; color: black; }
+        #scale-label, #numeric-scale {
+            font-size: 0.7rem; font-family: 'Courier New', monospace; font-weight: bold; color: black;
+        }
 
-        /* BRÚIXOLA DE PLACA */
+        /* BRÚIXOLA DE PLACA (Silva Style) */
         #compass-plate {
-            position: absolute; top: 80px; right: 10px;
-            /* Mida proporcional: 45% de l'ample i alçada basada en ràtio 1.6 */
-            width: 45vw; max-width: 180px; 
-            height: 72vw; max-height: 288px;
+            position: absolute; top: 100px; right: 20px;
+            width: 180px; height: 280px;
             background: var(--glass);
-            backdrop-filter: blur(3px);
-            border: 1px solid rgba(0,0,0,0.3);
-            z-index: 100; touch-action: none; cursor: move;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(0,0,0,0.15);
+            z-index: 100;
+            touch-action: none; /* Crucial per interact.js */
+            cursor: move;
             border-top-left-radius: 0;
+            display: flex; flex-direction: column; align-items: center;
+            /* Lògica de moviment interact.js */
+            user-select: none;
         }
 
-        /* REGLE SUPERIOR (Marge extrem) */
-        .ruler-top {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 15px; /* Línia més a prop del marge */
-            border-bottom: 2px solid var(--ruler-color);
-            display: flex;
-        }
-        .ruler-top span {
-            width: 38px; height: 100%;
-            border-left: 2px solid var(--ruler-color);
-            font-size: 0.65rem; font-weight: bold; color: var(--ruler-color);
-            padding-left: 2px; flex-shrink: 0;
-        }
-
-        /* REGLE LATERAL (Marge extrem) */
+        /* Regle Lateral Esquerre (Eix Y) */
         .ruler-left {
             position: absolute; left: 0; top: 0;
-            width: 15px; height: 100%; /* Línia més a prop del marge */
+            width: 35px; height: 100%;
             border-right: 2px solid var(--ruler-color);
             display: flex; flex-direction: column;
         }
         .ruler-left span {
-            height: 38px; width: 100%;
-            border-top: 2px solid var(--ruler-color);
-            font-size: 0.65rem; font-weight: bold; color: var(--ruler-color);
-            padding-top: 2px; padding-left: 2px; flex-shrink: 0;
+            height: 38px; border-top: 1.5px solid var(--ruler-color);
+            padding-left: 4px; font-size: 0.7rem; font-weight: bold; color: var(--ruler-color);
         }
 
-        /* ESPAI DE LA BRÚIXOLA (Centrat en l'espai restant) */
-        .compass-inner {
-            margin-top: 30px;
-            margin-left: 15px;
+        /* Regle Superior (Eix X) */
+        .ruler-top {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 35px;
+            border-bottom: 2px solid var(--ruler-color);
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: calc(100% - 15px);
-            height: calc(100% - 30px);
+        }
+        .ruler-top span {
+            width: 38px; border-left: 1.5px solid var(--ruler-color);
+            padding-top: 2px; text-align: center; font-size: 0.7rem; font-weight: bold; color: var(--ruler-color);
+        }
+
+        /* Contenidor central per evitar trepitjar regles */
+        .compass-inner {
+            margin-top: 45px;
+            display: flex; flex-direction: column; align-items: center;
         }
 
         .direction-line {
-            width: 3px; height: 30px;
-            background: var(--rogaine-red);
-            margin-bottom: 10px;
-            position: relative;
-        }
-        .direction-line::after {
-            content: ''; position: absolute; top: -5px; left: -4px;
-            border-left: 5px solid transparent; border-right: 5px solid transparent;
-            border-bottom: 8px solid var(--rogaine-red);
+            width: 3px; height: 45px; background: var(--rogaine-red);
+            margin-bottom: 10px; position: relative;
         }
 
         #bezel {
-            width: 110px; height: 110px; /* Reduït per deixar aire */
-            border: 6px solid var(--dark);
-            border-radius: 50%;
-            position: relative;
-            background: rgba(255, 255, 255, 0.4);
-            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 120px; height: 120px;
+            border: 8px solid var(--dark); border-radius: 50%;
+            position: relative; background: rgba(255, 255, 255, 0.4);
+            transition: transform 0.1s linear; 
         }
 
-        .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.8rem; }
-        .n { top: 2px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
-        .e { right: 4px; top: 50%; transform: translateY(-50%); }
-        .s { bottom: 2px; left: 50%; transform: translateX(-50%); }
-        .w { left: 4px; top: 50%; transform: translateY(-50%); }
+        .degree-numbers span { position: absolute; font-weight: bold; font-size: 0.85rem; }
+        .n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--rogaine-red); }
+        .e { right: 6px; top: 50%; transform: translateY(-50%); }
+        .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+        .w { left: 6px; top: 50%; transform: translateY(-50%); }
 
         .needle {
             position: absolute; top: 50%; left: 50%;
-            width: 2px; height: 85%;
+            width: 2px; height: 80%;
             background: linear-gradient(to bottom, var(--rogaine-red) 50%, #3182ce 50%);
             transform: translate(-50%, -50%);
         }
 
-        #heading-display { font-size: 1.6rem; font-weight: bold; margin-top: 15px; color: var(--dark); }
+        #heading-display { font-size: 1.7rem; font-weight: bold; margin-top: 10px; color: var(--dark); }
 
-        /* UI INFERIOR */
-        .bottom-ui { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 200; }
-        #target-card-full { background: white; padding: 12px 20px; border-top: 1px solid #e2e8f0; }
-        .data-row { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto; }
+        /* UI INFERIOR FIXA I AMPLE TOTAL */
+        .bottom-ui {
+            position: fixed; bottom: 0; left: 0;
+            width: 100%; z-index: 200;
+            display: flex; flex-direction: column;
+        }
+
+        #target-card-full {
+            background: white; padding: 12px 20px;
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        }
+
+        .data-row {
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 900px; margin: 0 auto; width: 100%;
+        }
+
+        .target-main { flex: 2; }
+        .data-box { flex: 1; text-align: center; border-left: 1px solid #edf2f7; }
+
         .label { font-size: 0.65rem; color: #718096; text-transform: uppercase; }
+        .target-name-val { font-size: 1rem; font-weight: bold; color: var(--primary); display: block; }
         .value { font-size: 1.3rem; font-weight: bold; color: var(--dark); }
 
+        /* Menú Inferior */
         .main-menu {
             display: flex; background: var(--dark); padding: 10px 0;
             padding-bottom: calc(10px + env(safe-area-inset-bottom));
@@ -147,13 +151,16 @@
         .menu-btn {
             flex: 1; background: none; border: none; color: #a0aec0;
             display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 3px;
+            cursor: pointer;
         }
         .menu-btn.active { color: white; }
+        .menu-btn i { font-size: 1.1rem; }
 
         #btn-permis {
             position: fixed; top: 15px; left: 15px; z-index: 600;
             padding: 10px 25px; background: var(--dark); color: white;
             border: none; border-radius: 50px; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -193,15 +200,15 @@
     <div class="bottom-ui">
         <div id="target-card-full">
             <div class="data-row">
-                <div style="flex: 2;">
-                    <span class="label">Objectiu</span>
-                    <span id="target-name" style="font-weight: bold; color: var(--primary); display: block;">Localitzant...</span>
+                <div class="target-main">
+                    <span class="label">Punt actual</span>
+                    <span id="target-name" class="target-name-val">Cercant GPS...</span>
                 </div>
-                <div style="flex: 1; text-align: center; border-left: 1px solid #edf2f7;">
+                <div class="data-box">
                     <span class="label">Rumb</span>
                     <span id="target-bearing" class="value">--°</span>
                 </div>
-                <div style="flex: 1; text-align: center; border-left: 1px solid #edf2f7;">
+                <div class="data-box">
                     <span class="label">Distància</span>
                     <span id="target-distance" class="value">-- m</span>
                 </div>
@@ -210,9 +217,7 @@
         <nav class="main-menu">
             <button class="menu-btn"><i class="fas fa-map"></i><span>Mapa</span></button>
             <button class="menu-btn active"><i class="fas fa-compass"></i><span>Joc</span></button>
-            <button class="menu-btn" onclick="alert('Portes ' + (indexFitaActual) + ' de ' + fites.length + ' fites.')">
-                <i class="fas fa-flag"></i><span>Fites</span>
-            </button>
+            <button id="btn-fites" class="menu-btn"><i class="fas fa-list-ol"></i><span>Fites</span></button>
             <button class="menu-btn"><i class="fas fa-skull-crossbones"></i><span>SOS</span></button>
             <button class="menu-btn"><i class="fas fa-user-circle"></i><span>Perfil</span></button>
         </nav>
