@@ -3,9 +3,9 @@ import { Menu } from './components/Menu.js';
 import { GameView } from './views/GameView.js';
 import { SOSView } from './views/SOSView.js';
 import { RutesView } from './views/RutesView.js';
+import { ProfileView } from './views/ProfileView.js'; // Assegura't que l'importes
 
-let game, gameView, sosView, menu, rutesView;
-let proximityVibrated = false;
+let game, gameView, sosView, menu, rutesView, profileView;
 
 document.getElementById('btn-permis').onclick = async () => {
     document.getElementById('btn-permis').style.display = 'none';
@@ -13,12 +13,29 @@ document.getElementById('btn-permis').onclick = async () => {
     game = new GameLogic();
     gameView = new GameView();
     sosView = new SOSView(game);
+    // Inicialitzem el ProfileView perquè pugui ser actualitzat pel menú
+    profileView = new ProfileView('profile-container', game); 
+    
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
+    // --- LÒGICA D'INTERCEPCIÓ DEL MENÚ ---
+    const originalSwitch = menu.switchScreen.bind(menu);
+    menu.switchScreen = (screen) => {
+        // 1. Si entra a SOS, apliquem penalització
+        if (screen === 'sos') {
+            game.afegirPenalitzacioSOS();
+            if ("vibrate" in navigator) navigator.vibrate(100);
+        }
+        // 2. Si entra a Perfil, forcem l'actualització de dades
+        if (screen === 'perfil') {
+            profileView.update();
+        }
+        originalSwitch(screen);
+    };
+
+    // REPRESA DE SESSIÓ
     if (game.loadState()) {
-        const resumir = confirm("S'ha detectat una ruta en curs. Vols continuar on ho vas deixar?");
-        if (resumir) {
-            console.log("Resumint sessió anterior...");
+        if (confirm("Vols continuar la ruta anterior?")) {
             gameView.refreshMarkers(game.fites, game.indexFitaActual);
             const estat = game.getEstatActual();
             if (estat) gameView.updateNavigation(estat.fitaNom, 0, 0);
@@ -32,20 +49,21 @@ document.getElementById('btn-permis').onclick = async () => {
         try {
             let fites = dataRuta.fites || await game.carregarRuta(dataRuta.fitxer);
             fites = fites.map(f => ({
-                ...f,
-                lat: Number(f.lat),
+                ...f, 
+                lat: Number(f.lat), 
                 lon: Number(f.lon),
-                radius: Number(f.radius || f.radi || f.radius_m || 25)
+                radius: Number(f.radius || f.radius_m || 25)
             }));
             game.fites = fites;
             game.indexFitaActual = 0;
+            game.penalitzacions = 0;
             game.saveState();
+            
             gameView.refreshMarkers(fites, 0);
             const estat = game.getEstatActual();
             if (estat) gameView.updateNavigation(estat.fitaNom, 0, 0);
         } catch (e) {
-            console.error("Error carregant ruta:", e);
-            alert("No s'ha pogut carregar la ruta.");
+            console.error("Error ruta:", e);
         }
     };
 
@@ -54,42 +72,43 @@ document.getElementById('btn-permis').onclick = async () => {
         menu.switchScreen('joc');
     });
 
-    if (!game.startTime && rutesView.rutes.length > 0) {
-        await carregarNovaRuta(rutesView.rutes[0]);
-    }
-
-    window.addEventListener('deviceorientationabsolute', (e) => {
-        let heading = e.webkitCompassHeading || (360 - e.alpha);
-        if (heading !== undefined) gameView.updateCompass(heading);
-    }, true);
-
+    // GEOLOCALITZACIÓ I FINAL DE RUTA
     navigator.geolocation.watchPosition((pos) => {
         const estat = game.processarPosicio(pos);
         if (estat) {
             gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
             
-            // VIBRACIÓ PROXIMITAT (Menys de 50m)
-            if (estat.dist < 50 && estat.dist > 25 && !proximityVibrated) {
-                if ("vibrate" in navigator) navigator.vibrate([50, 100, 50]);
-                proximityVibrated = true;
-            } else if (estat.dist >= 50) {
-                proximityVibrated = false;
-            }
-
             if (estat.fitaTrobada) {
                 gameView.refreshMarkers(game.fites, game.indexFitaActual);
                 if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-                alert(`🎯 ${estat.fitaNom} TROBADA!`);
+
+                // COMPROVACIÓ DE FINAL DE RUTA
+                if (estat.rutaCompletada) {
+                    const tempsNetMin = Math.round((Date.now() - game.startTime) / 60000);
+                    const tempsFinalMin = tempsNetMin + game.penalitzacions;
+
+                    // Desem historial abans d'esborrar sessió
+                    game.saveToHistory(tempsNetMin, tempsFinalMin);
+
+                    alert(`🏆 RUTA FINALITZADA!\n\nTemps Net: ${tempsNetMin} min\nPenalitzacions SOS: ${game.penalitzacions} min\nTOTAL: ${tempsFinalMin} min`);
+                    
+                    game.clearState();
+                    menu.switchScreen('rutes');
+                } else {
+                    alert(`🎯 ${estat.fitaNom} TROBADA!`);
+                }
             }
         }
         sosView.updatePosition(pos);
     }, null, { enableHighAccuracy: true, maximumAge: 0 });
+
+    // Sensors brúixola
+    window.addEventListener('deviceorientationabsolute', (e) => {
+        let heading = e.webkitCompassHeading || (360 - e.alpha);
+        if (heading !== undefined) gameView.updateCompass(heading);
+    }, true);
 };
 
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker registrat!', reg))
-            .catch(err => console.error('Error registrant SW', err));
-    });
+    navigator.serviceWorker.register('./sw.js');
 }

@@ -10,6 +10,7 @@ export class MapManager {
     }
 
     dibuixarFites(fites, indexActual) {
+        // Netegem cercles i marcadors antics
         this.map.eachLayer(layer => {
             if (layer instanceof L.Circle || layer instanceof L.Marker) {
                 this.map.removeLayer(layer);
@@ -36,29 +37,19 @@ export class MapManager {
     }
 
     centrarFita(fita) {
-        this.map.panTo([fita.lat, fita.lon], {
-            animate: true,
-            duration: 0.8
-        });
+        this.map.panTo([fita.lat, fita.lon], { animate: true, duration: 0.8 });
     }
 
-    /**
-     * Mostra el camí real fet i el teòric (Útil per a SOS o anàlisi final)
-     */
     revelarProgres(trackReal, fites) {
-        // Dibuixa el track real en vermell
+        // Dibuixa el track real en vermell discontinu
         const polylineTrack = L.polyline(trackReal, {
-            color: 'red', 
-            weight: 3, 
-            dashArray: '5, 10',
-            opacity: 0.7
+            color: 'red', weight: 3, dashArray: '5, 10', opacity: 0.7
         }).addTo(this.map);
 
-        // Dibuixa la línia entre fites en blau
+        // Línia ideal entre fites en blau
         const puntsIdeals = fites.map(f => [f.lat, f.lon]);
-        L.polyline(puntsIdeals, {color: 'blue', weight: 2, opacity: 0.4}).addTo(this.map);
+        L.polyline(puntsIdeals, {color: 'blue', weight: 2, opacity: 0.3}).addTo(this.map);
 
-        // Ajusta la vista per veure-ho tot
         if (trackReal.length > 0) {
             this.map.fitBounds(polylineTrack.getBounds());
         }
