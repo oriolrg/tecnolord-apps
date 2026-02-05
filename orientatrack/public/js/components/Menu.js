@@ -29,7 +29,7 @@ export class Menu {
 
             #fites-menu {
                 position: fixed !important;
-                bottom: 110px !important; /* Pugem el desplegable perquè el panell no el tapi */
+                bottom: 110px !important;
                 left: 50% !important;
                 transform: translateX(-50%) !important;
                 width: 90% !important;
@@ -37,7 +37,7 @@ export class Menu {
                 background: white !important;
                 border-radius: 12px !important;
                 box-shadow: 0 -10px 40px rgba(0,0,0,0.5) !important;
-                z-index: 99999 !important; /* Prioritat absoluta en Chrome */
+                z-index: 99999 !important;
                 display: none;
                 overflow-y: auto;
                 border: 2px solid var(--primary);
@@ -88,9 +88,26 @@ export class Menu {
     }
 
     switchScreen(id) {
+        // 1. Gestió de visibilitat de les vistes
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         const target = document.getElementById(`view-${id}`);
         if (target) target.classList.add('active');
+
+        // 2. GESTIÓ BRÚIXOLA: S'amaga en totes les pantalles excepte a 'joc'
+        const compass = document.getElementById('compass-container');
+        if (compass) {
+            // Es mostra si estem a 'joc' i l'usuari no l'ha amagat manualment amb el botó
+            compass.style.display = (id === 'joc' && this.gameView.compass.userWantsVisible) ? 'block' : 'none';
+        }
+
+        // 3. SOLUCIÓ MAPA SOS: Recalcula el tamany del mapa Leaflet quan la vista és visible
+        if (id === 'sos' && this.sosView) {
+            setTimeout(() => {
+                this.sosView.invalidate(); // Crida al mètode d'invalidació del SOSView
+            }, 100);
+        }
+
+        // 4. Actualització del perfil
         if (id === 'perfil' && this.profileView) this.profileView.update();
     }
 }
