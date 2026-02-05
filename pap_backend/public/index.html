@@ -13,7 +13,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PaP">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-
     <link rel="apple-touch-icon" href="icon-512.png">
 
     <style>
@@ -32,7 +31,7 @@
             align-items: center; 
             padding: 20px; 
             margin: 0;
-            overscroll-behavior-y: contain; /* Evita el refrescament de Chrome en estirar cap avall */
+            overscroll-behavior-y: contain; 
         }
 
         .header { 
@@ -49,7 +48,7 @@
             width: 100%; 
             max-width: 400px; 
             text-align: center; 
-            border-top: 10px solid #cbd5e0; /* Color dinàmic */
+            border-top: 10px solid #cbd5e0; 
             transition: border-color 0.6s ease, transform 0.2s ease;
             box-sizing: border-box;
         }
@@ -70,6 +69,8 @@
         }
 
         .badge-ok { background: #c6f6d5; color: #22543d; }
+        /* Estil per quan s'està sincronitzant */
+        .badge-sync { background: #edf2f7; color: #4a5568; }
 
         .icon { 
             font-size: 4.5rem; 
@@ -130,7 +131,6 @@
         }
 
         .proxima-row:last-child { border: none; }
-        
         .proxima-row strong { font-weight: 600; }
         .proxima-row span:last-child { color: #718096; font-size: 0.9rem; }
 
@@ -179,11 +179,17 @@
             "envasos": "#d69e2e", 
             "paper_cartro": "#3182ce", 
             "resta": "#718096",
-            "bolquers": "#b794f4"
+            "bolquers": "#b794f4" 
         };
 
         async function updateUI() {
+            // Marquem que estem buscant dades
+            const badge = document.getElementById('status-badge');
+            badge.innerText = "Sincronitzant...";
+            badge.classList.add('badge-sync');
+
             try {
+                // Fem el fetch forçant que no vingui de la cache del navegador (?v=)
                 const r = await fetch('estat?v=' + Date.now());
                 if (!r.ok) throw new Error('Error API');
                 const data = await r.json();
@@ -193,10 +199,10 @@
                 document.getElementById('current-date').innerText = dateObj.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
                 // 2. Estats i Missatges
-                const badge = document.getElementById('status-badge');
                 const timeMsg = document.getElementById('time-msg');
                 const card = document.querySelector('.card');
                 
+                badge.classList.remove('badge-sync');
                 if (data.passatHora) {
                     badge.innerText = "Preparar per demà";
                     badge.className = "badge badge-ok";
@@ -214,12 +220,8 @@
                 if (data.treure && data.treure.length > 0) {
                     resText.innerText = data.treure.map(x => x.nom).join(' + ');
                     const firstId = data.treure[0].id;
-                    
-                    // Actualitzar icona
                     iconDiv.innerHTML = `<i class="fas ${ICONS[firstId]}"></i>`;
                     iconDiv.style.color = COLORS[firstId];
-                    
-                    // Actualitzar vora de la card
                     card.style.borderColor = COLORS[firstId];
                 } else {
                     resText.innerText = "No hi ha recollida";
@@ -239,14 +241,30 @@
 
             } catch (e) {
                 document.getElementById('residu-text').innerText = "Sense connexió";
+                badge.innerText = "Offline";
                 console.error("Error:", e);
             }
         }
 
-        // Executar al carregar
+        // --- NOVETATS PER EVITAR DADES ANTIGUES ---
+
+        // Executar al carregar la pàgina per primer cop
         updateUI();
 
-        // Registrar Service Worker per a PWA
+        // 1. Refrescar cada vegada que l'usuari torna a l'app (després d'estar en segon pla)
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                updateUI();
+            }
+        });
+
+        // 2. Refrescar si l'app guanya el focus (útil en molts navegadors mòbils)
+        window.addEventListener("focus", updateUI);
+
+        // 3. Refrescar automàticament cada 5 minuts per si es deixa l'app oberta
+        setInterval(updateUI, 300000);
+
+        // Registrar Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));

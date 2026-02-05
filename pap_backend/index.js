@@ -21,7 +21,6 @@ const nomsResidus = {
 };
 
 // 1. PRIORITAT MÀXIMA: Servir fitxers reals de la carpeta 'public'
-// Això permet que /icon-512.png o /manifest.json es trobin abans que qualsevol ruta
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 2. Rutes de diagnòstic
@@ -29,8 +28,15 @@ app.get('/ping', (req, res) => {
     res.json({ ok: true, msg: "Backend de PaP operatiu" });
 });
 
-// 3. Lògica de l'estat (Actualitzada per enfocar-se en el que cal treure)
+// 3. Lògica de l'estat (AMB CONTROL DE CACHE)
 app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) => {
+  
+  // --- MILLORA CLAU: Evitar que les dades es guardin a la memòria cau ---
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+
   const ara = new Date();
   const diaSetmana = ara.getDay(); // 0 (dg) a 6 (ds)
   const hora = ara.getHours();
@@ -84,7 +90,6 @@ app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) =
 });
 
 // 4. L'ÚLTIM RECURS: Qualsevol altra ruta serveix l'index.html
-// Això permet que les rutes de Caddy com /pap/ funcionin sempre
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
