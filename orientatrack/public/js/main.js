@@ -3,7 +3,7 @@ import { Menu } from './components/Menu.js';
 import { GameView } from './views/GameView.js';
 import { SOSView } from './views/SOSView.js';
 import { RutesView } from './views/RutesView.js';
-import { ProfileView } from './views/ProfileView.js'; // Assegura't que l'importes
+import { ProfileView } from './views/ProfileView.js';
 
 let game, gameView, sosView, menu, rutesView, profileView;
 
@@ -13,22 +13,22 @@ document.getElementById('btn-permis').onclick = async () => {
     game = new GameLogic();
     gameView = new GameView();
     sosView = new SOSView(game);
-    // Inicialitzem el ProfileView perquè pugui ser actualitzat pel menú
-    profileView = new ProfileView('profile-container', game); 
     
+    // CORRECCIÓ CRÍTICA: Apuntem a 'view-perfil', que existeix a l'index.html
+    profileView = new ProfileView('view-perfil', game); 
+    
+    // Ara el menú es crearà correctament perquè el perfil ja no dóna error
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
-    // --- LÒGICA D'INTERCEPCIÓ DEL MENÚ ---
+    // LÒGICA DE REFRESC I PENALITZACIÓ
     const originalSwitch = menu.switchScreen.bind(menu);
     menu.switchScreen = (screen) => {
-        // 1. Si entra a SOS, apliquem penalització
-        if (screen === 'sos') {
-            game.afegirPenalitzacioSOS();
-            if ("vibrate" in navigator) navigator.vibrate(100);
-        }
-        // 2. Si entra a Perfil, forcem l'actualització de dades
         if (screen === 'perfil') {
-            profileView.update();
+            profileView.update(); // Actualitza els cronòmetres del perfil
+        }
+        if (screen === 'sos') {
+            game.afegirPenalitzacioSOS(); // +1 min penalització
+            if ("vibrate" in navigator) navigator.vibrate(100);
         }
         originalSwitch(screen);
     };
@@ -72,8 +72,14 @@ document.getElementById('btn-permis').onclick = async () => {
         menu.switchScreen('joc');
     });
 
-    // GEOLOCALITZACIÓ I FINAL DE RUTA
+    // POSICIONAMENT I FINAL DE RUTA
     navigator.geolocation.watchPosition((pos) => {
+        const accuracy = pos.coords.accuracy;
+        const gpsDot = document.getElementById('gps-status-dot');
+        if (gpsDot) {
+            gpsDot.style.backgroundColor = accuracy < 10 ? '#48bb78' : (accuracy < 30 ? '#ecc94b' : '#f56565');
+        }
+
         const estat = game.processarPosicio(pos);
         if (estat) {
             gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
@@ -82,16 +88,12 @@ document.getElementById('btn-permis').onclick = async () => {
                 gameView.refreshMarkers(game.fites, game.indexFitaActual);
                 if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
 
-                // COMPROVACIÓ DE FINAL DE RUTA
                 if (estat.rutaCompletada) {
-                    const tempsNetMin = Math.round((Date.now() - game.startTime) / 60000);
-                    const tempsFinalMin = tempsNetMin + game.penalitzacions;
+                    const tNet = Math.round((Date.now() - game.startTime) / 60000);
+                    const tTotal = tNet + game.penalitzacions;
+                    game.saveToHistory(tNet, tTotal);
 
-                    // Desem historial abans d'esborrar sessió
-                    game.saveToHistory(tempsNetMin, tempsFinalMin);
-
-                    alert(`🏆 RUTA FINALITZADA!\n\nTemps Net: ${tempsNetMin} min\nPenalitzacions SOS: ${game.penalitzacions} min\nTOTAL: ${tempsFinalMin} min`);
-                    
+                    alert(`🏆 FINAL!\nNet: ${tNet}m\nSOS: +${game.penalitzacions}m\nTOTAL: ${tTotal}m`);
                     game.clearState();
                     menu.switchScreen('rutes');
                 } else {
@@ -100,9 +102,8 @@ document.getElementById('btn-permis').onclick = async () => {
             }
         }
         sosView.updatePosition(pos);
-    }, null, { enableHighAccuracy: true, maximumAge: 0 });
+    }, null, { enableHighAccuracy: true });
 
-    // Sensors brúixola
     window.addEventListener('deviceorientationabsolute', (e) => {
         let heading = e.webkitCompassHeading || (360 - e.alpha);
         if (heading !== undefined) gameView.updateCompass(heading);

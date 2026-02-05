@@ -32,36 +32,31 @@
 
         #map { width: 100%; height: 100%; z-index: 1; }
 
+        /* Estil per als continguts de pantalla (Perfil, Rutes, etc.) */
         .screen-content {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: white; z-index: 100; padding: 20px; box-sizing: border-box;
             overflow-y: auto;
+            padding-bottom: 110px; /* Espai necessari per la barra de navegació */
         }
 
-        /* ESTIL ICONES MAPA */
+        #gps-status-dot {
+            position: fixed; top: 20px; right: 20px; width: 12px; height: 12px;
+            background: #cbd5e0; border-radius: 50%; z-index: 5000;
+            border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+
         .fita-icon {
-            background: white; 
-            border-radius: 50%;
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            z-index: 500;
+            background: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; z-index: 500;
         }
-        .fita-activa { 
-            border: 2px solid var(--primary); 
-            color: var(--primary); 
-        }
-        .fita-pendent { 
-            border: 2px solid #ff00ff; 
-            color: #ff00ff; 
-        }
+        .fita-activa { border: 2px solid var(--primary); color: var(--primary); }
+        .fita-pendent { border: 2px solid #ff00ff; color: #ff00ff; }
 
         .bottom-ui {
-            position: fixed; 
-            bottom: 0; left: 0; width: 100%; 
-            z-index: 2000; 
-            background: var(--dark); 
+            position: fixed; bottom: 0; left: 0; width: 100%; 
+            z-index: 2000; background: var(--dark); 
             padding-bottom: env(safe-area-inset-bottom);
         }
 
@@ -76,6 +71,7 @@
 <body>
 
     <button id="btn-permis">INICIAR SESSIÓ</button>
+    <div id="gps-status-dot"></div>
 
     <div id="view-joc" class="view active">
         <div id="map"></div>
@@ -89,15 +85,7 @@
         </div>
     </div>
 
-    <div id="view-perfil" class="view">
-        <div class="screen-content">
-            <h2>El meu Perfil</h2>
-            <hr>
-            <div id="perfil-stats">
-                <p>Carregant dades...</p>
-            </div>
-        </div>
-    </div>
+    <div id="view-perfil" class="view"></div>
 
     <div id="view-rutes" class="view">
         <div id="route-selector-container"></div>
