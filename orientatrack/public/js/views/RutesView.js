@@ -4,7 +4,8 @@ export class RutesView {
         this.onSelect = onSelectCallback;
         // La llista de rutes ara és una propietat de la instància per accedir-hi des del main
         this.rutes = [
-            { id: 1, nom: "Ruta Local (GPX)", dificultat: "Mitjana", fitxer: "data/ruta.gpx" }
+            { id: 1, nom: "Ruta Local 8KM (GPX)", dificultat: "Mitjana", fitxer: "data/ruta.gpx" },
+            { id: 2, nom: "Ruta Local  SLLO 10KM (KML)", dificultat: "Mitjana", fitxer: "data/Afternoon_Hike.gpx" }
         ];
         this.render();
     }
