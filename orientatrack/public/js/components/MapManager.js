@@ -21,9 +21,11 @@ export class MapManager {
             const esActual = i === indexActual;
             
             // Cercle de fita (blau si és l'activa, lila la resta)
+            // Dins de dibuixarFites a MapManager.js
             L.circle([f.lat, f.lon], { 
                 color: esActual ? '#3182ce' : '#ff00ff', 
-                radius: f.radius_m, 
+                // SOLUCIÓ: Prova totes les variants possibles i assegura un número
+                radius: Number(f.radius_m || f.radius || f.radi || 25), 
                 fillOpacity: esActual ? 0.2 : 0.05 
             }).addTo(this.map);
 
