@@ -10,7 +10,6 @@ export class MapManager {
     }
 
     dibuixarFites(fites, indexActual) {
-        // Netegem cercles i marcadors antics per refrescar la vista
         this.map.eachLayer(layer => {
             if (layer instanceof L.Circle || layer instanceof L.Marker) {
                 this.map.removeLayer(layer);
@@ -20,16 +19,12 @@ export class MapManager {
         fites.forEach((f, i) => {
             const esActual = i === indexActual;
             
-            // Cercle de fita (blau si és l'activa, lila la resta)
-            // Dins de dibuixarFites a MapManager.js
             L.circle([f.lat, f.lon], { 
                 color: esActual ? '#3182ce' : '#ff00ff', 
-                // SOLUCIÓ: Prova totes les variants possibles i assegura un número
                 radius: Number(f.radius_m || f.radius || f.radi || 25), 
                 fillOpacity: esActual ? 0.2 : 0.05 
             }).addTo(this.map);
 
-            // Icona numerada amb canvi de color dinàmic (ACTUALITZAT)
             const icon = L.divIcon({
                 className: `fita-icon ${esActual ? 'fita-activa' : 'fita-pendent'}`,
                 html: `<span>${i + 1}</span>`,
@@ -40,9 +35,6 @@ export class MapManager {
         });
     }
 
-    /**
-     * Mou el mapa cap a la fita però MANTÉ el zoom actual
-     */
     centrarFita(fita) {
         this.map.panTo([fita.lat, fita.lon], {
             animate: true,
@@ -50,10 +42,25 @@ export class MapManager {
         });
     }
 
-    revelarRutes(trackReal, fites) {
-        L.polyline(trackReal, {color: 'red', weight: 3, dashArray: '5, 10'}).addTo(this.map);
+    /**
+     * Mostra el camí real fet i el teòric (Útil per a SOS o anàlisi final)
+     */
+    revelarProgres(trackReal, fites) {
+        // Dibuixa el track real en vermell
+        const polylineTrack = L.polyline(trackReal, {
+            color: 'red', 
+            weight: 3, 
+            dashArray: '5, 10',
+            opacity: 0.7
+        }).addTo(this.map);
+
+        // Dibuixa la línia entre fites en blau
         const puntsIdeals = fites.map(f => [f.lat, f.lon]);
-        L.polyline(puntsIdeals, {color: 'blue', weight: 2, opacity: 0.5}).addTo(this.map);
-        this.map.fitBounds(L.polyline(trackReal).getBounds());
+        L.polyline(puntsIdeals, {color: 'blue', weight: 2, opacity: 0.4}).addTo(this.map);
+
+        // Ajusta la vista per veure-ho tot
+        if (trackReal.length > 0) {
+            this.map.fitBounds(polylineTrack.getBounds());
+        }
     }
 }

@@ -13,6 +13,7 @@ export class Compass {
         this.lastHeading = 0;
         this.plateRotation = 0;   
         this.userWantsVisible = true;
+        this.hasVibratedNorth = false; // Control per no vibrar constantment
         
         this.injectStyles();
         this.render();
@@ -51,7 +52,6 @@ export class Compass {
     }
 
     render() {
-        // Fixa't que l'agulla es renderitza INSIDE del bezel de la càpsula
         this.container.innerHTML = `
             <div id="compass-plate" class="draggable">
                 ${this.plate.html}
@@ -104,13 +104,18 @@ export class Compass {
         this.currentRotation += diff;
         this.lastHeading = newHeading;
 
-        // ARA NOMÉS GIREM L'AGULLA:
-        // Compensem la rotació de la placa perquè l'agulla sempre miri al Nord real
         const needleFinalRotation = -this.currentRotation - this.plateRotation;
-
-        // Afegim translate(-50%, -50%) per no perdre el centratge absolut
         needle.style.transform = `translate(-50%, -50%) rotate(${needleFinalRotation}deg)`;
         
         if (display) display.innerText = `${Math.round(newHeading)}°`;
+
+        // VIBRACIÓ AL NORD (0°)
+        const isNorth = newHeading > 358 || newHeading < 2;
+        if (isNorth && !this.hasVibratedNorth) {
+            if ("vibrate" in navigator) navigator.vibrate(15); 
+            this.hasVibratedNorth = true;
+        } else if (!isNorth) {
+            this.hasVibratedNorth = false;
+        }
     }
 }
