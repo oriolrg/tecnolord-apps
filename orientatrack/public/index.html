@@ -30,18 +30,13 @@
 
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        #compass-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 1000;
-        }
-
         .screen-content {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: white; z-index: 100; padding: 20px; box-sizing: border-box;
             overflow-y: auto;
         }
 
-        /* ESTIL ICONES MAPA (ACTUALITZAT) */
+        /* ESTIL ICONES MAPA */
         .fita-icon {
             background: white; 
             border-radius: 50%;
@@ -51,12 +46,10 @@
             font-weight: bold; 
             z-index: 500;
         }
-        /* Classe per a la fita objectiu */
         .fita-activa { 
             border: 2px solid var(--primary); 
             color: var(--primary); 
         }
-        /* Classe per a les fites pendents */
         .fita-pendent { 
             border: 2px solid #ff00ff; 
             color: #ff00ff; 
@@ -85,7 +78,6 @@
     <div id="view-joc" class="view active">
         <div id="map"></div>
         <div id="map-legend-container" style="position: absolute; top: 20px; left: 20px; z-index: 1100;"></div> 
-        <div id="compass-container"></div>
     </div>
 
     <div id="view-sos" class="view">
@@ -115,6 +107,7 @@
     </div>
 
     <div id="fites-menu"></div>
+    <div id="compass-container"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
