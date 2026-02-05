@@ -10,19 +10,39 @@ export class Compass {
     }
 
     injectStyles() {
-        if (document.getElementById('compass-styles')) return;
-        const style = document.createElement('style');
-        style.id = 'compass-styles';
-        style.innerHTML = `
+    if (document.getElementById('compass-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'compass-styles';
+    style.innerHTML = `
+            #compass-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none; /* Deixa passar clics al mapa */
+                z-index: 1000; /* Per sobre del mapa de Leaflet */
+            }
+
             #compass-plate {
-                position: absolute; top: 80px; right: 20px;
-                width: 190px; height: 320px;
+                position: absolute; 
+                top: 80px; 
+                right: 20px;
+                width: 190px; 
+                height: 320px;
                 background: rgba(255, 255, 255, 0.25);
                 backdrop-filter: blur(8px);
                 border: 1.5px solid rgba(0,0,0,0.3);
                 border-radius: 5px;
-                z-index: 100; touch-action: none; cursor: move;
+                pointer-events: auto; /* Permet arrossegar la brúixola */
+                cursor: move;
                 box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            }
+
+            /* REGLES UNIFICADES */
+            .compass-rules {
+                position: absolute; inset: 0; pointer-events: none;
+                color: #000; font-family: 'Courier New', monospace;
             }
             .ruler-top { 
                 display: flex; border-bottom: 2px solid #000; height: 30px; 
@@ -31,7 +51,6 @@ export class Compass {
                 width: 38px; text-align: center; font-size: 10px; border-left: 1px solid #000; 
                 line-height: 30px; font-weight: bold;
             }
-
             .ruler-left { 
                 position: absolute; left: 0; top: 0; height: 100%; width: 30px; 
                 border-right: 2px solid #000; display: flex; flex-direction: column;
@@ -40,39 +59,21 @@ export class Compass {
                 height: 38px; font-size: 10px; border-top: 1px solid #000; 
                 padding-left: 4px; line-height: 38px; font-weight: bold;
             }
-            /* PEÇA 1: LA BASE TRANSPARENT */
-            .compass-base {
-                position: absolute; inset: 0;
-                background: rgba(255, 255, 255, 0.2);
-                backdrop-filter: blur(10px);
-                border: 2px solid rgba(0,0,0,0.2);
-                border-radius: 8px;
-                z-index: -1;
-            }
-            /* PEÇA 2: EL REGLE (Rulers) */
-            .compass-rules {
-                position: absolute; inset: 0; pointer-events: none;
-                color: #000; font-family: 'Courier New', monospace;
-            }
-            .r-top { display: flex; border-bottom: 2px solid #000; height: 30px; }
-            .r-top span { width: 40px; border-left: 1px solid #000; font-size: 10px; text-align: center; }
-            .r-left { position: absolute; left: 0; top: 0; height: 100%; width: 30px; border-right: 2px solid #000; }
-            .r-left div { height: 40px; border-top: 1px solid #000; font-size: 10px; padding-left: 4px; }
 
-            /* PEÇA 3: LA CÀPSULA GIRATÒRIA (Bezel) */
-            
+            .compass-capsule {
+                margin-top: 50px; display: flex; flex-direction: column; align-items: center;
+            }
+
             .direction-line {
                 width: 2px; height: 45px; background: #ff0000; 
                 margin-bottom: 5px; box-shadow: 0 0 2px rgba(255,0,0,0.5);
             }
-                
-            .compass-capsule {
-                margin-top: 50px; display: flex; flex-direction: column; align-items: center;
-            }
+
             #bezel {
                 width: 135px; height: 135px;
                 border: 10px solid #1a202c; border-radius: 50%;
-                position: relative; background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
+                position: relative; 
+                background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
                 box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
             }
 

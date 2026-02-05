@@ -1,16 +1,55 @@
 export class Menu {
-    constructor(containerId, gameInstance, mapInstance) {
+    constructor(containerId, game, gameView, sosView, profileView) {
         this.container = document.getElementById(containerId);
-        this.game = gameInstance;
-        this.mapManager = mapInstance;
+        this.game = game;
+        this.gameView = gameView;
+        this.sosView = sosView;
+        this.profileView = profileView;
+        this.injectStyles();
         this.render();
         this.initEventListeners();
+    }
+
+    injectStyles() {
+        if (document.getElementById('menu-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'menu-styles';
+        style.innerHTML = `
+            .main-menu {
+                display: flex; justify-content: space-around; padding: 10px 0;
+                background: #1a202c; position: relative; z-index: 10;
+            }
+            .menu-btn {
+                flex: 1; background: none; border: none; color: #a0aec0;
+                display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 3px;
+                cursor: pointer;
+            }
+            .menu-btn.active { color: white; }
+            .menu-btn i { font-size: 1.2rem; }
+
+            #fites-menu {
+                position: fixed !important;
+                bottom: 110px !important; /* Pugem el desplegable perquè el panell no el tapi */
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                width: 90% !important;
+                max-height: 55vh !important;
+                background: white !important;
+                border-radius: 12px !important;
+                box-shadow: 0 -10px 40px rgba(0,0,0,0.5) !important;
+                z-index: 99999 !important; /* Prioritat absoluta en Chrome */
+                display: none;
+                overflow-y: auto;
+                border: 2px solid var(--primary);
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     render() {
         this.container.innerHTML = `
             <nav class="main-menu">
-                <button class="menu-btn" data-screen="mapa"><i class="fas fa-map"></i><span>Mapa</span></button>
+                <button class="menu-btn" data-screen="rutes"><i class="fas fa-route"></i><span>Rutes</span></button>
                 <button class="menu-btn active" data-screen="joc"><i class="fas fa-compass"></i><span>Joc</span></button>
                 <button id="btn-fites" class="menu-btn"><i class="fas fa-list-ol"></i><span>Fites</span></button>
                 <button class="menu-btn" data-screen="sos"><i class="fas fa-skull-crossbones"></i><span>SOS</span></button>
@@ -20,76 +59,38 @@ export class Menu {
     }
 
     initEventListeners() {
-        const buttons = this.container.querySelectorAll('.menu-btn');
-        const menuFites = document.getElementById('fites-menu');
-
-        buttons.forEach(btn => {
-            btn.onclick = (e) => {
+        this.container.querySelectorAll('.menu-btn').forEach(btn => {
+            btn.onclick = () => {
                 const screen = btn.getAttribute('data-screen');
-                
-                // Cas especial: Botó Fites (és un desplegable, no una pantalla)
                 if (btn.id === 'btn-fites') {
-                    this.toggleFitesMenu(menuFites);
+                    this.gameView.showCheckpoints(this.game.fites, this.game.indexFitaActual, (i) => {
+                        this.game.indexFitaActual = i;
+                        this.gameView.refreshMarkers(this.game.fites, i);
+                        const estat = this.game.getEstatActual();
+                        this.gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
+                    });
                     return;
                 }
-
-                // Tancar menú fites si s'obre una altra pantalla
-                menuFites.style.display = 'none';
-
+                
                 if (screen === 'sos') {
-                    this.confirmarSOS();
-                } else if (screen) {
+                    if (confirm("L'ajuda SOS penalitza el temps. Vols continuar?")) {
+                        this.game.penalitzacions++;
+                        this.switchScreen(screen);
+                    }
+                } else {
                     this.switchScreen(screen);
                 }
-
-                buttons.forEach(b => b.classList.remove('active'));
+                
+                this.container.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             };
         });
     }
 
-    switchScreen(screenId) {
-        // Amagar totes les vistes
+    switchScreen(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        
-        // Mostrar la seleccionada (les pantalles de l'HTML coincideixen amb l'ID view-XXXX)
-        const targetView = document.getElementById(`view-${screenId}`);
-        if (targetView) targetView.classList.add('active');
-        
-        // Lògica específica per pantalla
-        if (screenId === 'perfil') this.updatePerfilStats();
-    }
-
-    toggleFitesMenu(menuElement) {
-        if (menuElement.style.display === 'block') {
-            menuElement.style.display = 'none';
-        } else {
-            this.game.generarLlistaFitesHTML(menuElement, (index) => {
-                this.game.indexFitaActual = index;
-                this.mapManager.dibuixarFites(this.game.fites, index);
-                this.mapManager.centrarFita(this.game.fites[index]);
-                menuElement.style.display = 'none';
-            });
-            menuElement.style.display = 'block';
-        }
-    }
-
-    confirmarSOS() {
-        const accepta = confirm("ALERTA: El mode SOS mostrarà la teva posició al mapa però penalitzarà el temps. Vols continuar?");
-        if (accepta) {
-            this.switchScreen('sos');
-            // Aquí podríem instanciar un mini-mapa SOS o reutilitzar el MapManager
-        }
-    }
-
-    updatePerfilStats() {
-        const container = document.getElementById('perfil-stats');
-        container.innerHTML = `
-            <div style="background:#f7fafc; padding:15px; border-radius:10px;">
-                <p><strong>Fites trobades:</strong> ${this.game.fites.filter(f => f.trobada).length} / ${this.game.fites.length}</p>
-                <p><strong>Temps actual:</strong> --:--</p>
-                <p><strong>Penalitzacions:</strong> 0</p>
-            </div>
-        `;
+        const target = document.getElementById(`view-${id}`);
+        if (target) target.classList.add('active');
+        if (id === 'perfil' && this.profileView) this.profileView.update();
     }
 }
