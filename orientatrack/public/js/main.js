@@ -17,7 +17,6 @@ document.getElementById('btn-permis').onclick = async () => {
     // CORRECCIÓ CRÍTICA: Apuntem a 'view-perfil', que existeix a l'index.html
     profileView = new ProfileView('view-perfil', game); 
     
-    // Ara el menú es crearà correctament perquè el perfil ja no dóna error
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
     // LÒGICA DE REFRESC I PENALITZACIÓ
@@ -93,7 +92,7 @@ document.getElementById('btn-permis').onclick = async () => {
                     const tTotal = tNet + game.penalitzacions;
                     game.saveToHistory(tNet, tTotal);
 
-                    alert(`🏆 FINAL!\nNet: ${tNet}m\nSOS: +${game.penalitzacions}m\nTOTAL: ${tTotal}m`);
+                    alert(`🏆 FINAL!\nNet: ${tNet} min\nSOS: +${game.penalitzacions} min\nTOTAL: ${tTotal} min`);
                     game.clearState();
                     menu.switchScreen('rutes');
                 } else {
@@ -110,6 +109,20 @@ document.getElementById('btn-permis').onclick = async () => {
     }, true);
 };
 
+// REGISTRE DE SERVICE WORKER AMB DETECCIÓ D'ACTUALITZACIONS
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // Hi ha codi nou! Forcem refresc o avisem
+                        console.log('Nova versió detectada. Refressant...');
+                        window.location.reload();
+                    }
+                };
+            };
+        });
+    });
 }
