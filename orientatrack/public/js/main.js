@@ -4,34 +4,30 @@ import { GameView } from './views/GameView.js';
 import { SOSView } from './views/SOSView.js';
 import { RutesView } from './views/RutesView.js';
 import { ProfileView } from './views/ProfileView.js';
-import { WelcomeView } from './views/WelcomeView.js'; // 1. Importem la nova vista
+import { WelcomeView } from './views/WelcomeView.js';
 
 let game, gameView, sosView, menu, rutesView, profileView;
 
-// 2. Inicialitzem la pantalla de benvinguda. 
-// Ella mateixa comprova el LocalStorage per decidir si mostrar-se o no.
+// Mostrem la benvinguda si toca
 new WelcomeView();
 
-document.getElementById('btn-permis').onclick = async () => {
-    document.getElementById('btn-permis').style.display = 'none';
-
+// Funció que arrenca tota la maquinària de l'aplicació
+const initApp = async () => {
     game = new GameLogic();
     gameView = new GameView();
     sosView = new SOSView(game);
     
-    // CORRECCIÓ CRÍTICA: Apuntem a 'view-perfil', que existeix a l'index.html
     profileView = new ProfileView('view-perfil', game); 
-    
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
     // LÒGICA DE REFRESC I PENALITZACIÓ
     const originalSwitch = menu.switchScreen.bind(menu);
     menu.switchScreen = (screen) => {
         if (screen === 'perfil') {
-            profileView.update(); // Actualitza els cronòmetres del perfil
+            profileView.update();
         }
         if (screen === 'sos') {
-            game.afegirPenalitzacioSOS(); // +1 min penalització
+            game.afegirPenalitzacioSOS(); 
             if ("vibrate" in navigator) navigator.vibrate(100);
         }
         originalSwitch(screen);
@@ -114,7 +110,10 @@ document.getElementById('btn-permis').onclick = async () => {
     }, true);
 };
 
-// REGISTRE DE SERVICE WORKER AMB DETECCIÓ D'ACTUALITZACIONS
+// Executem la inicialització directament
+initApp();
+
+// REGISTRE DE SERVICE WORKER
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then(reg => {
@@ -122,8 +121,6 @@ if ('serviceWorker' in navigator) {
                 const installingWorker = reg.installing;
                 installingWorker.onstatechange = () => {
                     if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // Hi ha codi nou! Forcem refresc o avisem
-                        console.log('Nova versió detectada. Refressant...');
                         window.location.reload();
                     }
                 };
