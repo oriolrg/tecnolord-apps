@@ -16,12 +16,12 @@ export class WelcomeView {
         overlay.innerHTML = `
             <div class="welcome-card">
                 <div class="welcome-header">
-                    <img src="icon-512.png" alt="Logo" class="welcome-logo">
+                    <img src="icons/icon-512.png" alt="Logo" class="welcome-logo">
                     <h1>Benvingut a OrientaTrack</h1>
                 </div>
                 
                 <div class="welcome-body">
-                    <p>La teva eina per a entrenaments de <strong>Rogaine</strong> i orientació a la muntanya.</p>
+                    <p>Una forma diferent de descobrir la muntanya, jugant i competint <strong>Rogaine</strong>.</p>
                     
                     <div class="info-item">
                         <i class="fas fa-route"></i>
@@ -50,7 +50,7 @@ export class WelcomeView {
 
                 <button id="btn-close-welcome" class="welcome-btn"> COMENÇAR ARA </button>
                 
-                <p class="welcome-footer">Creat per Tecnolord · Solsonès</p>
+                <p class="welcome-footer">Creat per Tecnolord</p>
             </div>
         `;
 
@@ -86,6 +86,7 @@ export class WelcomeView {
                 max-width: 400px; width: 100%; text-align: center;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                 animation: slideUp 0.6s ease-out;
+                z-index: 10001;
             }
             @keyframes slideUp {
                 from { transform: translateY(50px); opacity: 0; }
