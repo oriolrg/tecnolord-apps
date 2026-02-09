@@ -17,7 +17,6 @@ function trackEvent(name, props) {
 function buildMeteoUI(root) {
   root.innerHTML = `
     <div class="wrap">
-
       <div class="section-title">
         <h2 class="meteo-h2">
           Meteo
@@ -28,6 +27,25 @@ function buildMeteoUI(root) {
       </div>
 
       <div class="grid" id="meteo-cards"></div>
+
+      <div id="meteo-support" style="margin-top: 40px; margin-bottom: 20px; padding: 0 10px;">
+        <div style="background: white; border-radius: 15px; padding: 20px; border: 1px solid #edf2f7; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <h4 style="font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">
+            <i class="fas fa-satellite-dish"></i> Equipament
+          </h4>
+          <p style="font-size: 0.85rem; color: #4a5568; line-height: 1.5; margin-bottom: 15px;">
+            Vols tenir la teva pròpia estació meteorològica a casa? 
+            Comprant des d'aquí ens <strong>ajudes a mantenir tecnolord.cat</strong> i les dades lliures.
+          </p>
+          <a href="https://amzn.to/4bFlrlz" target="_blank" rel="noopener" 
+             style="display: inline-block; background: #3182ce; color: white; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+            <i class="fab fa-amazon"></i> Veure estació a Amazon
+          </a>
+          <p style="font-size: 0.7rem; color: #cbd5e0; margin-top: 12px; font-style: italic;">
+            <i class="fas fa-heart" style="color: #e53e3e;"></i> Gràcies pel teu suport
+          </p>
+        </div>
+      </div>
     </div>
   `;
 

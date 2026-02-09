@@ -78,7 +78,7 @@ export class ProfileView {
                             <span>Brúixola Elit</span>
                         </a>
                         <a href="https://amzn.to/4qohPbi" target="_blank" class="gear-card">
-                            <i class="fas fa-backpack"></i>
+                            <i class="fas fa-running"></i>
                             <span>Motxilles</span>
                         </a>
                         <a href="https://amzn.to/4a4CADY" target="_blank" class="gear-card">
