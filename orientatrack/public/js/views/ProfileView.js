@@ -73,19 +73,19 @@ export class ProfileView {
                     </div>
 
                     <div class="gear-grid">
-                        <a href="https://amzn.to/4aktd1X" target="_blank" class="gear-card">
+                        <a href="https://amzn.to/4klZN86" target="_blank" class="gear-card">
                             <i class="fas fa-compass"></i>
                             <span>Brúixola Elit</span>
                         </a>
-                        <a href="https://amzn.to/4qohPbi" target="_blank" class="gear-card">
+                        <a href="https://amzn.to/4a62YgP" target="_blank" class="gear-card">
                             <i class="fas fa-running"></i>
                             <span>Motxilles</span>
                         </a>
-                        <a href="https://amzn.to/4a4CADY" target="_blank" class="gear-card">
+                        <a href="https://amzn.to/3O62jmS" target="_blank" class="gear-card">
                             <i class="fas fa-running"></i>
                             <span>Merrell Trail Running</span>
                         </a>
-                        <a href="https://amzn.to/4bFlrlz" target="_blank" class="gear-card">
+                        <a href="https://amzn.to/4an3aac" target="_blank" class="gear-card">
                             <i class="fas fa-cloud-sun"></i>
                             <span>Estacio Meteo</span>
                         </a>

@@ -37,7 +37,7 @@ function buildMeteoUI(root) {
             Vols tenir la teva pròpia estació meteorològica a casa? 
             Comprant des d'aquí ens <strong>ajudes a mantenir tecnolord.cat</strong> i les dades lliures.
           </p>
-          <a href="https://amzn.to/4qpK49C" target="_blank" rel="noopener" 
+          <a href="https://amzn.to/4kJcsCt" target="_blank" rel="noopener" 
              style="display: inline-block; background: #3182ce; color: white; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
             <i class="fab fa-amazon"></i> Veure estació a Amazon
           </a>
