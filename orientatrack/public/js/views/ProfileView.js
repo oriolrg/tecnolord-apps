@@ -117,19 +117,19 @@ export class ProfileView {
                         <a href="https://tecnolord.cat/meteo" 
                            data-umami-event="Anem a Meteo"
                            style="text-decoration: none; font-size: 0.9rem; color: #3182ce; background: #ebf8ff; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #bee3f8;">
-                            <img src="https://tecnolord.cat/meteo/assets/icons/favicon-96x96.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+                            <img src="https://tecnolord.cat/meteo/assets/icons/favicon-96x96.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
         METEO Temps Real
                         </a>
 
                         <a href="https://tecnolord.cat/pap/" 
                            data-umami-event="Anem a PaP"
                            style="text-decoration: none; font-size: 0.9rem; color: #48bb78; background: #f0fff4; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #c6f6d5;">
-                            <img src="https://tecnolord.cat/pap/icon-512.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+                            <img src="https://tecnolord.cat/pap/icon-512.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
         PaP SANT LLORENÇ
                         </a>
 
                         <div style="text-decoration: none; font-size: 0.75rem; color: #ed8936; padding: 10px; border-radius: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.7;">
-                            <img src="https://tecnolord.cat/orientatrack/icons/icon-512x512.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+                            <img src="https://tecnolord.cat/orientatrack/icons/icon-512x512.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
         ORIENTATRACK (v. Beta)
                         </div>
                     </div>
