@@ -108,25 +108,28 @@ export class ProfileView {
                     </button>
                 ` : ''}
 
-                <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #cbd5e0; text-align: center;">
-                    <p style="font-size: 0.8rem; color: #718096; margin-bottom: 10px;">Explora altres serveis Tecnolord:</p>
-                    <div style="display: flex; justify-content: center; gap: 15px;">
+                <div style="margin-top: 50px; padding: 25px 15px; border-top: 1px dashed #cbd5e0; text-align: center;">
+                    <p style="font-size: 0.85rem; color: #4a5568; margin-bottom: 15px; font-weight: bold;">
+                        Explora l'ecosistema Tecnolord:
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 300px; margin: 0 auto;">
+                        
                         <a href="https://tecnolord.cat/meteo" 
-                        data-umami-event="Anem a Meteo"
-                        style="text-decoration: none; font-size: 0.75rem; color: #3182ce; font-weight: bold;">
-                        <i class="fas fa-cloud-sun"></i> Anem a METEO
+                           data-umami-event="Salt a Meteo des de Orientatrack"
+                           style="text-decoration: none; font-size: 0.9rem; color: #3182ce; background: #ebf8ff; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #bee3f8;">
+                            <i class="fas fa-cloud-sun"></i> METEO Temps Real
                         </a>
+
                         <a href="https://tecnolord.cat/pap/" 
-                        data-umami-event="Anem a PaP"
-                        style="text-decoration: none; font-size: 0.75rem; color: #48bb78; font-weight: bold;">
-                        <i class="fas fa-trash"></i> Anem a Porta a Porta SANT LLORENÇ
+                           data-umami-event="Salt a PaP des de Orientatrack"
+                           style="text-decoration: none; font-size: 0.9rem; color: #48bb78; background: #f0fff4; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #c6f6d5;">
+                            <i class="fas fa-trash"></i> PaP Sant Llorenç
                         </a>
-                        <a href="https://tecnolord.cat/orientatrack" 
-                        data-umami-event="Anem a Orientatrack"
-                        style="text-decoration: none; font-size: 0.75rem; color: #ed8936; font-weight: bold;">
-                        <i class="fas fa-map-marked-alt"></i> ORIENTATRACK en desenvolupament
-                        </a>
+
                     </div>
+                    <p style="margin-top: 20px; font-size: 0.75rem; color: #a0aec0;">
+                        Desenvolupat amb ❤️ a la Vall de Lord
+                    </p>
                 </div>
             </div>
         `;
