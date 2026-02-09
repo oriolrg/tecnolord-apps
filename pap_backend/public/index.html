@@ -221,6 +221,11 @@
         </div>
     </div>
     <script>
+        // Normalitza l'URL quan s'accedeix a /pap (sense / final) per evitar problemes de rutes relatives
+        if (window.location.pathname === '/pap') {
+            window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+        }
+
         const ICONS = { 
             "organica": "fa-apple-whole", 
             "envasos": "fa-bottle-water", 
@@ -245,7 +250,8 @@
 
             try {
                 // Fem el fetch forçant que no vingui de la cache del navegador (?v=)
-                const r = await fetch('./estat?v=' + Date.now());
+                // IMPORTANT: evitem rutes relatives que canvien entre /pap i /pap/
+                const r = await fetch((window.location.pathname.startsWith('/pap') ? '/pap' : '') + '/estat?v=' + Date.now(), { cache: 'no-store' });
                 if (!r.ok) throw new Error('Error API');
                 const data = await r.json();
 

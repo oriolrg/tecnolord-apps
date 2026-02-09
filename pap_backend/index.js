@@ -29,16 +29,19 @@ app.use((req, res, next) => {
     next();
 });
 
+// Servei robust si es munta sota /pap (amb o sense strip del reverse proxy)
+app.use('/pap', express.static(path.join(__dirname, 'public')));
+
 // 1. PRIORITAT MÀXIMA: Servir fitxers reals de la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 2. Rutes de diagnòstic
-app.get('/ping', (req, res) => {
+app.get(['/ping','/ping/','/pap/ping','/pap/ping/','/api/pap/ping','/api/pap/ping/'], (req, res) => {
     res.json({ ok: true, msg: "Backend de PaP operatiu" });
 });
 
 // 3. Lògica de l'estat (AMB CONTROL DE CACHE)
-app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) => {
+app.get(['/estat', '/estat/', '/pap/estat', '/pap/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) => {
   
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');

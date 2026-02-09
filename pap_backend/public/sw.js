@@ -1,7 +1,10 @@
 const CACHE_NAME = 'pap-sant-llorenc-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-512.png',
+  './icon-512.ico',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
