@@ -4,8 +4,13 @@ import { GameView } from './views/GameView.js';
 import { SOSView } from './views/SOSView.js';
 import { RutesView } from './views/RutesView.js';
 import { ProfileView } from './views/ProfileView.js';
+import { WelcomeView } from './views/WelcomeView.js'; // 1. Importem la nova vista
 
 let game, gameView, sosView, menu, rutesView, profileView;
+
+// 2. Inicialitzem la pantalla de benvinguda. 
+// Ella mateixa comprova el LocalStorage per decidir si mostrar-se o no.
+new WelcomeView();
 
 document.getElementById('btn-permis').onclick = async () => {
     document.getElementById('btn-permis').style.display = 'none';

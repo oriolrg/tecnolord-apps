@@ -85,7 +85,7 @@ export class ProfileView {
                             <i class="fas fa-running"></i>
                             <span>Merrell Trail Running</span>
                         </a>
-                        <a href="https://amzn.to/4an3aac" target="_blank" class="gear-card">
+                        <a data-umami-event="Click Amazon - Estacio meteo" href="https://amzn.to/4an3aac" target="_blank" class="gear-card">
                             <i class="fas fa-cloud-sun"></i>
                             <span>Estacio Meteo</span>
                         </a>
@@ -107,6 +107,30 @@ export class ProfileView {
                         Esborrar tot l'historial
                     </button>
                 ` : ''}
+
+                <div style="margin-top: 50px; padding: 25px 15px; border-top: 1px dashed #cbd5e0; text-align: center;">
+                    <p style="font-size: 0.85rem; color: #4a5568; margin-bottom: 15px; font-weight: bold;">
+                        Explora l'ecosistema Tecnolord:
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 300px; margin: 0 auto;">
+                        
+                        <a href="https://tecnolord.cat/meteo" 
+                           data-umami-event="Salt a Meteo des de Orientatrack"
+                           style="text-decoration: none; font-size: 0.9rem; color: #3182ce; background: #ebf8ff; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #bee3f8;">
+                            <i class="fas fa-cloud-sun"></i> METEO Temps Real
+                        </a>
+
+                        <a href="https://tecnolord.cat/pap" 
+                           data-umami-event="Salt a PaP des de Orientatrack"
+                           style="text-decoration: none; font-size: 0.9rem; color: #48bb78; background: #f0fff4; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #c6f6d5;">
+                            <i class="fas fa-trash"></i> PaP Sant Llorenç
+                        </a>
+
+                    </div>
+                    <p style="margin-top: 20px; font-size: 0.75rem; color: #a0aec0;">
+                        Desenvolupat amb ❤️ a la Vall de Lord
+                    </p>
+                </div>
             </div>
         `;
 
