@@ -6,6 +6,9 @@ export class ProfileView {
         this.render();
     }
 
+    /**
+     * Converteix mil·lisegons a format llegible (MM:SS o H:MM:SS)
+     */
     formatTime(ms) {
         if (!ms || ms <= 0) return "00:00";
         const segonsTotals = Math.floor(ms / 1000);
@@ -21,9 +24,12 @@ export class ProfileView {
     }
 
     render() {
+        // 1. Dades de la sessió actual des del GameLogic
         const fitesTrobades = this.game.fites.filter(f => f.trobada).length;
         const totalFites = this.game.fites.length;
         const tempsGlobalMs = this.game.startTime ? (Date.now() - this.game.startTime) : 0;
+
+        // 2. Recuperem l'historial complet del LocalStorage
         const historial = JSON.parse(localStorage.getItem('orientatrack_history') || '[]');
 
         this.container.innerHTML = `
@@ -60,28 +66,33 @@ export class ProfileView {
 
                 <div class="affiliate-section">
                     <h3 class="section-title"><i class="fas fa-shopping-bag"></i> Material Recomanat</h3>
-                    <p class="affiliate-disclaimer">Equipa't per a la teva propera Rogaine amb la millor selecció:</p>
+                    
+                    <div class="support-message">
+                        <i class="fas fa-heart" style="color: #e53e3e; margin-right: 5px;"></i>
+                        Comprant a través d'aquests enllaços ens <strong>ajudes a mantenir l'aplicació gratuïta</strong> i sense publicitat intrusiva. Gràcies pel teu suport!
+                    </div>
+
                     <div class="gear-grid">
                         <a href="https://amzn.to/4aktd1X" target="_blank" class="gear-card">
                             <i class="fas fa-compass"></i>
                             <span>Brúixola Elit</span>
                         </a>
                         <a href="https://amzn.to/4qohPbi" target="_blank" class="gear-card">
-                            <i class="fas fa-running"></i>
-                            <span>Trail Running</span>
+                            <i class="fas fa-backpack"></i>
+                            <span>Motxilles</span>
                         </a>
                         <a href="https://amzn.to/4a4CADY" target="_blank" class="gear-card">
-                            <i class="fas fa-mitten"></i>
-                            <span>Polaines / Acc.</span>
+                            <i class="fas fa-running"></i>
+                            <span>Merrell Trail Running</span>
                         </a>
                         <a href="https://amzn.to/4bFlrlz" target="_blank" class="gear-card">
-                            <i class="fas fa-mobile-alt"></i>
-                            <span>Funda Estanca</span>
+                            <i class="fas fa-cloud-sun"></i>
+                            <span>Estacio Meteo</span>
                         </a>
                     </div>
                 </div>
 
-                <div class="history-section">
+                <div class="history-section" style="margin-top: 30px;">
                     <h3 class="section-title"><i class="fas fa-history"></i> Historial de Rutes</h3>
                     <div class="history-container">
                         ${historial.length === 0 ? 
@@ -191,9 +202,9 @@ export class ProfileView {
             .stat-value { font-size: 1.6rem; font-weight: 800; color: #2d3748; margin-top: 5px; }
             .main-stat .stat-value { font-size: 2.2rem; color: #3182ce; font-family: monospace; }
             
-            /* ESTILS AFILIATS */
-            .affiliate-section { margin-top: 30px; background: #fdf2f2; padding: 15px; border-radius: 15px; border: 1px solid #fed7d7; }
-            .affiliate-disclaimer { font-size: 0.75rem; color: #718096; margin-bottom: 12px; }
+            /* ESTILS AFILIATS I SUPORT */
+            .affiliate-section { margin-top: 30px; background: #fdf2f2; padding: 18px; border-radius: 15px; border: 1px solid #fed7d7; }
+            .support-message { font-size: 0.8rem; color: #4a5568; margin-bottom: 15px; line-height: 1.4; text-align: center; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px; border: 1px solid #feb2b2; }
             .gear-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .gear-card { 
                 background: white; border: 1px solid #feb2b2; padding: 12px; border-radius: 10px; 
