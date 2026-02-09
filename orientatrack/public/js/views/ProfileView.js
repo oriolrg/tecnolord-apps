@@ -69,7 +69,7 @@ export class ProfileView {
                     
                     <div class="support-message">
                         <i class="fas fa-heart" style="color: #e53e3e; margin-right: 5px;"></i>
-                        Comprant a través d'aquests enllaços ens <strong>ajudes a mantenir l'aplicació gratuïta</strong> i sense publicitat intrusiva. Gràcies pel teu suport!
+                        Comprant a través d'aquests enllaços ens <strong>ajudes a mantenir l'aplicació gratuïta</strong>. Gràcies pel teu suport!
                     </div>
 
                     <div class="gear-grid">
@@ -112,24 +112,25 @@ export class ProfileView {
                     <p style="font-size: 0.85rem; color: #4a5568; margin-bottom: 15px; font-weight: bold;">
                         Explora l'ecosistema Tecnolord:
                     </p>
-                    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 300px; margin: 0 auto;">
+                    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto;">
                         
                         <a href="https://tecnolord.cat/meteo" 
-                           data-umami-event="Salt a Meteo des de Orientatrack"
+                           data-umami-event="Anem a Meteo"
                            style="text-decoration: none; font-size: 0.9rem; color: #3182ce; background: #ebf8ff; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #bee3f8;">
                             <i class="fas fa-cloud-sun"></i> METEO Temps Real
                         </a>
 
                         <a href="https://tecnolord.cat/pap/" 
-                           data-umami-event="Salt a PaP des de Orientatrack"
+                           data-umami-event="Anem a PaP"
                            style="text-decoration: none; font-size: 0.9rem; color: #48bb78; background: #f0fff4; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #c6f6d5;">
-                            <i class="fas fa-trash"></i> PaP Sant Llorenç
+                            <i class="fas fa-trash"></i> PaP SANT LLORENÇ
                         </a>
 
+                        <div style="text-decoration: none; font-size: 0.75rem; color: #ed8936; padding: 10px; border-radius: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.7;">
+                            <i class="fas fa-map-marked-alt"></i> ORIENTATRACK (v. Beta)
+                        </div>
                     </div>
-                    <p style="margin-top: 20px; font-size: 0.75rem; color: #a0aec0;">
-                        Desenvolupat amb ❤️ a la Vall de Lord
-                    </p>
+                    <p style="margin-top: 20px; font-size: 0.75rem; color: #a0aec0;">Desenvolupat amb ❤️ a la Vall de Lord</p>
                 </div>
             </div>
         `;
@@ -226,7 +227,6 @@ export class ProfileView {
             .stat-value { font-size: 1.6rem; font-weight: 800; color: #2d3748; margin-top: 5px; }
             .main-stat .stat-value { font-size: 2.2rem; color: #3182ce; font-family: monospace; }
             
-            /* ESTILS AFILIATS I SUPORT */
             .affiliate-section { margin-top: 30px; background: #fdf2f2; padding: 18px; border-radius: 15px; border: 1px solid #fed7d7; }
             .support-message { font-size: 0.8rem; color: #4a5568; margin-bottom: 15px; line-height: 1.4; text-align: center; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px; border: 1px solid #feb2b2; }
             .gear-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
