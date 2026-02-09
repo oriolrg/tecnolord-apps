@@ -2,13 +2,10 @@ export class ProfileView {
     constructor(containerId, gameInstance) {
         this.container = document.getElementById(containerId);
         this.game = gameInstance;
-        this.timerInterval = null; // Control del temporitzador
+        this.timerInterval = null; 
         this.render();
     }
 
-    /**
-     * Converteix mil·lisegons a format llegible (MM:SS o H:MM:SS)
-     */
     formatTime(ms) {
         if (!ms || ms <= 0) return "00:00";
         const segonsTotals = Math.floor(ms / 1000);
@@ -19,19 +16,14 @@ export class ProfileView {
         const mStr = minuts.toString().padStart(2, '0');
         const sStr = segons.toString().padStart(2, '0');
 
-        if (hores > 0) {
-            return `${hores}:${mStr}:${sStr}`;
-        }
+        if (hores > 0) return `${hores}:${mStr}:${sStr}`;
         return `${mStr}:${sStr}`;
     }
 
     render() {
-        // 1. Dades de la sessió actual des del GameLogic
         const fitesTrobades = this.game.fites.filter(f => f.trobada).length;
         const totalFites = this.game.fites.length;
         const tempsGlobalMs = this.game.startTime ? (Date.now() - this.game.startTime) : 0;
-
-        // 2. Recuperem l'historial complet del LocalStorage
         const historial = JSON.parse(localStorage.getItem('orientatrack_history') || '[]');
 
         this.container.innerHTML = `
@@ -66,7 +58,30 @@ export class ProfileView {
                     </div>
                 </div>
 
-                <div class="history-section" style="margin-top: 30px;">
+                <div class="affiliate-section">
+                    <h3 class="section-title"><i class="fas fa-shopping-bag"></i> Material Recomanat</h3>
+                    <p class="affiliate-disclaimer">Equipa't per a la teva propera Rogaine amb la millor selecció:</p>
+                    <div class="gear-grid">
+                        <a href="https://amzn.to/4aktd1X" target="_blank" class="gear-card">
+                            <i class="fas fa-compass"></i>
+                            <span>Brúixola Elit</span>
+                        </a>
+                        <a href="https://amzn.to/4qohPbi" target="_blank" class="gear-card">
+                            <i class="fas fa-running"></i>
+                            <span>Trail Running</span>
+                        </a>
+                        <a href="https://amzn.to/4a4CADY" target="_blank" class="gear-card">
+                            <i class="fas fa-mitten"></i>
+                            <span>Polaines / Acc.</span>
+                        </a>
+                        <a href="https://amzn.to/4bFlrlz" target="_blank" class="gear-card">
+                            <i class="fas fa-mobile-alt"></i>
+                            <span>Funda Estanca</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="history-section">
                     <h3 class="section-title"><i class="fas fa-history"></i> Historial de Rutes</h3>
                     <div class="history-container">
                         ${historial.length === 0 ? 
@@ -86,10 +101,9 @@ export class ProfileView {
 
         this.injectStyles();
         this.initListeners();
-        this.startLiveTimer(); // Activem el rellotge
+        this.startLiveTimer();
     }
 
-    // ACTULITZACIÓ EN VIU DEL RELOTGE
     startLiveTimer() {
         if (this.timerInterval) clearInterval(this.timerInterval);
         const timerEl = this.container.querySelector('#live-profile-timer');
@@ -102,9 +116,7 @@ export class ProfileView {
     }
 
     renderCurrentPartials() {
-        if (this.game.fites.length === 0) {
-            return `<p class="empty-msg">No hi ha cap ruta carregada.</p>`;
-        }
+        if (this.game.fites.length === 0) return `<p class="empty-msg">No hi ha cap ruta carregada.</p>`;
 
         return this.game.fites.map((f, i) => {
             let tempsTram = "--:--";
@@ -113,7 +125,6 @@ export class ProfileView {
                 const duradaTram = this.game.fitesTimestamps[i] - iniciTram;
                 tempsTram = this.formatTime(duradaTram);
             }
-
             return `
                 <div class="partial-item ${f.trobada ? 'completed' : 'pending'}">
                     <span class="fita-nom">${f.nom}</span>
@@ -144,9 +155,7 @@ export class ProfileView {
                                     <div class="route-cell-date">${new Date(entry.data).toLocaleDateString()}</div>
                                 </td>
                                 <td>${entry.tempsNet}m</td>
-                                <td class="${entry.penalitzacions > 0 ? 'text-red' : 'text-green'}">
-                                    +${entry.penalitzacions}m
-                                </td>
+                                <td class="${entry.penalitzacions > 0 ? 'text-red' : 'text-green'}">+${entry.penalitzacions}m</td>
                                 <td class="text-bold text-primary">${entry.tempsFinal}m</td>
                             </tr>
                         `).join('')}
@@ -181,11 +190,26 @@ export class ProfileView {
             .stat-label { font-size: 0.7rem; color: #718096; text-transform: uppercase; font-weight: bold; display: block; }
             .stat-value { font-size: 1.6rem; font-weight: 800; color: #2d3748; margin-top: 5px; }
             .main-stat .stat-value { font-size: 2.2rem; color: #3182ce; font-family: monospace; }
-            .partials-box { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+            
+            /* ESTILS AFILIATS */
+            .affiliate-section { margin-top: 30px; background: #fdf2f2; padding: 15px; border-radius: 15px; border: 1px solid #fed7d7; }
+            .affiliate-disclaimer { font-size: 0.75rem; color: #718096; margin-bottom: 12px; }
+            .gear-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .gear-card { 
+                background: white; border: 1px solid #feb2b2; padding: 12px; border-radius: 10px; 
+                text-align: center; text-decoration: none; color: #c53030; display: flex; 
+                flex-direction: column; align-items: center; gap: 5px; transition: transform 0.2s;
+            }
+            .gear-card:active { transform: scale(0.95); }
+            .gear-card i { font-size: 1.2rem; color: #e53e3e; }
+            .gear-card span { font-size: 0.75rem; font-weight: bold; }
+
+            .partials-box { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-top: 15px;}
             .partials-header { background: #f7fafc; padding: 10px 15px; font-size: 0.8rem; font-weight: bold; color: #a0aec0; border-bottom: 1px solid #e2e8f0; }
             .partial-item { display: flex; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #f7fafc; font-size: 0.9rem; }
             .partial-item.completed { color: #2d3748; background: #f0fff4; }
             .fita-temps { font-weight: bold; font-family: monospace; }
+            .history-section { margin-top: 30px; }
             .table-wrapper { overflow-x: auto; background: white; border-radius: 10px; border: 1px solid #e2e8f0; }
             .history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
             .history-table th { background: #edf2f7; padding: 12px 10px; text-align: left; color: #4a5568; }
