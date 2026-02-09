@@ -73,15 +73,15 @@ export class ProfileView {
                     </div>
 
                     <div class="gear-grid">
-                        <a href="https://amzn.to/4klZN86" target="_blank" class="gear-card">
+                        <a data-umami-event="Click Amazon - Brúixola" href="https://amzn.to/4klZN86" target="_blank" class="gear-card">
                             <i class="fas fa-compass"></i>
                             <span>Brúixola Elit</span>
                         </a>
-                        <a href="https://amzn.to/4a62YgP" target="_blank" class="gear-card">
+                        <a data-umami-event="Click Amazon - Motxilles" href="https://amzn.to/4a62YgP" target="_blank" class="gear-card">
                             <i class="fas fa-running"></i>
                             <span>Motxilles</span>
                         </a>
-                        <a href="https://amzn.to/3O62jmS" target="_blank" class="gear-card">
+                        <a data-umami-event="Click Amazon - Merrell" href="https://amzn.to/3O62jmS" target="_blank" class="gear-card">
                             <i class="fas fa-running"></i>
                             <span>Merrell Trail Running</span>
                         </a>
