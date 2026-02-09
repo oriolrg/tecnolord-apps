@@ -52,17 +52,20 @@ function buildMeteoUI(root) {
             <a href="https://tecnolord.cat/meteo" 
             data-umami-event="Anem a Meteo"
             style="text-decoration: none; font-size: 0.75rem; color: #3182ce; font-weight: bold;">
-            <i class="fas fa-cloud-sun"></i> Anem a METEO
+            <img src="https://tecnolord.cat/meteo/assets/icons/favicon-96x96.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+        METEO Temps Real
             </a>
             <a href="https://tecnolord.cat/pap/" 
             data-umami-event="Anem a PaP"
             style="text-decoration: none; font-size: 0.75rem; color: #48bb78; font-weight: bold;">
-            <i class="fas fa-trash"></i> Anem a Porta a Porta SANT LLORENÇ
+            <img src="https://tecnolord.cat/pap/icon-512.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+        PaP SANT LLORENÇ
             </a>
             <a href="https://tecnolord.cat/orientatrack" 
             data-umami-event="Anem a Orientatrack"
             style="text-decoration: none; font-size: 0.75rem; color: #ed8936; font-weight: bold;">
-            <i class="fas fa-map-marked-alt"></i> ORIENTATRACK en desenvolupament
+            <img src="https://tecnolord.cat/orientatrack/icons/icon-512x512.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+        ORIENTATRACK  (v. Beta)
             </a>
         </div>
       </div>

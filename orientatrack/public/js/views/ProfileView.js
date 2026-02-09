@@ -117,17 +117,20 @@ export class ProfileView {
                         <a href="https://tecnolord.cat/meteo" 
                            data-umami-event="Anem a Meteo"
                            style="text-decoration: none; font-size: 0.9rem; color: #3182ce; background: #ebf8ff; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #bee3f8;">
-                            <i class="fas fa-cloud-sun"></i> METEO Temps Real
+                            <img src="https://tecnolord.cat/meteo/assets/icons/favicon-96x96.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+        METEO Temps Real
                         </a>
 
                         <a href="https://tecnolord.cat/pap/" 
                            data-umami-event="Anem a PaP"
                            style="text-decoration: none; font-size: 0.9rem; color: #48bb78; background: #f0fff4; padding: 14px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #c6f6d5;">
-                            <i class="fas fa-trash"></i> PaP SANT LLORENÇ
+                            <img src="https://tecnolord.cat/pap/icon-512.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+        PaP SANT LLORENÇ
                         </a>
 
                         <div style="text-decoration: none; font-size: 0.75rem; color: #ed8936; padding: 10px; border-radius: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.7;">
-                            <i class="fas fa-map-marked-alt"></i> ORIENTATRACK (v. Beta)
+                            <img src="https://tecnolord.cat/orientatrack/icons/icon-512x512.png" style="width: 18px; height: 18px; border-radius: 4px;" alt="">
+        ORIENTATRACK (v. Beta)
                         </div>
                     </div>
                     <p style="margin-top: 20px; font-size: 0.75rem; color: #a0aec0;">Desenvolupat amb ❤️ a la Vall de Lord</p>
