@@ -20,16 +20,30 @@ const nomsResidus = {
   bolquers: "Bolquers i Compreses"
 };
 
-// 1. PRIORITAT MÀXIMA: Servir fitxers reals de la carpeta 'public'
+// --- MODIFICACIÓ 1: CONTROL DE SUBRUTES ---
+// Si l'usuari entra a /pap (sense barra), el redirigim a /pap/ 
+// Això és vital perquè el navegador resolgui correctament els fitxers ./sw.js i estat
+app.use((req, res, next) => {
+    const url = req.originalUrl || req.url;
+    if (url === '/pap' || url === '/api/pap') {
+        return res.redirect(301, url + '/');
+    }
+    next();
+});
+
+// --- MODIFICACIÓ 2: SERVIR ESTÀTICS AMB PREFIX ---
+// Servim la carpeta public tant a l'arrel com al subcamí /pap
+app.use('/pap', express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 2. Rutes de diagnòstic
-app.get('/ping', (req, res) => {
+app.get(['/ping', '/pap/ping'], (req, res) => {
     res.json({ ok: true, msg: "Backend de PaP operatiu" });
 });
 
-// 3. Lògica de l'estat (AMB CONTROL DE CACHE)
-app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) => {
+// 3. Lògica de l'estat (AMB RUTES AMPLIADES)
+// Ara respon a /estat i també a /pap/estat per seguretat
+app.get(['/estat', '/estat/', '/pap/estat', '/pap/estat/', '/api/pap/estat'], (req, res) => {
   
   // --- MILLORA CLAU: Evitar que les dades es guardin a la memòria cau ---
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -89,8 +103,14 @@ app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) =
   });
 });
 
-// 4. L'ÚLTIM RECURS: Qualsevol altra ruta serveix l'index.html
-app.get('*', (req, res) => {
+// --- MODIFICACIÓ 3: GESTIÓ DE RUTES NO TROBADES (WILDCARD) ---
+// Evitem retornar index.html si el que es demana és un fitxer real (.js, .css, etc.)
+app.get(['/pap/*', '*'], (req, res) => {
+    // Si la ruta té un punt (és un fitxer) i ha arribat aquí, és que no existeix
+    if (req.path.includes('.')) {
+        return res.status(404).send('Fitxer no trobat');
+    }
+    // Per a qualsevol altra ruta de navegació, servim l'index.html
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
