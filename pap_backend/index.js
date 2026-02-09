@@ -20,6 +20,15 @@ const nomsResidus = {
   bolquers: "Bolquers i Compreses"
 };
 
+// --- MODIFICACIÓ PER RUTES ---
+// Força la barra final si s'accedeix sense ella per arreglar les rutes del navegador
+app.use((req, res, next) => {
+    if (req.originalUrl === '/pap' || req.originalUrl === '/api/pap') {
+        return res.redirect(301, req.originalUrl + '/');
+    }
+    next();
+});
+
 // 1. PRIORITAT MÀXIMA: Servir fitxers reals de la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -31,28 +40,22 @@ app.get('/ping', (req, res) => {
 // 3. Lògica de l'estat (AMB CONTROL DE CACHE)
 app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) => {
   
-  // --- MILLORA CLAU: Evitar que les dades es guardin a la memòria cau ---
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
 
   const ara = new Date();
-  const diaSetmana = ara.getDay(); // 0 (dg) a 6 (ds)
+  const diaSetmana = ara.getDay(); 
   const hora = ara.getHours();
-  
   const passatHora = hora >= 8;
-  
-  // Ajust: Dilluns=1, Diumenge=7
   const diaAvuiReal = (diaSetmana === 0 ? 7 : diaSetmana);
 
-  // LÒGICA: Si ja ha passat la recollida d'avui (08:00h), mirem què toca per DEMÀ
   let diaObjectiu = diaAvuiReal;
   if (passatHora) {
     diaObjectiu = (diaAvuiReal === 7 ? 1 : diaAvuiReal + 1);
   }
 
-  // Què toca treure ARA o AQUESTA NIT?
   let queTocaTreure = [];
   for (const [residu, dies] of Object.entries(calendariPaP)) {
     if (dies.includes(diaObjectiu)) {
@@ -60,7 +63,6 @@ app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) =
     }
   }
 
-  // Càlcul de la llista de properes recollides
   let properes = {};
   for (const [residu, dies] of Object.entries(calendariPaP)) {
     let diesFaltants = Infinity;
@@ -91,6 +93,8 @@ app.get(['/estat', '/estat/', '/api/pap/estat', '/api/pap/estat/'], (req, res) =
 
 // 4. L'ÚLTIM RECURS: Qualsevol altra ruta serveix l'index.html
 app.get('*', (req, res) => {
+    // Si la petició sembla un fitxer (té un punt), no enviem l'HTML per evitar errors de JSON/MIME
+    if (req.path.includes('.')) return res.status(404).send('Not found');
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

@@ -245,7 +245,7 @@
 
             try {
                 // Fem el fetch forçant que no vingui de la cache del navegador (?v=)
-                const r = await fetch('estat?v=' + Date.now());
+                const r = await fetch('./estat?v=' + Date.now());
                 if (!r.ok) throw new Error('Error API');
                 const data = await r.json();
 
