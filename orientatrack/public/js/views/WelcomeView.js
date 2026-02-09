@@ -18,7 +18,7 @@ export class WelcomeView {
         overlay.innerHTML = `
             <div class="welcome-card">
                 <div class="welcome-header">
-                    <img src="icon-512.png" alt="Logo" class="welcome-logo">
+                    <img src="icons/icon-512x512.png" alt="Logo" class="welcome-logo">
                     <h1>Benvingut a OrientaTrack</h1>
                 </div>
                 
