@@ -9,14 +9,14 @@ services:
     #depends_on: [db]
     #expose: ["8000"]
 
-  worker:
-    image: prefecthq/prefect:2-latest
-    restart: unless-stopped
-    env_file: .env
-    depends_on: [db]
-    volumes:
-      - ./flows:/opt/flows
-    command: ["prefect", "worker", "start", "-p", "default-agent-pool"]
+  #worker:
+    #image: prefecthq/prefect:2-latest
+    #restart: unless-stopped
+    #env_file: .env
+    #depends_on: [db]
+    #volumes:
+      #- ./flows:/opt/flows
+    #command: ["prefect", "worker", "start", "-p", "default-agent-pool"]
 
   #mlflow:
    # image: ghcr.io/mlflow/mlflow:v2.14.1
