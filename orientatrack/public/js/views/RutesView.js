@@ -1,7 +1,8 @@
 export class RutesView {
-    constructor(containerId, onRouteSelected) {
+    constructor(containerId, onRouteSelected, onCreateRoute) {
         this.container = document.getElementById(containerId);
         this.onRouteSelected = onRouteSelected;
+        this.onCreateRoute = onCreateRoute; // Callback per obrir la vista de creació
         
         // 1. Rutes oficials de l'aplicació
         this.rutesPredefinides = [
@@ -27,6 +28,11 @@ export class RutesView {
                 </div>
                 <hr style="margin: 15px 0;">
                 
+                <div id="create-route-zone" class="create-card">
+                    <i class="fas fa-plus-circle"></i>
+                    <p>Dissenyar <strong>Nova Ruta</strong> al mapa</p>
+                </div>
+
                 <div id="upload-zone" class="upload-card">
                     <i class="fas fa-file-upload"></i>
                     <p>Pujar fitxer <strong>.GPX</strong></p>
@@ -67,7 +73,16 @@ export class RutesView {
         const zone = this.container.querySelector('#upload-zone');
         const input = this.container.querySelector('#gpx-input');
         const clearBtn = this.container.querySelector('#btn-clear-custom');
+        const createBtn = this.container.querySelector('#create-route-zone');
 
+        // Event per crear ruta nova
+        if (createBtn) {
+            createBtn.onclick = () => {
+                if (this.onCreateRoute) this.onCreateRoute();
+            };
+        }
+
+        // Event per pujar GPX
         if (zone && input) {
             zone.onclick = () => input.click();
             input.onchange = (e) => {
@@ -79,6 +94,7 @@ export class RutesView {
             };
         }
 
+        // Event per netejar
         if (clearBtn) {
             clearBtn.onclick = () => {
                 if (confirm("Esborrar rutes personals?")) {
@@ -94,7 +110,6 @@ export class RutesView {
         try {
             const parser = new DOMParser();
             const xml = parser.parseFromString(xmlText, "text/xml");
-            // Cerquem tant punts de track com waypoints
             const trackPoints = xml.querySelectorAll('trkpt, wpt'); 
 
             const points = Array.from(trackPoints).map(pt => ({
@@ -113,15 +128,12 @@ export class RutesView {
                 isCustom: true
             };
 
-            // Guardem al LocalStorage perquè la ruta persisteixi
             const rutesGuardades = JSON.parse(localStorage.getItem('custom_routes') || '[]');
             rutesGuardades.push(novaRuta);
             localStorage.setItem('custom_routes', JSON.stringify(rutesGuardades));
             
             this.rutes.push(novaRuta);
             this.renderRoutes();
-            
-            // Avisem al main que s'ha seleccionat aquesta ruta nova
             this.onRouteSelected(novaRuta);
 
         } catch (e) {
@@ -133,12 +145,11 @@ export class RutesView {
         let fites = [];
         let acumulat = 0;
         
-        // CANVI CRÍTIC: Usem 'radius_m' perquè coincideixi amb el MapManager.js
         const crearFita = (nom, p) => ({
             nom: nom,
             lat: p.lat,
             lon: p.lon,
-            radius_m: 25 // <--- Abans deies 'radius' o 'radi'
+            radius_m: 25 
         });
 
         fites.push(crearFita("SORTIDA", points[0]));
@@ -172,13 +183,22 @@ export class RutesView {
         const style = document.createElement('style');
         style.id = 'rutes-styles';
         style.innerHTML = `
-            .upload-card {
-                border: 2px dashed #3182ce; border-radius: 12px; padding: 25px;
-                text-align: center; color: #3182ce; cursor: pointer;
-                background: #ebf8ff; margin-bottom: 20px;
-                transition: background 0.2s;
+            .upload-card, .create-card {
+                border-radius: 12px; padding: 20px;
+                text-align: center; cursor: pointer;
+                margin-bottom: 15px; transition: all 0.2s;
+                border: 2px dashed;
             }
-            .upload-card:hover { background: #e2f1ff; }
+            .upload-card { 
+                border-color: #3182ce; color: #3182ce; background: #ebf8ff; 
+            }
+            .create-card { 
+                border-color: #38a169; color: #38a169; background: #f0fff4; 
+            }
+            .upload-card:hover, .create-card:hover { 
+                transform: translateY(-2px);
+                filter: brightness(0.97);
+            }
             .route-item {
                 display: flex; align-items: center; padding: 15px;
                 background: white; border-radius: 10px; margin-bottom: 12px;
@@ -187,6 +207,7 @@ export class RutesView {
             .route-info { flex: 1; margin-left: 15px; }
             .route-name { font-weight: bold; display: block; color: #2d3748; }
             .fa-file-import { color: #3182ce; }
+            .fa-plus-circle { font-size: 24px; margin-bottom: 8px; }
         `;
         document.head.appendChild(style);
     }
