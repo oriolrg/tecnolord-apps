@@ -1,3 +1,5 @@
+// js/components/Menu.js
+
 export class Menu {
     constructor(containerId, game, gameView, sosView, profileView) {
         this.container = document.getElementById(containerId);
@@ -18,6 +20,7 @@ export class Menu {
             .main-menu {
                 display: flex; justify-content: space-around; padding: 10px 0;
                 background: #1a202c; position: relative; z-index: 10;
+                height: 60px;
             }
             .menu-btn {
                 flex: 1; background: none; border: none; color: #a0aec0;
@@ -26,22 +29,6 @@ export class Menu {
             }
             .menu-btn.active { color: white; }
             .menu-btn i { font-size: 1.2rem; }
-
-            #fites-menu {
-                position: fixed !important;
-                bottom: 110px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: 90% !important;
-                max-height: 55vh !important;
-                background: white !important;
-                border-radius: 12px !important;
-                box-shadow: 0 -10px 40px rgba(0,0,0,0.5) !important;
-                z-index: 99999 !important;
-                display: none;
-                overflow-y: auto;
-                border: 2px solid var(--primary);
-            }
         `;
         document.head.appendChild(style);
     }
@@ -62,52 +49,49 @@ export class Menu {
         this.container.querySelectorAll('.menu-btn').forEach(btn => {
             btn.onclick = () => {
                 const screen = btn.getAttribute('data-screen');
+                
                 if (btn.id === 'btn-fites') {
                     this.gameView.showCheckpoints(this.game.fites, this.game.indexFitaActual, (i) => {
                         this.game.indexFitaActual = i;
                         this.gameView.refreshMarkers(this.game.fites, i);
-                        const estat = this.game.getEstatActual();
-                        this.gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
                     });
                     return;
                 }
                 
-                if (screen === 'sos') {
-                    if (confirm("L'ajuda SOS penalitza el temps. Vols continuar?")) {
-                        this.game.penalitzacions++;
-                        this.switchScreen(screen);
-                    }
-                } else {
+                if (screen) {
                     this.switchScreen(screen);
+                    this.container.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
                 }
-                
-                this.container.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
             };
         });
     }
 
     switchScreen(id) {
-        // 1. Gestió de visibilitat de les vistes
+        // Amaguem totes les vistes
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        const target = document.getElementById(`view-${id}`);
+        
+        // Mapatge d'IDs per seguretat
+        const viewMap = {
+            'joc': 'view-joc',
+            'sos': 'view-sos',
+            'perfil': 'view-perfil',
+            'rutes': 'view-rutes',
+            'creator': 'view-creator'
+        };
+
+        const target = document.getElementById(viewMap[id] || `view-${id}`);
         if (target) target.classList.add('active');
 
-        // 2. GESTIÓ BRÚIXOLA: S'amaga en totes les pantalles excepte a 'joc'
+        // Brúixola
         const compass = document.getElementById('compass-container');
-        if (compass) {
-            // Es mostra si estem a 'joc' i l'usuari no l'ha amagat manualment amb el botó
-            compass.style.display = (id === 'joc' && this.gameView.compass.userWantsVisible) ? 'block' : 'none';
-        }
-
-        // 3. SOLUCIÓ MAPA SOS: Recalcula el tamany del mapa Leaflet quan la vista és visible
-        if (id === 'sos' && this.sosView) {
-            setTimeout(() => {
-                this.sosView.invalidate(); // Crida al mètode d'invalidació del SOSView
-            }, 100);
-        }
-
-        // 4. Actualització del perfil
+        if (compass) compass.style.display = (id === 'joc') ? 'block' : 'none';
+        
+        // SOS
+        if (id === 'sos' && this.sosView) setTimeout(() => this.sosView.invalidate(), 100);
+        
+        // Perfil
         if (id === 'perfil' && this.profileView) this.profileView.update();
     }
 }
+// ASSEGURA'T QUE AQUÍ SOTA NO HI HA RES MÉS DECLARANT 'Menu'

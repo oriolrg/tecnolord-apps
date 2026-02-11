@@ -33,12 +33,11 @@
 
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        /* Estil per als continguts de pantalla (Perfil, Rutes, etc.) */
         .screen-content {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: white; z-index: 100; padding: 20px; box-sizing: border-box;
             overflow-y: auto;
-            padding-bottom: 110px; /* Espai necessari per la barra de navegació */
+            padding-bottom: 110px;
         }
 
         #gps-status-dot {
@@ -47,31 +46,27 @@
             border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.2);
         }
 
-        .fita-icon {
-            background: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; z-index: 500;
-        }
-        .fita-activa { border: 2px solid var(--primary); color: var(--primary); }
-        .fita-pendent { border: 2px solid #ff00ff; color: #ff00ff; }
-
         .bottom-ui {
             position: fixed; bottom: 0; left: 0; width: 100%; 
             z-index: 2000; background: var(--dark); 
             padding-bottom: env(safe-area-inset-bottom);
         }
+        /* Dins del teu <style> o injectStyles() */
+        #view-creator {
+            height: calc(100vh - 60px); /* Tota l'alçada menys el menú inferior */
+            width: 100vw;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
 
-        #btn-permis {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 9999; padding: 15px 30px; background: var(--primary);
-            color: white; border: none; border-radius: 8px; font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        #map-creator {
+            height: 100%; /* Important perquè el div del mapa s'estiri */
+            width: 100%;
         }
     </style>
 </head>
 <body>
-
-    <!--<button id="btn-permis">INICIAR SESSIÓ</button>-->
     <div id="gps-status-dot"></div>
 
     <div id="view-joc" class="view active">
@@ -81,9 +76,6 @@
 
     <div id="view-sos" class="view">
         <div id="map-sos" style="width:100%; height:100%;"></div>
-        <div style="position:absolute; top:20px; left:20px; z-index:2000; background:rgba(229, 62, 62, 0.9); color:white; padding:15px; border-radius:8px; font-weight: bold;">
-            ⚠️ MODE SOS ACTIU
-        </div>
     </div>
 
     <div id="view-perfil" class="view"></div>
@@ -92,10 +84,11 @@
         <div id="route-selector-container"></div>
     </div>
 
+    <div id="view-creator" class="view"></div>
+
     <div class="bottom-ui">
         <div id="navigation-panel-container"></div>
-        <div id="main-menu-container"></div>
-    </div>
+        <div id="main-menu-container"></div> </div>
 
     <div id="fites-menu"></div>
     <div id="compass-container"></div>

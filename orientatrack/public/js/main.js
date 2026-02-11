@@ -9,23 +9,23 @@ import { WelcomeView } from './views/WelcomeView.js';
 
 let game, gameView, sosView, menu, rutesView, profileView, creatorView;
 
-// Mostrem la benvinguda si toca
 new WelcomeView();
 
-// Funció que arrenca tota la maquinària de l'aplicació
 const initApp = async () => {
     game = new GameLogic();
     gameView = new GameView();
     sosView = new SOSView(game);
     
+    // El contenidor ha de coincidir amb l'HTML: view-creator
+    creatorView = new CreatorView('view-creator', game); 
     profileView = new ProfileView('view-perfil', game); 
-    menu = new Menu('main-menu-container', game, gameView, sosView);
+    menu = new Menu('main-menu-container', game, gameView, sosView, profileView);
 
-    // LÒGICA DE REFRESC I PENALITZACIÓ
+    // Sobreescribim el switch per coses específiques
     const originalSwitch = menu.switchScreen.bind(menu);
     menu.switchScreen = (screen) => {
-        if (screen === 'perfil') {
-            profileView.update();
+        if (screen === 'creator') {
+            creatorView.update(); 
         }
         if (screen === 'sos') {
             game.afegirPenalitzacioSOS(); 
@@ -34,12 +34,9 @@ const initApp = async () => {
         originalSwitch(screen);
     };
 
-    // REPRESA DE SESSIÓ
     if (game.loadState()) {
         if (confirm("Vols continuar la ruta anterior?")) {
             gameView.refreshMarkers(game.fites, game.indexFitaActual);
-            const estat = game.getEstatActual();
-            if (estat) gameView.updateNavigation(estat.fitaNom, 0, 0);
             menu.switchScreen('joc');
         } else {
             game.clearState();
@@ -59,21 +56,18 @@ const initApp = async () => {
             game.indexFitaActual = 0;
             game.penalitzacions = 0;
             game.saveState();
-            
             gameView.refreshMarkers(fites, 0);
-            const estat = game.getEstatActual();
-            if (estat) gameView.updateNavigation(estat.fitaNom, 0, 0);
-        } catch (e) {
-            console.error("Error ruta:", e);
-        }
+        } catch (e) { console.error("Error ruta:", e); }
     };
 
+    // Passem el tercer argument al constructor de RutesView
     rutesView = new RutesView('route-selector-container', async (ruta) => {
         await carregarNovaRuta(ruta);
         menu.switchScreen('joc');
+    }, () => {
+        menu.switchScreen('creator'); // Obre la vista de creació
     });
 
-    // POSICIONAMENT I FINAL DE RUTA
     navigator.geolocation.watchPosition((pos) => {
         const accuracy = pos.coords.accuracy;
         const gpsDot = document.getElementById('gps-status-dot');
@@ -84,21 +78,12 @@ const initApp = async () => {
         const estat = game.processarPosicio(pos);
         if (estat) {
             gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
-            
             if (estat.fitaTrobada) {
                 gameView.refreshMarkers(game.fites, game.indexFitaActual);
-                if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-
                 if (estat.rutaCompletada) {
-                    const tNet = Math.round((Date.now() - game.startTime) / 60000);
-                    const tTotal = tNet + game.penalitzacions;
-                    game.saveToHistory(tNet, tTotal);
-
-                    alert(`🏆 FINAL!\nNet: ${tNet} min\nSOS: +${game.penalitzacions} min\nTOTAL: ${tTotal} min`);
                     game.clearState();
                     menu.switchScreen('rutes');
-                } else {
-                    alert(`🎯 ${estat.fitaNom} TROBADA!`);
+                    alert("Ruta completada!");
                 }
             }
         }
@@ -111,21 +96,10 @@ const initApp = async () => {
     }, true);
 };
 
-// Executem la inicialització directament
 initApp();
 
-// REGISTRE DE SERVICE WORKER
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
-            reg.onupdatefound = () => {
-                const installingWorker = reg.installing;
-                installingWorker.onstatechange = () => {
-                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        window.location.reload();
-                    }
-                };
-            };
-        });
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
     });
 }
