@@ -22,11 +22,12 @@ export class Menu {
             .menu-btn {
                 flex: 1; background: none; border: none; color: #a0aec0;
                 display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 3px;
-                cursor: pointer;
+                cursor: pointer; transition: color 0.2s;
             }
             .menu-btn.active { color: white; }
             .menu-btn i { font-size: 1.2rem; }
 
+            /* Estil per al menú desplegable de fites */
             #fites-menu {
                 position: fixed !important;
                 bottom: 110px !important;
@@ -40,24 +41,22 @@ export class Menu {
                 z-index: 99999 !important;
                 display: none;
                 overflow-y: auto;
-                border: 2px solid var(--primary);
+                border: 2px solid #3182ce;
             }
         `;
         document.head.appendChild(style);
     }
 
     render() {
+        // Ara tots els botons tenen la classe 'menu-btn' per rebre l'esdeveniment
         this.container.innerHTML = `
             <nav class="main-menu">
                 <button class="menu-btn" data-screen="rutes"><i class="fas fa-route"></i><span>Rutes</span></button>
                 <button class="menu-btn active" data-screen="joc"><i class="fas fa-compass"></i><span>Joc</span></button>
                 <button id="btn-fites" class="menu-btn"><i class="fas fa-list-ol"></i><span>Fites</span></button>
+                <button class="menu-btn" data-screen="creador"><i class="fas fa-plus-circle"></i><span>Crear</span></button>
                 <button class="menu-btn" data-screen="sos"><i class="fas fa-skull-crossbones"></i><span>SOS</span></button>
                 <button class="menu-btn" data-screen="perfil"><i class="fas fa-user-circle"></i><span>Perfil</span></button>
-                <button class="nav-btn" data-screen="creador">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Crear</span>
-                </button>
             </nav>
         `;
     }
@@ -66,6 +65,8 @@ export class Menu {
         this.container.querySelectorAll('.menu-btn').forEach(btn => {
             btn.onclick = () => {
                 const screen = btn.getAttribute('data-screen');
+                
+                // Lògica especial per al botó de llista de fites
                 if (btn.id === 'btn-fites') {
                     this.gameView.showCheckpoints(this.game.fites, this.game.indexFitaActual, (i) => {
                         this.game.indexFitaActual = i;
@@ -76,15 +77,16 @@ export class Menu {
                     return;
                 }
                 
+                // Lògica per a la resta de pantalles
                 if (screen === 'sos') {
                     if (confirm("L'ajuda SOS penalitza el temps. Vols continuar?")) {
-                        this.game.penalitzacions++;
                         this.switchScreen(screen);
                     }
-                } else {
+                } else if (screen) {
                     this.switchScreen(screen);
                 }
                 
+                // Actualització visual de l'estat actiu
                 this.container.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             };
@@ -92,26 +94,20 @@ export class Menu {
     }
 
     switchScreen(id) {
-        // 1. Gestió de visibilitat de les vistes
+        // 1. Amaguem totes les vistes i activem la seleccionada
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         const target = document.getElementById(`view-${id}`);
         if (target) target.classList.add('active');
 
-        // 2. GESTIÓ BRÚIXOLA: S'amaga en totes les pantalles excepte a 'joc'
+        // 2. Control de la brúixola
         const compass = document.getElementById('compass-container');
         if (compass) {
-            // Es mostra si estem a 'joc' i l'usuari no l'ha amagat manualment amb el botó
-            compass.style.display = (id === 'joc' && this.gameView.compass.userWantsVisible) ? 'block' : 'none';
+            compass.style.display = (id === 'joc') ? 'block' : 'none';
         }
 
-        // 3. SOLUCIÓ MAPA SOS: Recalcula el tamany del mapa Leaflet quan la vista és visible
+        // 3. Recàlcul de mapes Leaflet (SOS i Creador)
         if (id === 'sos' && this.sosView) {
-            setTimeout(() => {
-                this.sosView.invalidate(); // Crida al mètode d'invalidació del SOSView
-            }, 100);
+            setTimeout(() => this.sosView.invalidate(), 100);
         }
-
-        // 4. Actualització del perfil
-        if (id === 'perfil' && this.profileView) this.profileView.update();
     }
 }
