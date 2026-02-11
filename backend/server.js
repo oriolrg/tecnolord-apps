@@ -30,28 +30,31 @@ const { makeHealthRouter } = require('./routes/health');
 const { makeMesuresRouter } = require('./routes/mesures');
 const { makeHidroRouter } = require('./routes/hidro');
 const { makePreviRouter } = require('./routes/previ');
+const { normalizeOpenMeteoModel } = require('./utils/previ');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const pool = createPool();
 
-app.use(pingRouter);
-app.use(makeHealthRouter({ pool }));
-app.use(makeMesuresRouter({ pool }));
-app.use(makeHidroRouter({ pool }));
-app.use(makePreviRouter({ pool }));
+
 // ──────────────────────────────────────────────────────────
 // Middlewares
 app.use(morgan('tiny'));
 app.use(cors());
 app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*+json'] }));
 
-// Estàtics
-app.use(express.static(path.resolve(__dirname, '..', 'frontend')));
-app.get('/', (_req, res) => res.sendFile(path.resolve(__dirname, '..', 'frontend', 'index.html')));
+// Estàtics (robust: no depèn de __dirname)
+const FRONTEND_DIR = path.resolve(process.cwd(), 'frontend');
+app.use(express.static(FRONTEND_DIR));
+app.get('/', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
 
 
+app.use(pingRouter);
+app.use(makeHealthRouter({ pool }));
+app.use(makeMesuresRouter({ pool }));
+app.use(makeHidroRouter({ pool }));
+app.use(makePreviRouter({ pool }));
 
 // ──────────────────────────────────────────────────────────
 // Helpers de permisos/entitats
@@ -197,34 +200,6 @@ function mustNumEnv(name) {
   const n = Number(v);
   if (!Number.isFinite(n)) throw new Error(`missing/invalid env ${name}`);
   return n;
-}
-
-function normalizeOpenMeteoModel(raw) {
-  const s = String(raw ?? '').trim().toLowerCase();
-  if (!s) return null;
-
-  const map = {
-    'best': 'best_match',
-    'bestmatch': 'best_match',
-    'best_match': 'best_match',
-    'default': 'best_match',
-    'icon': 'icon_global',
-    'icon-global': 'icon_global',
-    'icon_global': 'icon_global',
-    'icon eu': 'icon_eu',
-    'icon-eu': 'icon_eu',
-    'icon_eu': 'icon_eu',
-    'icon d2': 'icon_d2',
-    'icon-d2': 'icon_d2',
-    'icon_d2': 'icon_d2',
-    'icon seamless': 'icon_seamless',
-    'icon-seamless': 'icon_seamless',
-    'icon_seamless': 'icon_seamless',
-  };
-
-  if (map[s]) return map[s];
-  if (/^[a-z0-9_]+$/.test(s)) return s;
-  return null;
 }
 
 function previConfig() {
