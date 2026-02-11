@@ -12,7 +12,7 @@ export async function fetchMeteo({ estacio, limit, period, date_from, date_to })
   if (period) params.set("period", period);
   if (date_from) params.set("from", date_from);
   if (date_to) params.set("to", date_to);
-  params.set("limit", String(limit));
+  params.set("limit", String(limit || CONFIG.defaultLimit));
 
   const base = (CONFIG?.apiBase || "").replace(/\/$/, "");
   const url = `${base}/api/v1/mesures/darreres?${params.toString()}`;

@@ -18,6 +18,6 @@ export const CONFIG = {
   // UI
   autoRefreshMs: 30000,
   defaultLimit: 48,
-  maxLimit: 500,
+  maxLimit: 300,
   defaultEstacio: "home",
 };

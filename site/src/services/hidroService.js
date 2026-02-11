@@ -14,7 +14,7 @@ export async function fetchHidro({ codi, limit, period, date_from, date_to, mode
   if (date_to) params.set("to", date_to);
   if (mode) params.set("mode", mode);
   if (ensure != null) params.set("ensure", String(ensure ? 1 : 0));
-  params.set("limit", String(limit));
+  params.set("limit", String(limit || CONFIG.defaultLimit));
 
   const base = (CONFIG?.apiBase || "").replace(/\/$/, "");
   const url = `${base}/api/v1/hidro/darreres?${params.toString()}`;
