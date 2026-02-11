@@ -18,9 +18,6 @@ const initApp = async () => {
     gameView = new GameView();
     sosView = new SOSView(game);
     
-    // Inicialitzem el creador de rutes (el contenidor ha d'existir a l'index.html)
-    creatorView = new CreatorView('creator-container', game); 
-    
     profileView = new ProfileView('view-perfil', game); 
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
@@ -29,9 +26,6 @@ const initApp = async () => {
     menu.switchScreen = (screen) => {
         if (screen === 'perfil') {
             profileView.update();
-        }
-        if (screen === 'creator') {
-            creatorView.update(); // Inicialitza o refresca el mapa del creador
         }
         if (screen === 'sos') {
             game.afegirPenalitzacioSOS(); 
@@ -74,18 +68,10 @@ const initApp = async () => {
         }
     };
 
-    // INSTÀNCIA DE RUTES VIEW AMB EL CALLBACK DE CREACIÓ
-    rutesView = new RutesView(
-        'route-selector-container', 
-        async (ruta) => {
-            await carregarNovaRuta(ruta);
-            menu.switchScreen('joc');
-        },
-        () => {
-            // Aquesta és la funció que s'executa en clicar "Dissenyar Nova Ruta"
-            menu.switchScreen('creator');
-        }
-    );
+    rutesView = new RutesView('route-selector-container', async (ruta) => {
+        await carregarNovaRuta(ruta);
+        menu.switchScreen('joc');
+    });
 
     // POSICIONAMENT I FINAL DE RUTA
     navigator.geolocation.watchPosition((pos) => {
