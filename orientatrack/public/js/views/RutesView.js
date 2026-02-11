@@ -110,17 +110,33 @@ export class RutesView {
         try {
             const parser = new DOMParser();
             const xml = parser.parseFromString(xmlText, "text/xml");
-            const trackPoints = xml.querySelectorAll('trkpt, wpt'); 
-
-            const points = Array.from(trackPoints).map(pt => ({
-                lat: parseFloat(pt.getAttribute('lat')),
-                lon: parseFloat(pt.getAttribute('lon'))
-            })).filter(p => !isNaN(p.lat) && !isNaN(p.lon));
-
-            if (points.length === 0) throw new Error("GPX sense coordenades vàlides");
-
-            const fites = this.generateCheckpoints(points);
             
+            // 1. Intentem buscar primer Waypoints (punts de fita directes)
+            const waypoints = xml.querySelectorAll('wpt');
+            let fites = [];
+
+            if (waypoints.length > 0) {
+                // Si hi ha Waypoints, els usem directament com a fites
+                fites = Array.from(waypoints).map((pt, index) => ({
+                    nom: pt.querySelector('name')?.textContent || `Fita ${index + 1}`,
+                    lat: parseFloat(pt.getAttribute('lat')),
+                    lon: parseFloat(pt.getAttribute('lon')),
+                    radius_m: 25
+                }));
+            } else {
+                // 2. Si NO hi ha Waypoints, busquem punts de track (ruta contínua)
+                const trackPoints = xml.querySelectorAll('trkpt');
+                const points = Array.from(trackPoints).map(pt => ({
+                    lat: parseFloat(pt.getAttribute('lat')),
+                    lon: parseFloat(pt.getAttribute('lon'))
+                })).filter(p => !isNaN(p.lat) && !isNaN(p.lon));
+
+                if (points.length === 0) throw new Error("GPX sense punts vàlids");
+                
+                // Generem fites automàtiques per distància (lògica antiga)
+                fites = this.generateCheckpoints(points);
+            }
+
             const novaRuta = {
                 id: 'custom_' + Date.now(),
                 nom: fileName.replace('.gpx', ''),
@@ -128,6 +144,7 @@ export class RutesView {
                 isCustom: true
             };
 
+            // Guardem i avisem
             const rutesGuardades = JSON.parse(localStorage.getItem('custom_routes') || '[]');
             rutesGuardades.push(novaRuta);
             localStorage.setItem('custom_routes', JSON.stringify(rutesGuardades));
