@@ -31,6 +31,8 @@ const { makeMesuresRouter } = require('./routes/mesures');
 const { makeHidroRouter } = require('./routes/hidro');
 const { makePreviRouter } = require('./routes/previ');
 const { normalizeOpenMeteoModel } = require('./utils/previ');
+const { makeTasksRouter } = require('./routes/tasks');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +57,12 @@ app.use(makeHealthRouter({ pool }));
 app.use(makeMesuresRouter({ pool }));
 app.use(makeHidroRouter({ pool }));
 app.use(makePreviRouter({ pool }));
+app.use(makeTasksRouter({
+  checkApiKey,
+  pullEcowittAndSave,
+  pullACAAndSave,
+  pullPreviAndSave
+}));
 
 // ──────────────────────────────────────────────────────────
 // Helpers de permisos/entitats
