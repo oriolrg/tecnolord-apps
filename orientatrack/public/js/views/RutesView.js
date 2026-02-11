@@ -2,7 +2,7 @@ export class RutesView {
     constructor(containerId, onRouteSelected) {
         this.container = document.getElementById(containerId);
         this.onRouteSelected = onRouteSelected;
-        
+        this.onCreateRoute = onCreateRoute;
         // 1. Rutes oficials de l'aplicació
         this.rutesPredefinides = [
             { id: 'r1', nom: "Carrera de montaña", fitxer: "data/Afternoon_Hike.gpx" },
@@ -27,6 +27,11 @@ export class RutesView {
                 </div>
                 <hr style="margin: 15px 0;">
                 
+                <div id="create-route-zone" class="create-card">
+                    <i class="fas fa-plus-circle"></i>
+                    <p>Dissenyar <strong>Nova Ruta</strong> al mapa</p>
+                </div>
+
                 <div id="upload-zone" class="upload-card">
                     <i class="fas fa-file-upload"></i>
                     <p>Pujar fitxer <strong>.GPX</strong></p>
@@ -67,7 +72,12 @@ export class RutesView {
         const zone = this.container.querySelector('#upload-zone');
         const input = this.container.querySelector('#gpx-input');
         const clearBtn = this.container.querySelector('#btn-clear-custom');
-
+        const createZone = this.container.querySelector('#create-route-zone');
+        if (createZone && this.onCreateRoute) {
+            createZone.onclick = () => {
+                this.onCreateRoute(); // Cridem la funció que obre la vista de creació
+            };
+        }
         if (zone && input) {
             zone.onclick = () => input.click();
             input.onchange = (e) => {
@@ -172,13 +182,22 @@ export class RutesView {
         const style = document.createElement('style');
         style.id = 'rutes-styles';
         style.innerHTML = `
-            .upload-card {
-                border: 2px dashed #3182ce; border-radius: 12px; padding: 25px;
-                text-align: center; color: #3182ce; cursor: pointer;
-                background: #ebf8ff; margin-bottom: 20px;
-                transition: background 0.2s;
+            .upload-card, .create-card {
+            border-radius: 12px; padding: 20px;
+            text-align: center; cursor: pointer;
+            margin-bottom: 15px; transition: all 0.2s;
+            border: 2px dashed;
             }
-            .upload-card:hover { background: #e2f1ff; }
+            .upload-card { 
+                border-color: #3182ce; color: #3182ce; background: #ebf8ff; 
+            }
+            .create-card { 
+                border-color: #38a169; color: #38a169; background: #f0fff4; 
+            }
+            .upload-card:hover, .create-card:hover { 
+                transform: translateY(-2px);
+                filter: brightness(0.95);
+            }
             .route-item {
                 display: flex; align-items: center; padding: 15px;
                 background: white; border-radius: 10px; margin-bottom: 12px;
