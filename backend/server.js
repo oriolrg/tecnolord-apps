@@ -21,19 +21,13 @@ const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
-const { Pool } = require('pg');
+const { createPool } = require('./db/pool');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const pool = new Pool({
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  host: process.env.POSTGRES_HOST || 'db',
-  port: Number(process.env.POSTGRES_PORT || 5432),
-  database: process.env.POSTGRES_DB,
-});
+const pool = createPool();
 
 // IMPORTANT: usem esquemes en català
 pool.on('connect', (client) => {
@@ -509,6 +503,7 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
   const effectiveMode = mode || (hasWindow ? 'latest' : 'raw');
 
   try {
+    // 1. MODE RAW (Sense canvis)
     if (effectiveMode === 'raw') {
       const params = [];
       let where = '';
@@ -532,6 +527,7 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       return res.json({ ok: true, items: rows });
     }
 
+    // Preparació de filtres
     const wParams = [];
     const wConds = [];
     if (codi) { wParams.push(codi); wConds.push(`e.codi = $${wParams.length}`); }
@@ -539,9 +535,33 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
     if (end) { wParams.push(end.toISOString()); wConds.push(`h.instant < $${wParams.length}`); }
     const wWhere = wConds.length ? `WHERE ${wConds.join(' AND ')}` : '';
 
+    // 2. MODE RANGE (Amb optimització de 5MB)
     if (effectiveMode === 'range') {
-      if (codi) {
-        const sqlRange = `
+      const diffDays = (start && end) ? (end - start) / (1000 * 3600 * 24) : 0;
+      let sqlAllRange;
+
+      if (diffDays > 3) {
+        // OPTIMITZACIÓ: Si són més de 3 dies, fem mitjanes per hora
+        // Redueix dràsticament el pes del JSON (de 5MB a ~100KB)
+        sqlAllRange = `
+          SELECT
+            date_trunc('hour', h.instant) AS instant,
+            AVG(h.cabal_m3s) AS cabal_m3s,
+            AVG(h.capacitat_pct) AS capacitat_pct,
+            AVG(h.nivell_m) AS nivell_m,
+            e.codi, e.nom, e.tipus, e.id AS estacio_id,
+            false AS is_fallback,
+            false AS is_outside_range
+          FROM lectures_hidro h
+          JOIN estacions_hidro e ON e.id = h.estacio_id
+          ${wWhere}
+          GROUP BY 1, e.codi, e.nom, e.tipus, e.id
+          ORDER BY 1 DESC
+          LIMIT ${limit}
+        `;
+      } else {
+        // ORIGINAL: Dades minut a minut per a períodes curts
+        sqlAllRange = `
           SELECT
             h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
             e.codi, e.nom, e.tipus, e.id AS estacio_id,
@@ -555,43 +575,12 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
           ORDER BY h.instant DESC
           LIMIT ${limit}
         `;
-        const { rows } = await pool.query(sqlRange, wParams);
-        if (rows.length || !ensure) return res.json({ ok: true, items: rows, fallback: false });
-
-        const sqlFallback = `
-          SELECT
-            h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
-            e.codi, e.nom, e.tipus, e.id AS estacio_id,
-            EXTRACT(EPOCH FROM (NOW() - h.instant)) / 3600 AS age_hours,
-            (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale,
-            true AS is_fallback,
-            true AS is_outside_range
-          FROM lectures_hidro h
-          JOIN estacions_hidro e ON e.id = h.estacio_id
-          WHERE e.codi = $1
-          ORDER BY h.instant DESC
-          LIMIT 1
-        `;
-        const fb = await pool.query(sqlFallback, [codi]);
-        return res.json({ ok: true, items: fb.rows, fallback: true });
       }
 
-      const sqlAllRange = `
-        SELECT
-          h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
-          e.codi, e.nom, e.tipus, e.id AS estacio_id,
-          EXTRACT(EPOCH FROM (NOW() - h.instant)) / 3600 AS age_hours,
-          (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale,
-          false AS is_fallback,
-          false AS is_outside_range
-        FROM lectures_hidro h
-        JOIN estacions_hidro e ON e.id = h.estacio_id
-        ${wWhere}
-        ORDER BY h.instant DESC
-        LIMIT ${limit}
-      `;
       const rangeRes = await pool.query(sqlAllRange, wParams);
       let items = rangeRes.rows;
+
+      // Lògica de fallback i ensure (Sense canvis)
       if (!ensure) return res.json({ ok: true, items });
 
       const targets = [
@@ -611,9 +600,7 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       if (!missing.length) return res.json({ ok: true, items });
 
       const sqlLatestMissing = `
-        WITH wanted AS (
-          SELECT unnest($1::text[]) AS codi
-        ),
+        WITH wanted AS (SELECT unnest($1::text[]) AS codi),
         latest AS (
           SELECT DISTINCT ON (e.codi)
             h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
@@ -623,23 +610,20 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
           JOIN lectures_hidro h ON h.estacio_id = e.id
           ORDER BY e.codi, h.instant DESC
         )
-        SELECT
-          l.*,
+        SELECT l.*,
           EXTRACT(EPOCH FROM (NOW() - l.instant)) / 3600 AS age_hours,
           (NOW() - l.instant) > INTERVAL '24 hours' AS is_stale,
-          true AS is_fallback,
-          true AS is_outside_range
+          true AS is_fallback, true AS is_outside_range
         FROM latest l
       `;
       const missRes = await pool.query(sqlLatestMissing, [missing]);
-
       items = items.concat(missRes.rows);
       items.sort((a, b) => new Date(b.instant).getTime() - new Date(a.instant).getTime());
 
       return res.json({ ok: true, items });
     }
 
-    // mode=latest
+    // 3. MODE LATEST (Sense canvis, la lògica de fallback és necessària)
     {
       const targets = [
         process.env.ACA_CODI_CARDENER,
@@ -690,9 +674,7 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
       }
 
       const sql = `
-        WITH wanted AS (
-          SELECT unnest($1::text[]) AS codi
-        ),
+        WITH wanted AS (SELECT unnest($1::text[]) AS codi),
         in_range AS (
           SELECT DISTINCT ON (e.codi)
             h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
@@ -706,10 +688,7 @@ app.get('/api/v1/hidro/darreres', async (req, res) => {
           ORDER BY e.codi, h.instant DESC
         ),
         missing AS (
-          SELECT w.codi
-          FROM wanted w
-          LEFT JOIN in_range r ON r.codi = w.codi
-          WHERE r.codi IS NULL
+          SELECT w.codi FROM wanted w LEFT JOIN in_range r ON r.codi = w.codi WHERE r.codi IS NULL
         ),
         fallback AS (
           SELECT DISTINCT ON (e.codi)
