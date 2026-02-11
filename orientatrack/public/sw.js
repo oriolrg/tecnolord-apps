@@ -1,4 +1,4 @@
-const CACHE_NAME = 'orientatrack-v1.1'; // CANVIA AIXÒ PER CADA ACTUALITZACIÓ
+const CACHE_NAME = 'orientatrack-v1.3'; // CANVIA AIXÒ PER CADA ACTUALITZACIÓ
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
