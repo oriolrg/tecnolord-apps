@@ -26,13 +26,17 @@ const { createPool } = require('./db/pool');
 require('dotenv').config();
 const { checkApiKey } = require('./middleware/authApiKey.js');
 const { getWindowFromQuery } = require('./utils/periods');
+const { router: pingRouter } = require('./routes/ping');
+const { makeHealthRouter } = require('./routes/health');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const pool = createPool();
 
-
+app.use(pingRouter);
+app.use(makeHealthRouter({ pool }));
 
 // ──────────────────────────────────────────────────────────
 // Middlewares
@@ -44,14 +48,7 @@ app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*
 app.use(express.static(path.resolve(__dirname, '..', 'frontend')));
 app.get('/', (_req, res) => res.sendFile(path.resolve(__dirname, '..', 'frontend', 'index.html')));
 
-// Salut
-app.get('/health', async (_req, res) => {
-  try { await pool.query('SELECT 1'); res.json({ ok: true, db: 'ok', time: new Date().toISOString() }); }
-  catch { res.json({ ok: true, db: 'down', time: new Date().toISOString() }); }
-});
 
-// Ping
-app.get('/api/ping', (_req, res) => res.json({ ok: true, msg: 'pong' }));
 
 // ──────────────────────────────────────────────────────────
 // Helpers de permisos/entitats
