@@ -2,25 +2,19 @@ import { calcularDistancia, calcularRumb } from './GeoEngine.js';
 
 export class GameLogic {
     constructor() {
-        // --- Estat del Joc (Ruta en curs) ---
         this.fites = [];
         this.indexFitaActual = 0;
         this.segonsDinsRadi = 0;
         this.ultimaPosicio = null;
         this.penalitzacions = 0;
         this.startTime = null;
-        this.fitesTimestamps = []; 
+        this.fitesTimestamps = []; // Nou: Registre de parcials (splits)
         this.currentRouteName = "Ruta";
-
-        // --- Claus de Persistència ---
         this.STORAGE_KEY = 'orientatrack_session';
         this.HISTORY_KEY = 'orientatrack_history';
     }
 
-    // ==========================================
-    // GESTIÓ DE L'ESTAT (JOC ACTIU)
-    // ==========================================
-
+    // --- GESTIÓ DE L'ESTAT (PERSISTÈNCIA) ---
     saveState() {
         const state = {
             fites: this.fites,
@@ -61,9 +55,11 @@ export class GameLogic {
         this.fitesTimestamps = [];
     }
 
+    // --- HISTORIAL ---
     saveToHistory(tempsNetMin, tempsFinalMin) {
         const history = JSON.parse(localStorage.getItem(this.HISTORY_KEY) || '[]');
         
+        // Calculem els parcials en segons (diferència entre timestamps)
         const parcialsSegons = this.fitesTimestamps.map((t, i) => {
             const inici = i === 0 ? this.startTime : this.fitesTimestamps[i-1];
             return Math.round((t - inici) / 1000);
@@ -81,16 +77,16 @@ export class GameLogic {
         localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
     }
 
+    // --- LÒGICA DE PENALITZACIONS ---
     afegirPenalitzacioSOS() {
         this.penalitzacions++;
         this.saveState();
+        console.log(`SOS penalitzat: Total ${this.penalitzacions} minuts.`);
     }
 
-    // ==========================================
-    // LÒGICA DE NAVEGACIÓ I GPS
-    // ==========================================
-
+    // --- CÀRREGA DE RUTA (Lògica original preservada) ---
     async carregarRuta(url) {
+        // Reset d'estat abans de carregar la nova ruta
         this.fites = [];
         this.indexFitaActual = 0;
         this.segonsDinsRadi = 0;
@@ -116,6 +112,7 @@ export class GameLogic {
                 const prevLon = parseFloat(pts[i-1].getAttribute("lon"));
                 acumuladorDistancia += calcularDistancia(prevLat, prevLon, lat, lon);
 
+                // Afegim fita cada 1000 metres recorreguts al GPX
                 if (acumuladorDistancia >= 1000) {
                     this._afegirFita(llista, lat, lon);
                     acumuladorDistancia = 0;
@@ -153,10 +150,12 @@ export class GameLogic {
         };
     }
 
+    // --- PROCESSAMENT DE POSICIÓ ---
     processarPosicio(pos) {
         this.ultimaPosicio = pos;
         if (this.fites.length === 0) return null;
 
+        // Iniciem cronòmetre global al primer moviment detectat
         if (!this.startTime) {
             this.startTime = Date.now();
             this.saveState();
@@ -171,12 +170,15 @@ export class GameLogic {
         let fitaTrobada = false;
         let rutaCompletada = false;
 
+        // Validació per fita trobada (mantenint els 3 segons dins del radi)
         if (dist <= (target.radius_m || 20) && accuracy < 30) {
             this.segonsDinsRadi++;
             if (this.segonsDinsRadi >= 3) {
                 fitaTrobada = true;
                 target.trobada = true;
                 this.segonsDinsRadi = 0;
+                
+                // Registrem timestamp per al càlcul de parcials al perfil
                 this.fitesTimestamps.push(Date.now());
 
                 if (this.indexFitaActual === this.fites.length - 1) {

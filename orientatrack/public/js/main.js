@@ -1,44 +1,30 @@
 import { GameLogic } from './core/GameLogic.js';
-import { RouteCreator } from './core/RouteCreator.js';
 import { Menu } from './components/Menu.js';
 import { GameView } from './views/GameView.js';
 import { SOSView } from './views/SOSView.js';
 import { RutesView } from './views/RutesView.js';
 import { ProfileView } from './views/ProfileView.js';
 import { WelcomeView } from './views/WelcomeView.js';
-import { CreatorView } from './views/CreatorView.js';
 
-let game, creator, gameView, sosView, menu, rutesView, profileView, creatorView;
+let game, gameView, sosView, menu, rutesView, profileView;
 
-// Mostrem la benvinguda inicial
+// Mostrem la benvinguda si toca
 new WelcomeView();
 
-/**
- * Inicialització de l'aplicació
- */
+// Funció que arrenca tota la maquinària de l'aplicació
 const initApp = async () => {
-    // 1. Instanciació de les dues lògiques core
     game = new GameLogic();
-    creator = new RouteCreator();
-    
-    // 2. Instanciació de vistes
     gameView = new GameView();
     sosView = new SOSView(game);
+    
     profileView = new ProfileView('view-perfil', game); 
-    
-    // El CreatorView ara depèn de la classe 'creator'
-    creatorView = new CreatorView('view-creador', creator); 
-    
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
-    // 3. Intercepció del Menú per refrescar dades
+    // LÒGICA DE REFRESC I PENALITZACIÓ
     const originalSwitch = menu.switchScreen.bind(menu);
     menu.switchScreen = (screen) => {
-        if (screen === 'creador') {
-            creatorView.update(); // Refresca mapa i llista de fites
-        }
         if (screen === 'perfil') {
-            profileView.update(); // Refresca parcials i historial
+            profileView.update();
         }
         if (screen === 'sos') {
             game.afegirPenalitzacioSOS(); 
@@ -47,7 +33,7 @@ const initApp = async () => {
         originalSwitch(screen);
     };
 
-    // 4. Represa de Sessió
+    // REPRESA DE SESSIÓ
     if (game.loadState()) {
         if (confirm("Vols continuar la ruta anterior?")) {
             gameView.refreshMarkers(game.fites, game.indexFitaActual);
@@ -59,7 +45,6 @@ const initApp = async () => {
         }
     }
 
-    // 5. Gestió de Càrrega de Rutes
     const carregarNovaRuta = async (dataRuta) => {
         try {
             let fites = dataRuta.fites || await game.carregarRuta(dataRuta.fitxer);
@@ -87,7 +72,7 @@ const initApp = async () => {
         menu.switchScreen('joc');
     });
 
-    // 6. Geolocalització i Finalització
+    // POSICIONAMENT I FINAL DE RUTA
     navigator.geolocation.watchPosition((pos) => {
         const accuracy = pos.coords.accuracy;
         const gpsDot = document.getElementById('gps-status-dot');
@@ -108,7 +93,7 @@ const initApp = async () => {
                     const tTotal = tNet + game.penalitzacions;
                     game.saveToHistory(tNet, tTotal);
 
-                    alert(`🏆 FINAL!\nTemps Net: ${tNet} min\nSOS: +${game.penalitzacions} min\nTOTAL: ${tTotal} min`);
+                    alert(`🏆 FINAL!\nNet: ${tNet} min\nSOS: +${game.penalitzacions} min\nTOTAL: ${tTotal} min`);
                     game.clearState();
                     menu.switchScreen('rutes');
                 } else {
@@ -119,16 +104,16 @@ const initApp = async () => {
         sosView.updatePosition(pos);
     }, null, { enableHighAccuracy: true });
 
-    // Sensors brúixola
     window.addEventListener('deviceorientationabsolute', (e) => {
         let heading = e.webkitCompassHeading || (360 - e.alpha);
         if (heading !== undefined) gameView.updateCompass(heading);
     }, true);
 };
 
+// Executem la inicialització directament
 initApp();
 
-// Service Worker
+// REGISTRE DE SERVICE WORKER
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then(reg => {
