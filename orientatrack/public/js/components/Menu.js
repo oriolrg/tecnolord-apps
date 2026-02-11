@@ -1,12 +1,12 @@
-// js/components/Menu.js
-
 export class Menu {
-    constructor(containerId, game, gameView, sosView, profileView) {
+    constructor(containerId, game, gameView, sosView, profileView, creatorView) {
         this.container = document.getElementById(containerId);
         this.game = game;
         this.gameView = gameView;
         this.sosView = sosView;
         this.profileView = profileView;
+        this.creatorView = creatorView; // Referència per accedir a les fites del creador
+        
         this.injectStyles();
         this.render();
         this.initEventListeners();
@@ -29,6 +29,23 @@ export class Menu {
             }
             .menu-btn.active { color: white; }
             .menu-btn i { font-size: 1.2rem; }
+
+            /* Estil del menú de fites per assegurar que sigui visible sobre el mapa */
+            #fites-menu {
+                position: fixed !important;
+                bottom: 80px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                width: 90% !important;
+                max-height: 55vh !important;
+                background: white !important;
+                border-radius: 12px !important;
+                box-shadow: 0 -10px 40px rgba(0,0,0,0.5) !important;
+                z-index: 99999 !important; /* El més alt de tota l'app */
+                display: none;
+                overflow-y: auto;
+                border: 2px solid #3182ce;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -50,28 +67,51 @@ export class Menu {
             btn.onclick = () => {
                 const screen = btn.getAttribute('data-screen');
                 
+                // LÒGICA BOTÓ FITES (Detecta si estem al creador o al joc)
                 if (btn.id === 'btn-fites') {
-                    this.gameView.showCheckpoints(this.game.fites, this.game.indexFitaActual, (i) => {
-                        this.game.indexFitaActual = i;
-                        this.gameView.refreshMarkers(this.game.fites, i);
-                    });
+                    const isCreatorActive = document.getElementById('view-creator').classList.contains('active');
+                    
+                    if (isCreatorActive && this.creatorView) {
+                        const fitesDraft = this.creatorView.routeCreator.draftFites;
+                        if (fitesDraft.length === 0) return alert("Encara no hi ha fites al disseny.");
+                        this.gameView.showCheckpoints(fitesDraft, -1, null);
+                    } else {
+                        if (!this.game.fites || this.game.fites.length === 0) return alert("No hi ha cap ruta carregada.");
+                        this.gameView.showCheckpoints(this.game.fites, this.game.indexFitaActual, (i) => {
+                            this.game.indexFitaActual = i;
+                            this.gameView.refreshMarkers(this.game.fites, i);
+                            const estat = this.game.getEstatActual();
+                            this.gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
+                        });
+                    }
                     return;
                 }
                 
-                if (screen) {
+                // LÒGICA CANVI DE PANTALLA
+                if (screen === 'sos') {
+                    if (confirm("L'ajuda SOS penalitza el temps. Vols continuar?")) {
+                        this.game.penalitzacions++;
+                        this.switchScreen(screen);
+                    }
+                } else if (screen) {
                     this.switchScreen(screen);
-                    this.container.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
                 }
+                
+                this.container.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
             };
         });
     }
 
     switchScreen(id) {
-        // Amaguem totes les vistes
+        // 1. Amagar totes les vistes
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         
-        // Mapatge d'IDs per seguretat
+        // 2. Amagar el panell de navegació si no estem al joc
+        const navPanel = document.getElementById('navigation-panel-container');
+        if (navPanel) navPanel.style.display = (id === 'joc') ? 'block' : 'none';
+
+        // 3. Mapatge d'IDs per activar la vista correcta
         const viewMap = {
             'joc': 'view-joc',
             'sos': 'view-sos',
@@ -83,15 +123,11 @@ export class Menu {
         const target = document.getElementById(viewMap[id] || `view-${id}`);
         if (target) target.classList.add('active');
 
-        // Brúixola
+        // 4. Gestió d'elements especials
         const compass = document.getElementById('compass-container');
         if (compass) compass.style.display = (id === 'joc') ? 'block' : 'none';
         
-        // SOS
         if (id === 'sos' && this.sosView) setTimeout(() => this.sosView.invalidate(), 100);
-        
-        // Perfil
         if (id === 'perfil' && this.profileView) this.profileView.update();
     }
 }
-// ASSEGURA'T QUE AQUÍ SOTA NO HI HA RES MÉS DECLARANT 'Menu'

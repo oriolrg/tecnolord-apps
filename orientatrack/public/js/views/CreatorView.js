@@ -14,19 +14,22 @@ export class CreatorView {
 
     render() {
         this.container.innerHTML = `
-            <div class="screen-content" style="padding: 0; display: flex; flex-direction: column;">
-                <div style="background: white; padding: 10px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+            <div class="screen-content" style="padding: 0; display: flex; flex-direction: column; background: white; position: relative; z-index: 1000;">
+                <div style="background: white; padding: 10px; z-index: 1100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin:0; font-size: 0.9rem;">Dissenya la teva ruta</h3>
                     <div style="display: flex; gap: 5px;">
                         <button id="btn-undo" class="btn-tool"><i class="fas fa-undo"></i></button>
                         <button id="btn-clear-draft" class="btn-tool danger"><i class="fas fa-trash"></i></button>
-                        <button id="btn-save-gpx" style="padding: 5px 10px; background: #48bb78; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">GUARDAR</button>
+                        <button id="btn-save-gpx" style="padding: 5px 15px; background: #48bb78; color: white; border: none; border-radius: 4px; font-weight: bold;">GUARDAR</button>
                     </div>
                 </div>
 
-                <div id="map-creator" style="flex: 1; width: 100%; background: #ddd;"></div>
+                <div id="map-creator" style="flex: 1; width: 100%; z-index: 1050; min-height: 300px;"></div>
                 
-                <div style="position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.7rem; z-index: 1000; pointer-events: none;">
+                <div id="creator-fites-list" style="background: white; max-height: 150px; overflow-y: auto; z-index: 1100; border-top: 1px solid #eee;">
+                    </div>
+                
+                <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.7rem; z-index: 1200; pointer-events: none;">
                     Toca el mapa per afegir punts
                 </div>
             </div>
