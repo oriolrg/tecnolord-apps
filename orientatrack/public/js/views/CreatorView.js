@@ -1,180 +1,155 @@
-import { GameLogic } from './core/GameLogic.js';
-import { Menu } from './components/Menu.js';
-import { GameView } from './views/GameView.js';
-import { SOSView } from './views/SOSView.js';
-import { RutesView } from './views/RutesView.js';
-import { ProfileView } from './views/ProfileView.js';
-import { WelcomeView } from './views/WelcomeView.js';
-import { CreatorView } from './views/CreatorView.js';
+import { RouteCreator } from '../core/RouteCreator.js';
 
-let game, gameView, sosView, menu, rutesView, profileView, creatorView;
-
-// Mostrem la pantalla de benvinguda (si és la primera vegada o segons la seva lògica interna)
-new WelcomeView();
-
-/**
- * Inicialitza els components core de l'aplicació
- */
-const initApp = async () => {
-    // 1. Instanciació de la lògica i vistes principals
-    game = new GameLogic();
-    gameView = new GameView();
-    sosView = new SOSView(game);
-    
-    // Contenidors definits a l'index.html
-    profileView = new ProfileView('view-perfil', game); 
-    creatorView = new CreatorView('view-creador', game);
-    
-    menu = new Menu('main-menu-container', game, gameView, sosView);
-
-    // 2. Intercepció del Menú per a rutes, penalitzacions i refresc de dades
-    const originalSwitch = menu.switchScreen.bind(menu);
-    
-    menu.switchScreen = (screen) => {
-        // Refresquem el creador si s'hi accedeix
-        if (screen === 'creador') {
-            creatorView.update();
-        }
+export class CreatorView {
+    constructor(containerId, game) {
+        this.container = document.getElementById(containerId);
+        this.game = game; // Referència al joc principal (opcional si usem lògica separada)
+        this.routeCreator = new RouteCreator();
+        this.map = null;
+        this.markersLayer = null;
+        this.linesLayer = null;
         
-        // Refresquem el perfil (temps global i parcials)
-        if (screen === 'perfil') {
-            profileView.update();
-        }
-        
-        // Apliquem penalització de temps si s'entra al mode SOS (Ajuda externa)
-        if (screen === 'sos') {
-            game.afegirPenalitzacioSOS(); 
-            if ("vibrate" in navigator) navigator.vibrate(100);
-        }
-        
-        originalSwitch(screen);
-    };
+        this.render();
+        // El mapa s'inicialitza quan es fa update() en mostrar la pantalla
+    }
 
-    // 3. Gestió de Represa de Sessió (Persistència)
-    if (game.loadState()) {
-        if (confirm("S'ha detectat una ruta en curs. Vols continuar-la?")) {
-            gameView.refreshMarkers(game.fites, game.indexFitaActual);
-            const estat = game.getEstatActual();
-            if (estat) {
-                gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
+    render() {
+        this.container.innerHTML = `
+            <div style="position: relative; height: 100%; display: flex; flex-direction: column;">
+                <div style="background: white; padding: 10px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin:0; font-size: 1rem;">Creador de Rutes</h3>
+                    <div>
+                        <button id="btn-undo" style="padding: 5px 10px; background: #ecc94b; border: none; border-radius: 4px; margin-right: 5px;"><i class="fas fa-undo"></i></button>
+                        <button id="btn-save-gpx" style="padding: 5px 10px; background: #48bb78; color: white; border: none; border-radius: 4px;">Guardar GPX</button>
+                        <button id="btn-clear-draft" style="padding: 5px 10px; background: #e53e3e; color: white; border: none; border-radius: 4px;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+
+                <div id="map-creator" style="flex: 1; width: 100%; z-index: 1;"></div>
+                
+                <div style="position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.9); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; z-index: 1000; pointer-events: none;">
+                    Clica al mapa per afegir fites
+                </div>
+            </div>
+        `;
+
+        this.initEventListeners();
+    }
+
+    initEventListeners() {
+        this.container.querySelector('#btn-save-gpx').onclick = () => this.saveRoute();
+        this.container.querySelector('#btn-clear-draft').onclick = () => {
+            if(confirm("Esborrar el mapa actual?")) {
+                this.routeCreator.clearDraft();
+                this.refreshMapElements();
             }
-            menu.switchScreen('joc');
+        };
+        this.container.querySelector('#btn-undo').onclick = () => {
+            // Lògica simple de desfer (eliminem l'últim element de l'array)
+            this.routeCreator.draftFites.pop();
+            this.routeCreator.saveDraft();
+            this.refreshMapElements();
+        };
+    }
+
+    update() {
+        // Aquesta funció es crida des del Menu.js quan obrim la pestanya
+        if (!this.map) {
+            this.initMap();
         } else {
-            game.clearState(); // Esborrem si l'usuari vol començar de zero
+            this.map.invalidateSize();
         }
     }
 
-    /**
-     * Carrega un fitxer GPX i el processa per al joc
-     */
-    const carregarNovaRuta = async (dataRuta) => {
-        try {
-            let fites = dataRuta.fites || await game.carregarRuta(dataRuta.fitxer);
-            
-            // Normalització de fites (assegurar números i radi per defecte)
-            fites = fites.map(f => ({
-                ...f, 
-                lat: Number(f.lat), 
-                lon: Number(f.lon),
-                radius: Number(f.radius || f.radius_m || 25)
-            }));
-            
-            game.fites = fites;
-            game.indexFitaActual = 0;
-            game.penalitzacions = 0;
-            game.saveState();
-            
-            gameView.refreshMarkers(fites, 0);
-            const estat = game.getEstatActual();
-            if (estat) gameView.updateNavigation(estat.fitaNom, 0, 0);
-        } catch (e) {
-            console.error("Error carregant la ruta:", e);
-            alert("No s'ha pogut carregar la ruta seleccionada.");
-        }
-    };
+    initMap() {
+        // Inicialitzem el mapa del creador centrat a Catalunya per defecte o on sigui l'usuari
+        this.map = L.map('map-creator').setView([41.3851, 2.1734], 13);
 
-    // Inicialitzem el selector de rutes
-    rutesView = new RutesView('route-selector-container', async (ruta) => {
-        await carregarNovaRuta(ruta);
-        menu.switchScreen('joc');
-    });
+        // Capa de l'ICGC
+        L.tileLayer('https://geoserveis.icgc.cat/icc_mapesmultibase/noutm/wmts/tile/orto/GRID3857/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'ICGC'
+        }).addTo(this.map);
 
-    // 4. Seguiment GPS i Validació de Fites
-    navigator.geolocation.watchPosition((pos) => {
-        const accuracy = pos.coords.accuracy;
-        
-        // Indicador visual de qualitat del senyal GPS (semàfor)
-        const gpsDot = document.getElementById('gps-status-dot');
-        if (gpsDot) {
-            gpsDot.style.backgroundColor = accuracy < 10 ? '#48bb78' : (accuracy < 30 ? '#ecc94b' : '#f56565');
-        }
+        this.markersLayer = L.layerGroup().addTo(this.map);
+        this.linesLayer = L.layerGroup().addTo(this.map);
 
-        const estat = game.processarPosicio(pos);
-        if (estat) {
-            // Actualitzem panell inferior de navegació (distància i fita)
-            gameView.updateNavigation(estat.fitaNom, estat.dist, estat.rumb);
-            
-            if (estat.fitaTrobada) {
-                // Actualitzem el mapa per marcar la fita com a trobada
-                gameView.refreshMarkers(game.fites, game.indexFitaActual);
-                if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-
-                // Comprovem si era la darrera fita de la ruta
-                if (estat.rutaCompletada) {
-                    const tNet = Math.round((Date.now() - game.startTime) / 60000);
-                    const tTotal = tNet + game.penalitzacions;
-                    
-                    // Guardem a l'historial del perfil
-                    game.saveToHistory(tNet, tTotal);
-
-                    alert(`🏆 RUTA FINALITZADA!\n\nTemps Net: ${tNet} min\nSOS/Penalitzacions: +${game.penalitzacions} min\nTEMPS TOTAL: ${tTotal} min`);
-                    
-                    game.clearState();
-                    menu.switchScreen('rutes');
-                } else {
-                    alert(`🎯 ${estat.fitaNom} TROBADA!`);
-                }
+        // Gestió de clics al mapa per afegir fites
+        this.map.on('click', (e) => {
+            const nom = prompt("Nom de la fita (opcional):", `Fita ${this.routeCreator.draftFites.length + 1}`);
+            if (nom !== null) { // Si no cancel·la
+                this.routeCreator.addFitaToDraft(e.latlng.lat, e.latlng.lng, nom);
+                this.refreshMapElements();
             }
-        }
-        
-        // Actualitzem la posició de l'usuari al mapa del mode SOS
-        sosView.updatePosition(pos);
-        
-    }, (err) => {
-        console.warn("Error Geolocation:", err.message);
-    }, { 
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 15000 
-    });
-
-    // 5. Gestió de l'Orientació (Brúixola)
-    window.addEventListener('deviceorientationabsolute', (e) => {
-        let heading = e.webkitCompassHeading || (360 - e.alpha);
-        if (heading !== undefined) {
-            gameView.updateCompass(heading);
-        }
-    }, true);
-};
-
-// Arrenquem l'aplicació
-initApp();
-
-// 6. Registre del Service Worker (PWA) amb autorefresh en actualitzacions
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
-            reg.onupdatefound = () => {
-                const installingWorker = reg.installing;
-                installingWorker.onstatechange = () => {
-                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // Força el recàrrega per aplicar la nova versió instal·lada
-                        window.location.reload();
-                    }
-                };
-            };
-        }).catch(err => {
-            console.error('Error Service Worker:', err);
         });
-    });
+
+        // Intentar centrar en la posició de l'usuari si està disponible
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                this.map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+            });
+        }
+
+        // Dibuixar el que tinguem guardat
+        this.refreshMapElements();
+    }
+
+    refreshMapElements() {
+        if (!this.markersLayer) return;
+
+        this.markersLayer.clearLayers();
+        this.linesLayer.clearLayers();
+
+        const fites = this.routeCreator.draftFites;
+        const latlngs = [];
+
+        fites.forEach((f, index) => {
+            const latlng = [f.lat, f.lon];
+            latlngs.push(latlng);
+
+            // Marcador visual
+            L.circleMarker(latlng, {
+                radius: 8,
+                fillColor: '#3182ce',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).bindPopup(`<b>${f.nom}</b><br>Lat: ${f.lat.toFixed(5)}<br>Lon: ${f.lon.toFixed(5)}`).addTo(this.markersLayer);
+        });
+
+        // Dibuixar línia que uneix les fites
+        if (latlngs.length > 1) {
+            L.polyline(latlngs, { color: '#3182ce', weight: 4, opacity: 0.6 }).addTo(this.linesLayer);
+        }
+    }
+
+    saveRoute() {
+        if (this.routeCreator.draftFites.length < 2) {
+            alert("Necessites almenys 2 fites per guardar una ruta.");
+            return;
+        }
+
+        const nom = prompt("Nom del fitxer GPX:", "La_Meva_Ruta");
+        if (!nom) return;
+
+        const gpxContent = this.routeCreator.exportToGPXString(nom);
+        const blob = new Blob([gpxContent], { type: "application/gpx+xml" });
+        const url = URL.createObjectURL(blob);
+        
+        // Descarregar fitxer
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${nom}.gpx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url); // Netejar memòria
+        
+        // Opcional: Netejar esborrany després de guardar
+        if(confirm("Vols netejar el mapa ara?")) {
+            this.routeCreator.clearDraft();
+            this.refreshMapElements();
+        }
+    }
 }
