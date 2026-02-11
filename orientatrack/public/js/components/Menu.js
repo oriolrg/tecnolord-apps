@@ -54,6 +54,10 @@ export class Menu {
                 <button id="btn-fites" class="menu-btn"><i class="fas fa-list-ol"></i><span>Fites</span></button>
                 <button class="menu-btn" data-screen="sos"><i class="fas fa-skull-crossbones"></i><span>SOS</span></button>
                 <button class="menu-btn" data-screen="perfil"><i class="fas fa-user-circle"></i><span>Perfil</span></button>
+                <button class="nav-btn" data-screen="creador">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Crear</span>
+                </button>
             </nav>
         `;
     }
