@@ -3,10 +3,11 @@ import { Menu } from './components/Menu.js';
 import { GameView } from './views/GameView.js';
 import { SOSView } from './views/SOSView.js';
 import { RutesView } from './views/RutesView.js';
+import { CreatorView } from './views/CreatorView.js';
 import { ProfileView } from './views/ProfileView.js';
 import { WelcomeView } from './views/WelcomeView.js';
 
-let game, gameView, sosView, menu, rutesView, profileView;
+let game, gameView, sosView, menu, rutesView, profileView, creatorView;
 
 // Mostrem la benvinguda si toca
 new WelcomeView();
@@ -17,6 +18,9 @@ const initApp = async () => {
     gameView = new GameView();
     sosView = new SOSView(game);
     
+    // Inicialitzem el creador de rutes (el contenidor ha d'existir a l'index.html)
+    creatorView = new CreatorView('creator-container', game); 
+    
     profileView = new ProfileView('view-perfil', game); 
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
@@ -25,6 +29,9 @@ const initApp = async () => {
     menu.switchScreen = (screen) => {
         if (screen === 'perfil') {
             profileView.update();
+        }
+        if (screen === 'creator') {
+            creatorView.update(); // Inicialitza o refresca el mapa del creador
         }
         if (screen === 'sos') {
             game.afegirPenalitzacioSOS(); 
@@ -67,10 +74,18 @@ const initApp = async () => {
         }
     };
 
-    rutesView = new RutesView('route-selector-container', async (ruta) => {
-        await carregarNovaRuta(ruta);
-        menu.switchScreen('joc');
-    });
+    // INSTÀNCIA DE RUTES VIEW AMB EL CALLBACK DE CREACIÓ
+    rutesView = new RutesView(
+        'route-selector-container', 
+        async (ruta) => {
+            await carregarNovaRuta(ruta);
+            menu.switchScreen('joc');
+        },
+        () => {
+            // Aquesta és la funció que s'executa en clicar "Dissenyar Nova Ruta"
+            menu.switchScreen('creator');
+        }
+    );
 
     // POSICIONAMENT I FINAL DE RUTA
     navigator.geolocation.watchPosition((pos) => {
