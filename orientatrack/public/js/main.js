@@ -18,6 +18,9 @@ const initApp = async () => {
     gameView = new GameView();
     sosView = new SOSView(game);
     
+    // Inicialitzem el creador (assegura't que el div 'creator-container' existeix a l'HTML)
+    creatorView = new CreatorView('creator-container', game); 
+
     profileView = new ProfileView('view-perfil', game); 
     menu = new Menu('main-menu-container', game, gameView, sosView);
 
@@ -26,6 +29,10 @@ const initApp = async () => {
     menu.switchScreen = (screen) => {
         if (screen === 'perfil') {
             profileView.update();
+        }
+        // Afegim el refresc del mapa quan s'entra al creador
+        if (screen === 'creator') {
+            creatorView.update();
         }
         if (screen === 'sos') {
             game.afegirPenalitzacioSOS(); 
@@ -68,9 +75,13 @@ const initApp = async () => {
         }
     };
 
+    // Aquí afegim el tercer paràmetre () => menu.switchScreen('creator')
     rutesView = new RutesView('route-selector-container', async (ruta) => {
         await carregarNovaRuta(ruta);
         menu.switchScreen('joc');
+    }, () => {
+        // Acció en clicar el botó de dissenyar
+        menu.switchScreen('creator');
     });
 
     // POSICIONAMENT I FINAL DE RUTA
