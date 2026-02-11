@@ -1,6 +1,7 @@
 import { GameLogic } from './core/GameLogic.js';
 import { Menu } from './components/Menu.js';
 import { GameView } from './views/GameView.js';
+import { CreatorView } from './views/CreatorView.js'; // Aquesta línia és important
 import { SOSView } from './views/SOSView.js';
 import { RutesView } from './views/RutesView.js';
 import { ProfileView } from './views/ProfileView.js';
@@ -19,7 +20,7 @@ const initApp = async () => {
     
     profileView = new ProfileView('view-perfil', game); 
     menu = new Menu('main-menu-container', game, gameView, sosView);
-
+    creatorView = new CreatorView('view-creador', game);
     // LÒGICA DE REFRESC I PENALITZACIÓ
     const originalSwitch = menu.switchScreen.bind(menu);
     menu.switchScreen = (screen) => {
