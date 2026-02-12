@@ -88,6 +88,58 @@ function makePreviService({ pool }) {
       items: rowsQ.rows
     };
   }
+
+  async function getPreviPast48AndNext48({ station, model, source } = {}) {
+    const stationCode = String(
+      station || process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home'
+    );
+    const modelCode = normalizeOpenMeteoModel(model || process.env.PREVI_MODEL || 'best_match') || 'best_match';
+    const sourceCode = String(source || process.env.PREVI_SOURCE || 'open-meteo');
+
+    const sql = `
+      WITH picked AS (
+        SELECT DISTINCT ON (fh.valid_time)
+          fh.valid_time,
+          fh.temp_c,
+          fh.hum_pct,
+          fh.wind_ms,
+          fh.wind_dir,
+          fh.rain_mm,
+          fr.id AS run_id,
+          fr.issued_at
+        FROM forecast_run fr
+        JOIN forecast_hourly fh ON fh.run_id = fr.id
+        WHERE fr.station_code = $1
+          AND fr.model = $2
+          AND fr.source = $3
+          AND fh.valid_time >= (now() - interval '48 hours')
+          AND fh.valid_time <= (now() + interval '48 hours')
+        ORDER BY fh.valid_time ASC, fr.issued_at DESC
+      )
+      SELECT valid_time, temp_c, hum_pct, wind_ms, wind_dir, rain_mm, run_id, issued_at
+      FROM picked
+      ORDER BY valid_time ASC
+    `;
+
+    const rowsQ = await pool.query(sql, [stationCode, modelCode, sourceCode]);
+
+    if (!rowsQ.rows.length) return null;
+
+    return {
+      ok: true,
+      window: {
+        past_hours: 48,
+        future_hours: 48
+      },
+      filter: {
+        source: sourceCode,
+        model: modelCode,
+        station: stationCode
+      },
+      items: rowsQ.rows
+    };
+  }
+
   async function pullPreviAndSave() {
     const cfg = previConfig();
     const issuedAt = new Date().toISOString();
@@ -189,7 +241,7 @@ function makePreviService({ pool }) {
     }
   }
 
-  return { getLatestPrevi48h, pullPreviAndSave };
+  return { getLatestPrevi48h, getPreviPast48AndNext48, pullPreviAndSave };
 }
 
 module.exports = { makePreviService };
