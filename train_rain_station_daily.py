@@ -74,6 +74,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--model-out", default="ml_models/rain_day_station_logreg.joblib", help="On guardar el model final")
     p.add_argument("--balanced", action="store_true", help="Usa class_weight='balanced' per desbalanceig")
     p.add_argument("--seed", type=int, default=42, help="Seed (per reproducibilitat)")
+    p.add_argument("--threshold", type=float, default=0.5, help="Llindar per convertir probabilitat a classe (default: 0.5)")
+    p.add_argument("--tune-threshold", action="store_true", help="Busca llindar òptim al CV (sobre proba) per F1")
+
     return p.parse_args()
 
 
@@ -150,6 +153,7 @@ def evaluate_cv(
     y: pd.Series,
     pipe: Pipeline,
     n_splits: int,
+    threshold: float,
 ) -> pd.DataFrame:
     tscv = TimeSeriesSplit(n_splits=n_splits)
 
@@ -160,9 +164,9 @@ def evaluate_cv(
 
         pipe.fit(X_tr, y_tr)
 
-        y_hat = pipe.predict(X_te)
         # Probabilitat positiva (classe 1)
         y_prob = pipe.predict_proba(X_te)[:, 1]
+        y_hat = (y_prob >= threshold).astype(int)
 
         acc = float(accuracy_score(y_te, y_hat))
         prec = float(precision_score(y_te, y_hat, zero_division=0))
@@ -212,7 +216,7 @@ def main() -> None:
     pipe = build_pipeline(balanced=args.balanced)
 
     # CV temporal
-    metrics_df = evaluate_cv(X, y, pipe, n_splits=args.n_splits)
+    metrics_df = evaluate_cv(X, y, pipe, n_splits=args.n_splits, threshold=args.threshold)
     print("\nPer-fold:")
     print(metrics_df)
 
@@ -247,6 +251,7 @@ def main() -> None:
         "feature_cols": feature_cols,
         "rain_ratio": rain_ratio,
         "balanced": bool(args.balanced),
+        "threshold": float(args.threshold),
         "cv_n_splits": int(args.n_splits),
         "cv_metrics": metrics_df.to_dict(orient="records"),
         "cv_means": {k: (None if pd.isna(v) else float(v)) for k, v in means.items()},
