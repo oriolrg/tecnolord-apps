@@ -48,12 +48,31 @@ function openMeteoURL({ lat, lon, model, hours }) {
 }
 
 function makePreviService({ pool }) {
+  async function resolveModelCode({ stationCode, sourceCode, rawModel }) {
+    const normalized =
+      normalizeOpenMeteoModel(rawModel || process.env.PREVI_MODEL || 'best_match') || 'best_match';
+
+    // Si arriba best_match (o buit), resol a un model real usant l'ultim run disponible.
+    if (normalized !== 'best_match') return normalized;
+
+    const latestModelQ = await pool.query(
+      `SELECT model
+       FROM forecast_run
+       WHERE station_code = $1 AND source = $2
+       ORDER BY issued_at DESC
+       LIMIT 1`,
+      [stationCode, sourceCode]
+    );
+
+    return latestModelQ.rows[0]?.model || 'best_match';
+  }
+
   async function getLatestPrevi48h({ station, model, source } = {}) {
     const stationCode = String(
       station || process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home'
     );
-    const modelCode = String(model || process.env.PREVI_MODEL || 'best_match');
     const sourceCode = String(source || process.env.PREVI_SOURCE || 'open-meteo');
+    const modelCode = await resolveModelCode({ stationCode, sourceCode, rawModel: model });
 
     const runQ = await pool.query(
       `SELECT id, source, model, station_code, issued_at, hours
@@ -61,7 +80,7 @@ function makePreviService({ pool }) {
        WHERE station_code = $1 AND model = $2 AND source = $3
        ORDER BY issued_at DESC
        LIMIT 1`,
-      [stationCode, normalizeOpenMeteoModel(modelCode) || 'best_match', sourceCode]
+      [stationCode, modelCode, sourceCode]
     );
 
     const run = runQ.rows[0];
@@ -93,8 +112,8 @@ function makePreviService({ pool }) {
     const stationCode = String(
       station || process.env.PREVI_STATION_CODE || process.env.ESTACIO_CODI || 'home'
     );
-    const modelCode = normalizeOpenMeteoModel(model || process.env.PREVI_MODEL || 'best_match') || 'best_match';
     const sourceCode = String(source || process.env.PREVI_SOURCE || 'open-meteo');
+    const modelCode = await resolveModelCode({ stationCode, sourceCode, rawModel: model });
 
     const sql = `
       WITH picked AS (
