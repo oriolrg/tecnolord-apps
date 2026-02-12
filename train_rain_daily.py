@@ -66,10 +66,12 @@ preprocess = ColumnTransformer(
 )
 
 # Model simple
-LogisticRegression(
+# Model simple
+clf = LogisticRegression(
     max_iter=2000,
     class_weight="balanced"
 )
+
 
 
 pipe = Pipeline(steps=[("prep", preprocess), ("clf", clf)])
