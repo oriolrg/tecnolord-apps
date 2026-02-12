@@ -103,7 +103,7 @@ app.use(pingRouter);
 app.use(makeHealthRouter({ pool }));
 app.use(makeMesuresRouter({ pool }));
 app.use(makeHidroRouter({ pool }));
-app.use(makePreviRouter({ pool }));
+app.use(makePreviRouter({ previService  }));
 
 app.use(makeTasksRouter({
   checkApiKey,

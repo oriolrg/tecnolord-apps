@@ -144,7 +144,9 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
-      - "2019:2019"
+      # No exposis el port 2019
+      - "127.0.0.1:2019:2019"
+
     depends_on:
       - backend
       #- api_py
