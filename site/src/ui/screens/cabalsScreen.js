@@ -9,6 +9,7 @@ import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 const THEO_CAPACITY_HM3 = {
   "081419-003": 80.0, // Llosa del Cavall
 };
+const ACA_CATALOG_URL = "https://aplicacions.aca.gencat.cat/sentilo-catalog-web/component/map#";
 
 // Umami (analytics) – tracking segur (no trenca si no està carregat)
 function trackEvent(name, props) {
@@ -189,13 +190,35 @@ async function refreshCabals(ui, store) {
     });
     cCabal.classList.add("card--tall", "card--wind");
 
-    const capDetailsHtml = `
-      <div style="margin-top:8px; display:grid; gap:4px; color: var(--muted); font-size: 0.95em;">
-        <div>% ACA: <strong style="color:inherit">${cap == null ? "—" : fmt1(cap)}%</strong></div>
-        <div>Volum: <strong style="color:inherit">${volHm3 == null ? "n/d" : `${fmt1(volHm3)} hm³`}</strong></div>
-        <div>% propi (sobre ${theoHm3 == null ? "n/d" : `${fmt1(theoHm3)} hm³`}): <strong style="color:inherit">${capOwn == null ? "n/d" : `${fmt1(capOwn)}%`}</strong></div>
-      </div>
-    `;
+    const acaCode = rowLlosa?.codi || "—";
+
+const capDetailsHtml = `
+  <div style="margin-top:8px; display:grid; gap:6px; color: var(--muted); font-size: 0.95em;">
+    <div>
+      <span style="opacity:.9">Oficial ACA (capacitat útil):</span>
+      <strong style="color:inherit"> ${cap == null ? "—" : fmt1(cap)}%</strong>
+    </div>
+
+    <div>
+      <span style="opacity:.9">Volum actual:</span>
+      <strong style="color:inherit"> ${volHm3 == null ? "n/d" : `${fmt1(volHm3)} hm³`}</strong>
+    </div>
+
+    <div>
+      <span style="opacity:.9">Càlcul propi (sobre capacitat teòrica ${theoHm3 == null ? "n/d" : fmt1(theoHm3)} hm³):</span>
+      <strong style="color:inherit"> ${capOwn == null ? "n/d" : `${fmt1(capOwn)}%`}</strong>
+    </div>
+
+    <div style="margin-top:4px; font-size:0.92em;">
+      <a href="${ACA_CATALOG_URL}" target="_blank" rel="noopener noreferrer"
+         style="color: var(--link, #2b6cb0); text-decoration: underline;">
+        Font oficial ACA (catàleg Sentilo)
+      </a>
+      <span style="opacity:.85"> · codi component: <strong>${acaCode}</strong></span>
+    </div>
+  </div>
+`;
+
 
     const cCap = card({
       title: "Capacitat",
