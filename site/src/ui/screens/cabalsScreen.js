@@ -5,11 +5,59 @@ import { num, fmt1, clamp, fmtTime, norm } from "../format.js";
 import { fetchHidro } from "../../services/hidroService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
-// Capacitat teòrica (hm³) per recalcular % propi
-// -> Afegeix aquí més components si vols fer-ho extensible.
+// Capacitat teòrica (hm³) per recalcular % propi (si tens un ID estable)
 const THEO_CAPACITY_HM3 = {
   "081419-003": 80.0, // Llosa del Cavall
 };
+
+// Helpers robustos
+function isLlosa(row) {
+  const n = norm(row?.nom || "");
+  const c = norm(row?.codi || "");
+  return n.includes("llosa") || n.includes("cavall") || c.includes("llosa") || c.includes("cavall");
+}
+
+function getTheoHm3(row) {
+  // 1) si tens algun id estable que encaixi amb el map
+  const maybeId =
+    row?.component ??
+    row?.component_id ??
+    row?.componentId ??
+    row?.id ??
+    row?.signal_component ??
+    null;
+
+  if (maybeId && THEO_CAPACITY_HM3[maybeId] != null) return THEO_CAPACITY_HM3[maybeId];
+
+  // 2) fallback per nom (evita quedar-te amb "—" si l’API no porta component)
+  if (isLlosa(row)) return 80.0;
+
+  return null;
+}
+
+function getVolumeHm3(row) {
+  // Prova camps “plans”
+  const v =
+    num(row?.volum_hm3) ??
+    num(row?.volume_hm3) ??
+    num(row?.volum) ??
+    num(row?.volume) ??
+    num(row?.hm3) ??
+    num(row?.volum_actual_hm3) ??
+    num(row?.volume_actual_hm3);
+
+  if (v != null) return v;
+
+  // Prova estructura tipus ACA (com el JSON que em vas passar)
+  const pv =
+    num(row?.popup?.volume?.value) ??
+    num(row?.popup?.volum?.value) ??
+    num(row?.popup?.capacity?.volume?.value);
+
+  if (pv != null) return pv;
+
+  return null;
+}
 
 // Umami (analytics) – tracking segur (no trenca si no està carregat)
 function trackEvent(name, props) {
@@ -91,7 +139,6 @@ async function refreshCabals(ui, store) {
     const hidroRows = await fetchHidro({ codi, limit, period, date_from, date_to, mode, ensure });
     if (ui.cards) ui.cards.innerHTML = "";
 
-    // Tracking: refresh OK (molt lleuger, sense dades sensibles)
     trackEvent("cabals_refresh_ok", { mode, period, limit });
 
     if (!hidroRows.length) {
@@ -119,26 +166,19 @@ async function refreshCabals(ui, store) {
     const staleValls = !!rowValls?.is_stale;
 
     const anyStale = staleLlosa || staleCardener || staleValls;
-
     const instantLlosa = rowLlosa?.instant ?? null;
 
     // % capacitat reportat (ACA / font)
     const cap = num(rowLlosa?.capacitat_pct);
 
-    // Volum real hm³ (requereix que l'API el retorni en algun d'aquests camps)
-    const volHm3 =
-      num(rowLlosa?.volum_hm3) ??
-      num(rowLlosa?.volume_hm3) ??
-      num(rowLlosa?.volum) ??
-      num(rowLlosa?.volume);
+    // volum hm³ (si l'API el porta; sinó quedarà null)
+    const volHm3 = getVolumeHm3(rowLlosa);
 
-    // Capacitat teòrica (hm³) per recalcul propi
-    const componentId = rowLlosa?.component ?? rowLlosa?.component_id ?? rowLlosa?.signal ?? null;
-    const theoHm3 = componentId ? THEO_CAPACITY_HM3[componentId] ?? null : null;
+    // capacitat teòrica (hm³) -> fallback per nom si no tens component id
+    const theoHm3 = getTheoHm3(rowLlosa);
 
-    // % propi = volum / capacitat teòrica
-    const capOwn =
-      volHm3 != null && theoHm3 != null && theoHm3 > 0 ? (volHm3 / theoHm3) * 100 : null;
+    // % propi només si tenim volum i capacitat teòrica
+    const capOwn = (volHm3 != null && theoHm3 != null && theoHm3 > 0) ? (volHm3 / theoHm3) * 100 : null;
 
     let sortida = num(rowLlosa?.cabal_m3s);
     if (sortida == null) {
@@ -161,8 +201,7 @@ async function refreshCabals(ui, store) {
     let deltaHtml = "";
     if (sortida != null && (cabalCardener != null || cabalValls != null)) {
       const cls = delta == null ? "" : delta >= 0 ? "pos" : "neg";
-      const txt =
-        delta == null ? "—" : delta >= 0 ? `+${fmt1(delta)} m³/s` : `${fmt1(delta)} m³/s`;
+      const txt = delta == null ? "—" : delta >= 0 ? `+${fmt1(delta)} m³/s` : `${fmt1(delta)} m³/s`;
       deltaHtml = `
         <span>Entrada: <strong>${fmt1(entradaTotal)} m³/s</strong></span>
         <span>Sortida: <strong>${fmt1(sortida)} m³/s</strong></span>
@@ -181,12 +220,13 @@ async function refreshCabals(ui, store) {
     });
     cCabal.classList.add("card--tall", "card--wind");
 
-    // Subinfo capacitat: % ACA + Volum (hm³) + % propi (sobre capacitat teòrica)
+    // Detalls capacitat:
+    // - Si no tens volum, no “inventem”: mostrem n/d i no calculem % propi.
     const capDetailsHtml = `
       <div style="margin-top:8px; display:grid; gap:4px; color: var(--muted); font-size: 0.95em;">
         <div>% ACA: <strong style="color:inherit">${cap == null ? "—" : fmt1(cap)}%</strong></div>
-        <div>Volum: <strong style="color:inherit">${volHm3 == null ? "—" : fmt1(volHm3)} hm³</strong></div>
-        <div>% propi (sobre ${theoHm3 == null ? "—" : fmt1(theoHm3)} hm³): <strong style="color:inherit">${capOwn == null ? "—" : fmt1(capOwn)}%</strong></div>
+        <div>Volum: <strong style="color:inherit">${volHm3 == null ? "n/d" : `${fmt1(volHm3)} hm³`}</strong></div>
+        <div>% propi (sobre ${theoHm3 == null ? "n/d" : `${fmt1(theoHm3)} hm³`}): <strong style="color:inherit">${capOwn == null ? "n/d" : `${fmt1(capOwn)}%`}</strong></div>
       </div>
     `;
 
@@ -239,9 +279,7 @@ async function refreshCabals(ui, store) {
           norm(r.codi).includes("llosa") ||
           norm(r.codi).includes("cavall")
       );
-      const rowsCardener = ytdRows.filter(
-        (r) => norm(r.nom).includes("cardener") || norm(r.codi).includes("cardener")
-      );
+      const rowsCardener = ytdRows.filter((r) => norm(r.nom).includes("cardener") || norm(r.codi).includes("cardener"));
       const rowsValls = ytdRows.filter((r) => norm(r.nom).includes("valls") || norm(r.codi).includes("valls"));
 
       const capCanvas = cCap.querySelector("#tl-chart-cap");
@@ -262,11 +300,7 @@ async function refreshCabals(ui, store) {
         renderLineChart(cVallsCanvas, pts, { unit: "m³/s" });
       }
     } catch (e2) {
-      if (ui.err)
-        ui.err.textContent =
-          (ui.err.textContent ? ui.err.textContent + " · " : "") +
-          "Gràfica YTD: " +
-          (e2.message || e2);
+      if (ui.err) ui.err.textContent = (ui.err.textContent ? ui.err.textContent + " · " : "") + "Gràfica YTD: " + (e2.message || e2);
     }
 
     if (instantLlosa) {
@@ -289,8 +323,6 @@ async function refreshCabals(ui, store) {
     }
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
-
-    // Tracking: refresh KO
     trackEvent("cabals_refresh_error", { msg: String(e && (e.message || e)) });
   }
 }
@@ -298,7 +330,6 @@ async function refreshCabals(ui, store) {
 export function initCabalsScreen(root, store) {
   const ui = buildCabalsUI(root);
 
-  // Tracking: screen view
   trackEvent("screen_view", { screen: "cabals" });
 
   let timer = null;
