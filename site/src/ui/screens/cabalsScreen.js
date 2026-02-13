@@ -5,6 +5,12 @@ import { num, fmt1, clamp, fmtTime, norm } from "../format.js";
 import { fetchHidro } from "../../services/hidroService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
+// Capacitat teòrica (hm³) per recalcular % propi
+// -> Afegeix aquí més components si vols fer-ho extensible.
+const THEO_CAPACITY_HM3 = {
+  "081419-003": 80.0, // Llosa del Cavall
+};
+
 // Umami (analytics) – tracking segur (no trenca si no està carregat)
 function trackEvent(name, props) {
   try {
@@ -25,8 +31,6 @@ function buildCabalsUI(root) {
         <h2>Cabals</h2>
         <p style="margin-top:6px; color: var(--muted);">Cabals i capacitat del sistema.</p>
       </div>
-
-      
 
       <div class="grid" id="hidro-cards"></div>
     </div>
@@ -118,7 +122,23 @@ async function refreshCabals(ui, store) {
 
     const instantLlosa = rowLlosa?.instant ?? null;
 
+    // % capacitat reportat (ACA / font)
     const cap = num(rowLlosa?.capacitat_pct);
+
+    // Volum real hm³ (requereix que l'API el retorni en algun d'aquests camps)
+    const volHm3 =
+      num(rowLlosa?.volum_hm3) ??
+      num(rowLlosa?.volume_hm3) ??
+      num(rowLlosa?.volum) ??
+      num(rowLlosa?.volume);
+
+    // Capacitat teòrica (hm³) per recalcul propi
+    const componentId = rowLlosa?.component ?? rowLlosa?.component_id ?? rowLlosa?.signal ?? null;
+    const theoHm3 = componentId ? THEO_CAPACITY_HM3[componentId] ?? null : null;
+
+    // % propi = volum / capacitat teòrica
+    const capOwn =
+      volHm3 != null && theoHm3 != null && theoHm3 > 0 ? (volHm3 / theoHm3) * 100 : null;
 
     let sortida = num(rowLlosa?.cabal_m3s);
     if (sortida == null) {
@@ -154,7 +174,6 @@ async function refreshCabals(ui, store) {
       title: "Cabal (balanç)",
       value: sortida == null ? "—" : fmt1(sortida),
       unit: "m³/s",
-      //badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
       subHtml: `
         ${deltaHtml}
         ${instantLlosa ? `<span class="sep"></span>Hora: <strong>${fmtTime(instantLlosa)}</strong>` : ""}
@@ -162,13 +181,22 @@ async function refreshCabals(ui, store) {
     });
     cCabal.classList.add("card--tall", "card--wind");
 
+    // Subinfo capacitat: % ACA + Volum (hm³) + % propi (sobre capacitat teòrica)
+    const capDetailsHtml = `
+      <div style="margin-top:8px; display:grid; gap:4px; color: var(--muted); font-size: 0.95em;">
+        <div>% ACA: <strong style="color:inherit">${cap == null ? "—" : fmt1(cap)}%</strong></div>
+        <div>Volum: <strong style="color:inherit">${volHm3 == null ? "—" : fmt1(volHm3)} hm³</strong></div>
+        <div>% propi (sobre ${theoHm3 == null ? "—" : fmt1(theoHm3)} hm³): <strong style="color:inherit">${capOwn == null ? "—" : fmt1(capOwn)}%</strong></div>
+      </div>
+    `;
+
     const cCap = card({
       title: "Capacitat",
       value: cap == null ? "—" : fmt1(cap),
       unit: "%",
-      //badge: rowLlosa?.nom ? rowLlosa.nom : "Últim",
       subHtml:
         `${rowLlosa?.nom ? `Estació: <strong>${rowLlosa.nom}</strong>` : ""}` +
+        capDetailsHtml +
         `<div style="margin-top:10px"><canvas id="tl-chart-cap" style="width:100%;height:140px"></canvas></div>`,
     });
     cCap.classList.add("card--tall", "card--wind");
@@ -177,7 +205,6 @@ async function refreshCabals(ui, store) {
       title: "Cardener",
       value: cabalCardener == null ? "—" : fmt1(cabalCardener),
       unit: "m³/s",
-      //badge: rowCardener?.nom ? rowCardener.nom : "",
       className: staleCardener ? "card--stale" : "",
       subHtml: `<div style="margin-top:10px"><canvas id="tl-chart-cardener" style="width:100%;height:140px"></canvas></div>`,
     });
@@ -186,7 +213,6 @@ async function refreshCabals(ui, store) {
       title: "Valls",
       value: cabalValls == null ? "—" : fmt1(cabalValls),
       unit: "m³/s",
-      //badge: rowValls?.nom ? rowValls.nom : "",
       className: staleValls ? "card--stale" : "",
       subHtml: `<div style="margin-top:10px"><canvas id="tl-chart-valls" style="width:100%;height:140px"></canvas></div>`,
     });
@@ -216,9 +242,7 @@ async function refreshCabals(ui, store) {
       const rowsCardener = ytdRows.filter(
         (r) => norm(r.nom).includes("cardener") || norm(r.codi).includes("cardener")
       );
-      const rowsValls = ytdRows.filter(
-        (r) => norm(r.nom).includes("valls") || norm(r.codi).includes("valls")
-      );
+      const rowsValls = ytdRows.filter((r) => norm(r.nom).includes("valls") || norm(r.codi).includes("valls"));
 
       const capCanvas = cCap.querySelector("#tl-chart-cap");
       if (capCanvas) {
@@ -238,7 +262,11 @@ async function refreshCabals(ui, store) {
         renderLineChart(cVallsCanvas, pts, { unit: "m³/s" });
       }
     } catch (e2) {
-      if (ui.err) ui.err.textContent = (ui.err.textContent ? ui.err.textContent + " · " : "") + "Gràfica YTD: " + (e2.message || e2);
+      if (ui.err)
+        ui.err.textContent =
+          (ui.err.textContent ? ui.err.textContent + " · " : "") +
+          "Gràfica YTD: " +
+          (e2.message || e2);
     }
 
     if (instantLlosa) {
@@ -273,7 +301,6 @@ export function initCabalsScreen(root, store) {
   // Tracking: screen view
   trackEvent("screen_view", { screen: "cabals" });
 
-  
   let timer = null;
   if (store.get().auto) {
     timer = setInterval(() => refreshCabals(ui, store), CONFIG.autoRefreshMs);
