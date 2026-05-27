@@ -31,6 +31,10 @@ tecnolord.cat, www.tecnolord.cat {
   }
 
   # Opos
+  handle /_next/* {
+    reverse_proxy opos_web:3000
+  }
+
   handle /opos* {
     reverse_proxy opos_web:3000
   }
