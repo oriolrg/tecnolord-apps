@@ -1,0 +1,378 @@
+{
+  "metadata": {
+    "id": "plan-2026-05-base-01",
+    "name": "Base maig 2026",
+    "athleteName": "Usuari demo",
+    "coach": "Self-coached",
+    "timezone": "Europe/Madrid",
+    "createdAt": "2026-05-01T07:00:00.000Z",
+    "source": "manual"
+  },
+  "targetProfile": {
+    "athleteType": "Trail + salut general",
+    "experienceLevel": "intermediate",
+    "objectives": [
+      "Mantenir 2 estimuls de forca setmanals",
+      "Construir base aerobica amb poc marge temporal",
+      "Evitar sobrecarrega als bessons"
+    ],
+    "constraints": [
+      "Dilluns disponible per gimnas i piscina",
+      "Dimarts gairebe sense temps",
+      "Dijous i diumenge sovint hort o activitat no esportiva"
+    ],
+    "weeklyAvailability": {
+      "monday": "55-85 min",
+      "tuesday": "0-20 min",
+      "wednesday": "60-90 min outdoor Z2",
+      "thursday": "hort o mobilitat 20 min",
+      "friday": "45-75 min intensitat curta",
+      "saturday": "60-120 min outdoor",
+      "sunday": "hort, descans actiu o recuperacio"
+    }
+  },
+  "monthlyPeriod": {
+    "year": 2026,
+    "month": 5,
+    "startsOn": "2026-05-04",
+    "endsOn": "2026-05-31"
+  },
+  "intensityCriteria": {
+    "rpeScale": "1-10, on 10 is maximum effort",
+    "hrZones": {
+      "Z1": "recuperacio molt suau",
+      "Z2": "base aerobica sostenible",
+      "Z3": "tempo controlat",
+      "Z4": "llindar / intervals",
+      "Z5": "VO2max / esprints"
+    },
+    "loadFormula": "durationMin * plannedRpe"
+  },
+  "replanningRules": [
+    {
+      "id": "avoid-double-hard",
+      "label": "Evitar dos dies forts seguits",
+      "condition": "If skipped session is strength/intensity and next day is already hard",
+      "action": "Keep only one hard stimulus and move the other to Friday or next available easy day",
+      "priority": 1
+    },
+    {
+      "id": "monday-strength-priority",
+      "label": "Prioritzar forca setmanal",
+      "condition": "If Monday strength is skipped",
+      "action": "Reinsert main strength block on Wednesday or Friday",
+      "priority": 2
+    },
+    {
+      "id": "post-long-ride-protection",
+      "label": "No posar intensitat despres de sortida llarga",
+      "condition": "If previous day was long outdoor session",
+      "action": "Replace intensity with recovery or mobility",
+      "priority": 3
+    },
+    {
+      "id": "high-fatigue-recovery",
+      "label": "Recuperacio si hi ha dolor o fatiga alta",
+      "condition": "If pain >= 7 or fatigue >= 8",
+      "action": "Substitute with walking, mobility or complete rest",
+      "priority": 0
+    }
+  ],
+  "aiNotes": {
+    "contextSummary": "Usuari amb setmana molt marcada per disponibilitat fixa i necessitat de mantenir forca sense acumular intensitat.",
+    "promptHints": [
+      "No afegir dobles sessions intenses",
+      "Mantenir dilluns com a dia principal de forca",
+      "Oferir sempre alternativa curta"
+    ]
+  },
+  "days": [
+    {
+      "id": "2026-05-04-strength-swim",
+      "date": "2026-05-04",
+      "title": "Forca gimnas + piscina suau",
+      "type": "combined",
+      "status": "pending",
+      "goal": "Mantenir forca general i tecnica de natacio",
+      "plannedDurationMin": 55,
+      "plannedDurationMax": 65,
+      "plannedRpe": 7,
+      "tags": ["key-session", "strength-priority"],
+      "blocks": [
+        {
+          "id": "gym-main",
+          "title": "Forca principal",
+          "blockType": "strength",
+          "exercises": [
+            { "exerciseSlug": "press-banca", "sets": 4, "reps": "5", "restSeconds": 120, "rpe": 7 },
+            { "exerciseSlug": "goblet-squat", "sets": 4, "reps": "8", "restSeconds": 90, "rpe": 7 },
+            { "exerciseSlug": "pes-mort-romanes", "sets": 3, "reps": "8", "restSeconds": 120, "rpe": 7 },
+            { "exerciseSlug": "rem-invertit", "sets": 3, "reps": "8-10", "restSeconds": 75, "rpe": 7 },
+            { "exerciseSlug": "dead-bug", "sets": 3, "reps": "10/10", "restSeconds": 45, "rpe": 5 }
+          ]
+        },
+        {
+          "id": "swim-easy",
+          "title": "Piscina tecnica",
+          "blockType": "cardio",
+          "activity": {
+            "discipline": "swim",
+            "zone": "Z1",
+            "durationMin": 20,
+            "notes": "200 suau + 4x50 tecnica + 100 suau"
+          }
+        }
+      ],
+      "alternatives": [
+        {
+          "label": "Versio curta gimnas",
+          "trigger": "low_time",
+          "summary": "Press banca + goblet squat + planxa en circuit 25 min",
+          "replacementBlockIds": ["gym-main"],
+          "suggestedDurationMin": 25
+        }
+      ],
+      "notes": "Evitar apurar si hi ha molesties al tendon d'Aquil.les."
+    },
+    {
+      "id": "2026-05-05-rest-mobility",
+      "date": "2026-05-05",
+      "title": "Descans o mobilitat",
+      "type": "mobility",
+      "status": "pending",
+      "plannedDurationMin": 20,
+      "plannedDurationMax": 20,
+      "plannedRpe": 2,
+      "blocks": [
+        {
+          "id": "mobility-reset",
+          "title": "Mobilitat curta",
+          "blockType": "mobility",
+          "activity": {
+            "discipline": "mobility",
+            "durationMin": 20,
+            "notes": "Malucs, turmells, espatlla i respiracio"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2026-05-06-outdoor-z2",
+      "date": "2026-05-06",
+      "title": "Outdoor Z2",
+      "type": "outdoor",
+      "status": "pending",
+      "plannedDurationMin": 60,
+      "plannedDurationMax": 90,
+      "plannedRpe": 5,
+      "plannedZone": "Z2",
+      "blocks": [
+        {
+          "id": "z2-main",
+          "title": "Base aerobica",
+          "blockType": "cardio",
+          "activity": {
+            "discipline": "trail",
+            "zone": "Z2",
+            "durationMin": 60,
+            "durationMax": 90,
+            "elevationGainM": 400,
+            "notes": "Terreny ondulat, conversa possible"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2026-05-07-garden",
+      "date": "2026-05-07",
+      "title": "Hort o mobilitat curta",
+      "type": "garden",
+      "status": "pending",
+      "plannedDurationMin": 20,
+      "plannedDurationMax": 45,
+      "plannedRpe": 3,
+      "blocks": [
+        {
+          "id": "garden-block",
+          "title": "Activitat funcional",
+          "blockType": "mixed",
+          "activity": {
+            "discipline": "garden",
+            "durationMin": 30,
+            "notes": "Comptar com activitat fisica no esportiva"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2026-05-08-intensity-short",
+      "date": "2026-05-08",
+      "title": "Intensitat curta",
+      "type": "intensity",
+      "status": "pending",
+      "plannedDurationMin": 45,
+      "plannedDurationMax": 75,
+      "plannedRpe": 8,
+      "blocks": [
+        {
+          "id": "warmup",
+          "title": "Escalfament",
+          "blockType": "cardio",
+          "activity": {
+            "discipline": "bike",
+            "durationMin": 15,
+            "zone": "Z1"
+          }
+        },
+        {
+          "id": "intervals",
+          "title": "Bloc d'intervals",
+          "blockType": "cardio",
+          "activity": {
+            "discipline": "bike",
+            "durationMin": 30,
+            "zone": "Z4",
+            "intervals": ["6x2' fort / 2' suau"],
+            "notes": "Cadencia viva, controlant forma"
+          }
+        }
+      ],
+      "alternatives": [
+        {
+          "label": "Curt 30 min",
+          "trigger": "low_time",
+          "summary": "4x2' Z4 en lloc de 6 repeticions",
+          "replacementBlockIds": ["warmup", "intervals"],
+          "suggestedDurationMin": 30
+        }
+      ]
+    },
+    {
+      "id": "2026-05-09-outdoor-free",
+      "date": "2026-05-09",
+      "title": "Outdoor lliure",
+      "type": "outdoor",
+      "status": "pending",
+      "plannedDurationMin": 60,
+      "plannedDurationMax": 120,
+      "plannedRpe": 6,
+      "tags": ["long-session"],
+      "blocks": [
+        {
+          "id": "free-outdoor",
+          "title": "Sortida lliure",
+          "blockType": "cardio",
+          "activity": {
+            "discipline": "trail",
+            "durationMin": 60,
+            "durationMax": 120,
+            "elevationGainM": 700,
+            "notes": "Ruta flexible segons energia"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2026-05-10-recovery",
+      "date": "2026-05-10",
+      "title": "Hort, descans actiu o recuperacio",
+      "type": "rest",
+      "status": "rest",
+      "plannedDurationMin": 20,
+      "plannedDurationMax": 40,
+      "plannedRpe": 2,
+      "tags": ["after-long-session"],
+      "blocks": [
+        {
+          "id": "recovery-main",
+          "title": "Recuperacio",
+          "blockType": "recovery",
+          "activity": {
+            "discipline": "walk",
+            "durationMin": 30,
+            "zone": "Z1",
+            "notes": "Passeig o mobilitat molt suau"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2026-05-11-strength-swim",
+      "date": "2026-05-11",
+      "title": "Forca traccio + piscina suau",
+      "type": "combined",
+      "status": "pending",
+      "plannedDurationMin": 55,
+      "plannedDurationMax": 65,
+      "plannedRpe": 7,
+      "blocks": [
+        {
+          "id": "gym-upper",
+          "title": "Forca superior i cadena posterior",
+          "blockType": "strength",
+          "exercises": [
+            { "exerciseSlug": "dominades-excentriques", "sets": 4, "reps": "4", "restSeconds": 90, "rpe": 8 },
+            { "exerciseSlug": "press-militar", "sets": 4, "reps": "6", "restSeconds": 90, "rpe": 7 },
+            { "exerciseSlug": "step-ups", "sets": 3, "reps": "8/8", "restSeconds": 60, "rpe": 6 },
+            { "exerciseSlug": "bessons-excentriques", "sets": 3, "reps": "12/12", "restSeconds": 45, "rpe": 5 }
+          ]
+        },
+        {
+          "id": "swim-reset",
+          "title": "Piscina regenerativa",
+          "blockType": "recovery",
+          "activity": {
+            "discipline": "swim",
+            "durationMin": 20,
+            "zone": "Z1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2026-05-12-rest-mobility",
+      "date": "2026-05-12",
+      "title": "Descans o mobilitat",
+      "type": "mobility",
+      "status": "pending",
+      "plannedDurationMin": 20,
+      "plannedDurationMax": 20,
+      "plannedRpe": 2,
+      "blocks": [
+        {
+          "id": "mobility-2",
+          "title": "Mobilitat curta",
+          "blockType": "mobility",
+          "activity": {
+            "discipline": "mobility",
+            "durationMin": 20
+          }
+        }
+      ]
+    },
+    {
+      "id": "2026-05-13-outdoor-z2",
+      "date": "2026-05-13",
+      "title": "Outdoor Z2",
+      "type": "outdoor",
+      "status": "pending",
+      "plannedDurationMin": 60,
+      "plannedDurationMax": 90,
+      "plannedRpe": 5,
+      "plannedZone": "Z2",
+      "blocks": [
+        {
+          "id": "z2-main-2",
+          "title": "Base aerobica",
+          "blockType": "cardio",
+          "activity": {
+            "discipline": "bike",
+            "zone": "Z2",
+            "durationMin": 75,
+            "notes": "Rodar sense pics d'intensitat"
+          }
+        }
+      ]
+    }
+  ]
+}

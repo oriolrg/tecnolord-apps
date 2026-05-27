@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/opos-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("OPOS_DATABASE_URL")
+}
+
+model Question {
+  id                String                @id @default(cuid())
+  externalId        String                @unique
+  examPart          String
+  examExercise      String
+  topicNumber       Int
+  topicTitle        String
+  section           String
+  subsection        String?
+  questionType      String
+  difficulty        String
+  text              String
+  explanation       String?
+  sourceDocument    String?
+  sourceReference   String?
+  tagsJson          String                @default("[]")
+  status            String                @default("draft")
+  isDemo            Boolean               @default(false)
+  isFavorite        Boolean               @default(false)
+  isDoubtful        Boolean               @default(false)
+  isArchived        Boolean               @default(false)
+  reserveOrder      Int?
+  caseStudyId       String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  caseStudy         CaseStudy?            @relation(fields: [caseStudyId], references: [id], onDelete: SetNull)
+  options           Option[]
+  testAnswers       TestAnswer[]
+  reviewQueue       ReviewQueue?
+  importEvents      ImportBatchQuestion[]
+  progressSnapshots UserProgress[]
+}
+
+model Option {
+  id          String   @id @default(cuid())
+  questionId  String
+  label       String
+  text        String
+  isCorrect   Boolean
+  explanation String?
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, label])
+}
+
+model CaseStudy {
+  id          String     @id
+  title       String
+  description String?
+  topicNumber Int?
+  section     String?
+  source      String?
+  questions   Question[]
+}
+
+model ImportBatch {
+  id                     String                @id @default(cuid())
+  filename               String
+  importedAt             DateTime              @default(now())
+  sourceMetadataJson     String?
+  totalQuestionsDetected Int
+  createdCount           Int                   @default(0)
+  updatedCount           Int                   @default(0)
+  skippedCount           Int                   @default(0)
+  errorCount             Int                   @default(0)
+  warningsJson           String?
+  rawSummaryJson         String?
+  revertedAt             DateTime?
+  items                  ImportBatchQuestion[]
+}
+
+model ImportBatchQuestion {
+  id               String      @id @default(cuid())
+  importBatchId    String
+  questionId       String?
+  externalId       String
+  action           String
+  warningsJson     String?
+  errorsJson       String?
+  previousDataJson String?
+  importedDataJson String?
+  importBatch      ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+  question         Question?   @relation(fields: [questionId], references: [id], onDelete: SetNull)
+}
+
+model TestSession {
+  id                     String       @id @default(cuid())
+  mode                   String
+  startedAt              DateTime     @default(now())
+  finishedAt             DateTime?
+  durationSeconds        Int?
+  status                 String       @default("in_progress")
+  examExercise           String
+  questionIdsJson        String
+  totalQuestions         Int
+  score                  Float?
+  maxScore               Float
+  passed                 Boolean?
+  correctCount           Int          @default(0)
+  wrongCount             Int          @default(0)
+  blankCount             Int          @default(0)
+  averageTimePerQuestion Float?
+  topicFilter            String?
+  sectionFilter          String?
+  includeStatusesJson    String?
+  summaryJson            String?
+  answers                TestAnswer[]
+}
+
+model TestAnswer {
+  id               String      @id @default(cuid())
+  testSessionId    String
+  questionId       String
+  selectedOptionId String?
+  isCorrect        Boolean
+  isBlank          Boolean
+  confidence       String?
+  timeSpentSeconds Int?
+  answeredAt       DateTime    @default(now())
+  testSession      TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
+  question         Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model ReviewQueue {
+  questionId      String    @id
+  nextReviewAt    DateTime
+  intervalDays    Int       @default(1)
+  easeFactor      Float     @default(2.5)
+  masteryLevel    Float     @default(0)
+  lastResult      String?
+  totalAttempts   Int       @default(0)
+  correctAttempts Int       @default(0)
+  wrongAttempts   Int       @default(0)
+  lastReviewedAt  DateTime?
+  question        Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  title       String
+  description String
+  unlockedAt  DateTime
+}
+
+model UserProgress {
+  id            String    @id @default(cuid())
+  scopeType     String
+  scopeKey      String
+  topicNumber   Int?
+  section       String?
+  attempts      Int       @default(0)
+  correctCount  Int       @default(0)
+  wrongCount    Int       @default(0)
+  blankCount    Int       @default(0)
+  lastAttemptAt DateTime?
+  masteryLevel  Float     @default(0)
+  xp            Int       @default(0)
+  questionId    String?
+  question      Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@unique([scopeType, scopeKey])
+}
+
+model AppSettings {
+  id                         String    @id @default("default")
+  targetExamDate             DateTime?
+  weeklyGoal                 Int       @default(50)
+  dailyGoal                  Int       @default(10)
+  weakPointMinimumSample     Int       @default(10)
+  wrongAnswerPenaltyFraction Float     @default(0.25)
+  minimumQuestionStatus      String    @default("validated")
+  qualityRequiresExplanation Boolean   @default(false)
+  visualPreferencesJson      String?
+  updatedAt                  DateTime  @updatedAt
+}

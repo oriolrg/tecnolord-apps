@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tecnolord.local/schemas/training-plan.schema.json",
+  "title": "Training Plan",
+  "type": "object",
+  "required": ["metadata", "targetProfile", "monthlyPeriod", "intensityCriteria", "replanningRules", "days"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["id", "name", "athleteName", "timezone", "createdAt", "source"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "athleteName": { "type": "string" },
+        "coach": { "type": "string" },
+        "timezone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "source": { "type": "string", "enum": ["manual", "ai", "imported"] }
+      },
+      "additionalProperties": false
+    },
+    "targetProfile": {
+      "type": "object",
+      "required": ["athleteType", "experienceLevel", "objectives", "constraints", "weeklyAvailability"],
+      "properties": {
+        "athleteType": { "type": "string" },
+        "experienceLevel": { "type": "string", "enum": ["beginner", "intermediate", "advanced"] },
+        "objectives": { "type": "array", "items": { "type": "string" } },
+        "constraints": { "type": "array", "items": { "type": "string" } },
+        "weeklyAvailability": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "monthlyPeriod": {
+      "type": "object",
+      "required": ["year", "month", "startsOn", "endsOn"],
+      "properties": {
+        "year": { "type": "integer", "minimum": 2024 },
+        "month": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "startsOn": { "type": "string", "format": "date" },
+        "endsOn": { "type": "string", "format": "date" }
+      },
+      "additionalProperties": false
+    },
+    "intensityCriteria": {
+      "type": "object",
+      "required": ["rpeScale", "hrZones", "loadFormula"],
+      "properties": {
+        "rpeScale": { "type": "string" },
+        "hrZones": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "loadFormula": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "replanningRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "condition", "action", "priority"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "condition": { "type": "string" },
+          "action": { "type": "string" },
+          "priority": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "aiNotes": {
+      "type": "object",
+      "required": ["contextSummary", "promptHints"],
+      "properties": {
+        "contextSummary": { "type": "string" },
+        "promptHints": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "date", "title", "type", "status", "blocks"],
+        "properties": {
+          "id": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "title": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["strength", "swim", "bike", "trail", "walk", "mobility", "garden", "rest", "combined", "intensity", "outdoor"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "completed", "partial", "skipped", "substituted", "rest"]
+          },
+          "goal": { "type": "string" },
+          "plannedDurationMin": { "type": "integer", "minimum": 1 },
+          "plannedDurationMax": { "type": "integer", "minimum": 1 },
+          "plannedRpe": { "type": "integer", "minimum": 1, "maximum": 10 },
+          "plannedZone": { "type": "string" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "blocks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "blockType"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "blockType": { "type": "string", "enum": ["strength", "cardio", "mobility", "recovery", "mixed"] },
+                "notes": { "type": "string" },
+                "exercises": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["exerciseSlug"],
+                    "properties": {
+                      "exerciseSlug": { "type": "string" },
+                      "sets": { "type": "integer", "minimum": 1 },
+                      "reps": { "type": "string" },
+                      "restSeconds": { "type": "integer", "minimum": 0 },
+                      "intensity": { "type": "string" },
+                      "rpe": { "type": "integer", "minimum": 1, "maximum": 10 },
+                      "notes": { "type": "string" }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "activity": {
+                  "type": "object",
+                  "required": ["discipline"],
+                  "properties": {
+                    "discipline": {
+                      "type": "string",
+                      "enum": ["strength", "swim", "bike", "trail", "walk", "mobility", "garden", "rest", "combined", "intensity", "outdoor"]
+                    },
+                    "zone": { "type": "string" },
+                    "durationMin": { "type": "integer", "minimum": 1 },
+                    "durationMax": { "type": "integer", "minimum": 1 },
+                    "distanceKm": { "type": "number", "minimum": 0 },
+                    "elevationGainM": { "type": "integer", "minimum": 0 },
+                    "intervals": { "type": "array", "items": { "type": "string" } },
+                    "notes": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "trigger", "summary"],
+              "properties": {
+                "label": { "type": "string" },
+                "trigger": { "type": "string", "enum": ["low_time", "fatigue", "pain", "weather", "equipment"] },
+                "summary": { "type": "string" },
+                "replacementBlockIds": { "type": "array", "items": { "type": "string" } },
+                "suggestedDurationMin": { "type": "integer", "minimum": 1 }
+              },
+              "additionalProperties": false
+            }
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

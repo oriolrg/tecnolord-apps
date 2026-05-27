@@ -309,3 +309,21 @@ Què es considera fallada (ex: data: {} o tots els camps null)
 Què fa el sistema (no inserir registre buit; intentar font alternativa; si també falla, només log i sortir 200/500 segons decideixis)
 
 Com provar-ho (comanda de test manual)
+
+---
+
+## Apps web addicionals
+
+Aquest repo tambÃ© inclou dues apps Next.js desplegables com a serveis separats:
+
+* `opos-web` â†’ `https://tecnolord.cat/opos`
+* `entrenador-personal` â†’ `https://entrenador.tecnolord.cat`
+
+ActualitzaciÃ³ recomanada al servidor:
+
+```bash
+cd /home/deploy/tecnolord-apps
+git pull
+docker compose up -d --build entrenador_personal_web opos_web caddy
+docker compose ps
+```

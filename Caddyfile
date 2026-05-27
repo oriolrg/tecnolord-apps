@@ -11,8 +11,8 @@ tecnolord.cat, www.tecnolord.cat {
     reverse_proxy orientatrack:4000
   }
 
-  handle_path /api/opos* {
-    reverse_proxy opos_backend:5000
+  handle /api/opos* {
+    reverse_proxy opos_web:3000
   }
 
   # --- FRONTENDS (subdirectoris) ---
@@ -31,8 +31,8 @@ tecnolord.cat, www.tecnolord.cat {
   }
 
   # Opos
-  handle_path /opos* {
-    reverse_proxy opos_backend:5000
+  handle /opos* {
+    reverse_proxy opos_web:3000
   }
 
   # --- Rutes preexistents (MeteoLord i IA) ---
@@ -56,6 +56,11 @@ tecnolord.cat, www.tecnolord.cat {
   handle / {
     redir /meteo/ 302
   }
+}
+
+entrenador.tecnolord.cat {
+  encode gzip zstd
+  reverse_proxy entrenador_personal_web:3000
 }
 
 stats.tecnolord.cat {

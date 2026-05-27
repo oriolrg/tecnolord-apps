@@ -1,0 +1,23 @@
+:root {
+  --font-sans: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-mist text-ink antialiased;
+  background-image:
+    radial-gradient(circle at top left, rgba(127, 157, 108, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(249, 115, 96, 0.18), transparent 22%),
+    linear-gradient(180deg, #fffdf8 0%, #f8fafc 100%);
+}
+
+a {
+  @apply transition-colors;
+}
+
+.input {
+  @apply w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-pine;
+}
