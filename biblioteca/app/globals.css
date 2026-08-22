@@ -1,0 +1,73 @@
+:root {
+  --font-sans: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-paper text-ink antialiased;
+}
+
+a {
+  @apply transition-colors;
+}
+
+.field {
+  @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none transition focus:border-teal focus:ring-2 focus:ring-teal/15;
+}
+
+.label {
+  @apply text-xs font-semibold uppercase tracking-normal text-slate-600;
+}
+
+.prose-biblioteca {
+  @apply max-w-none leading-7 text-slate-800;
+}
+
+.prose-biblioteca h1,
+.prose-biblioteca h2,
+.prose-biblioteca h3 {
+  @apply mt-8 font-semibold text-ink;
+}
+
+.prose-biblioteca h1 {
+  @apply text-3xl;
+}
+
+.prose-biblioteca h2 {
+  @apply text-2xl;
+}
+
+.prose-biblioteca h3 {
+  @apply text-xl;
+}
+
+.prose-biblioteca p,
+.prose-biblioteca ul,
+.prose-biblioteca ol,
+.prose-biblioteca blockquote,
+.prose-biblioteca pre {
+  @apply my-4;
+}
+
+.prose-biblioteca ul {
+  @apply list-disc pl-6;
+}
+
+.prose-biblioteca ol {
+  @apply list-decimal pl-6;
+}
+
+.prose-biblioteca code {
+  @apply rounded bg-slate-100 px-1 py-0.5 text-sm;
+}
+
+.prose-biblioteca pre {
+  @apply overflow-x-auto rounded-md bg-slate-950 p-4 text-slate-100;
+}
+
+.prose-biblioteca pre code {
+  @apply bg-transparent p-0 text-inherit;
+}

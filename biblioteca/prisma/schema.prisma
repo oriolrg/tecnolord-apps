@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("BIBLIOTECA_DATABASE_URL")
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+enum ArticleStatus {
+  draft
+  published
+  archived
+}
+
+enum VerificationStatus {
+  pending
+  reviewed
+  verified
+}
+
+enum ArticleScope {
+  notes
+  tutorial
+  project
+  regulation
+  opinion
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  status       UserStatus @default(active)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  sessions     Session[]
+  articles     Article[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model Topic {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  articles    Article[]
+}
+
+model Tag {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  createdAt DateTime     @default(now())
+  articles  ArticleTag[]
+}
+
+model Article {
+  id                 String             @id @default(cuid())
+  title              String
+  slug               String             @unique
+  summary            String
+  contentMarkdown    String
+  status             ArticleStatus      @default(draft)
+  verificationStatus VerificationStatus @default(pending)
+  scope              ArticleScope       @default(notes)
+  keywords           String[]           @default([])
+  createdWithAi      Boolean            @default(false)
+  reviewedAt         DateTime?
+  publishedAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  authorId           String
+  topicId            String
+  author             User               @relation(fields: [authorId], references: [id])
+  topic              Topic              @relation(fields: [topicId], references: [id])
+  tags               ArticleTag[]
+  sources            Source[]
+  attachments        Attachment[]
+
+  @@index([status, publishedAt])
+  @@index([topicId, status])
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+}
+
+model Source {
+  id        String   @id @default(cuid())
+  articleId String
+  title     String
+  url       String?
+  note      String?
+  createdAt DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  articleId String
+  filename  String
+  url       String
+  mimeType  String?
+  sizeBytes Int?
+  createdAt DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+}

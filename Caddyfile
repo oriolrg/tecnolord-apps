@@ -39,6 +39,10 @@ tecnolord.cat, www.tecnolord.cat {
     reverse_proxy opos_web:3000
   }
 
+  handle /biblioteca* {
+    reverse_proxy biblioteca_web:3000
+  }
+
   # --- Rutes preexistents (MeteoLord i IA) ---
   @py path /api/v1/kpis* /api/v1/forecast* /health
   handle @py {
