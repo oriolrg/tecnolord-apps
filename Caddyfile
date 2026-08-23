@@ -16,6 +16,9 @@ tecnolord.cat, www.tecnolord.cat {
   }
 
   # --- FRONTENDS (subdirectoris) ---
+  redir /iblioteca /biblioteca/ 301
+  redir /biblioteca /biblioteca/ 301
+
   # 1. Forçar la barra final perquè el navegador sàpiga on és
   redir /orientatrack /orientatrack/
   # OrientaTrack: DELEGEM TOT A NODE.JS
