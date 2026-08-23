@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { readUploadedImage } from "@/lib/biblioteca/uploads";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_request: Request, { params }: { params: { path: string[] } }) {
   try {
     const storageName = params.path.join("/");

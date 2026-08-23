@@ -72,10 +72,14 @@ a {
   @apply bg-transparent p-0 text-inherit;
 }
 
-.prose-biblioteca .markdown-image-button {
-  @apply my-6 block w-full cursor-zoom-in rounded-md border border-line bg-white p-0 transition hover:border-teal;
+.prose-biblioteca .markdown-image {
+  @apply my-6 mx-auto block h-auto max-w-full cursor-zoom-in rounded-md border border-line bg-white transition hover:border-teal;
 }
 
-.prose-biblioteca .markdown-image-button img {
-  @apply mx-auto h-auto max-w-full rounded-md;
+.prose-biblioteca .markdown-image-error {
+  @apply my-6 rounded-md border border-brick bg-brick/10 p-3 text-sm text-brick;
+}
+
+.prose-biblioteca .markdown-image-error a {
+  @apply font-semibold underline;
 }

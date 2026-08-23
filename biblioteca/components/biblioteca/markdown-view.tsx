@@ -14,14 +14,11 @@ export function MarkdownView({ content }: { content: string }) {
             if (!src) return null;
 
             return (
-              <button
-                type="button"
-                className="markdown-image-button"
-                onClick={() => setExpandedImage({ src, alt: alt ?? "" })}
-                aria-label="Ampliar imatge"
-              >
-                <img src={src} alt={alt ?? ""} loading="lazy" />
-              </button>
+              <MarkdownImage
+                src={src}
+                alt={alt ?? ""}
+                onExpand={() => setExpandedImage({ src, alt: alt ?? "" })}
+              />
             );
           }
         }}
@@ -43,11 +40,60 @@ export function MarkdownView({ content }: { content: string }) {
           >
             Tancar
           </button>
-          <div className="m-auto max-h-full max-w-full overflow-auto rounded-md bg-white p-2" onClick={(event) => event.stopPropagation()}>
-            <img src={expandedImage.src} alt={expandedImage.alt} className="block h-auto max-w-none" />
+          <div
+            className="m-auto flex max-h-full max-w-full overflow-auto rounded-md bg-white p-2"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={expandedImage.src}
+              alt={expandedImage.alt}
+              className="m-auto block h-auto max-h-[calc(100vh-5rem)] max-w-full object-contain"
+            />
           </div>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function MarkdownImage({
+  src,
+  alt,
+  onExpand
+}: {
+  src: string;
+  alt: string;
+  onExpand: () => void;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="markdown-image-error">
+        <p>No s'ha pogut carregar aquesta imatge.</p>
+        <a href={src} target="_blank" rel="noreferrer">
+          Obrir la imatge directament
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className="markdown-image"
+      role="button"
+      tabIndex={0}
+      onClick={onExpand}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onExpand();
+        }
+      }}
+      onError={() => setFailed(true)}
+    />
   );
 }
