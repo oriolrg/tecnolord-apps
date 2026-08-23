@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Save, Trash2 } from "lucide-react";
+import { ImageManager } from "./image-manager";
 import { MarkdownView } from "./markdown-view";
 import type { ArticleWithRelations } from "@/lib/biblioteca/repository";
 
@@ -25,6 +26,7 @@ function dateInput(value?: Date | null) {
 
 export function ArticleForm({ article, csrfToken }: Props) {
   const [content, setContent] = useState(article?.contentMarkdown ?? defaultMarkdown);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [sources, setSources] = useState<EditableSource[]>(
     article?.sources.length
       ? article.sources.map((source) => ({
@@ -102,6 +104,29 @@ export function ArticleForm({ article, csrfToken }: Props) {
     if (response.ok) window.location.href = "/biblioteca/admin";
   }
 
+  function insertMarkdownAtCursor(markdown: string) {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setContent((current) => `${current}\n\n${markdown}\n`);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = content.slice(0, start);
+    const after = content.slice(end);
+    const prefix = before.endsWith("\n") || before.length === 0 ? "" : "\n\n";
+    const suffix = after.startsWith("\n") || after.length === 0 ? "" : "\n\n";
+    const nextContent = `${before}${prefix}${markdown}${suffix}${after}`;
+    const nextCursor = before.length + prefix.length + markdown.length;
+
+    setContent(nextContent);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,42%)]">
       <form action={submit} className="space-y-4">
@@ -130,12 +155,22 @@ export function ArticleForm({ article, csrfToken }: Props) {
           <label className="space-y-1">
             <span className="label">Markdown</span>
             <textarea
+              ref={textareaRef}
               className="field min-h-[460px] font-mono text-sm"
               value={content}
               onChange={(event) => setContent(event.target.value)}
             />
           </label>
         </div>
+
+        {article ? (
+          <ImageManager
+            articleId={article.id}
+            csrfToken={csrfToken}
+            initialAttachments={article.attachments}
+            onInsert={insertMarkdownAtCursor}
+          />
+        ) : null}
 
         <div className="rounded-md border border-line bg-white p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">

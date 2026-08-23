@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function ArticlePage({ params }: { params: { slug: string } }) {
   const article = await getPublishedArticle(params.slug);
   if (!article) notFound();
+  const cover = article.attachments.find((attachment) => attachment.kind === "cover");
 
   return (
     <>
@@ -28,6 +29,13 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           <span className="rounded border border-line px-2 py-1 text-xs text-slate-700">{article.verificationStatus}</span>
           {article.createdWithAi ? <span className="rounded border border-brass px-2 py-1 text-xs text-brass">Assistit amb IA</span> : null}
         </div>
+        {cover ? (
+          <img
+            src={cover.url}
+            alt={cover.altText || article.title}
+            className="mt-8 aspect-[16/9] w-full rounded-md border border-line object-cover"
+          />
+        ) : null}
         <article className="mt-8 border-t border-line pt-6">
           <MarkdownView content={article.contentMarkdown} />
         </article>

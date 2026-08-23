@@ -124,8 +124,12 @@ services:
       - BIBLIOTECA_ADMIN_EMAIL=${BIBLIOTECA_ADMIN_EMAIL}
       - BIBLIOTECA_ADMIN_PASSWORD=${BIBLIOTECA_ADMIN_PASSWORD}
       - BIBLIOTECA_ADMIN_NAME=${BIBLIOTECA_ADMIN_NAME}
+      - BIBLIOTECA_UPLOADS_DIR=/app/uploads
+      - BIBLIOTECA_MAX_IMAGE_BYTES=${BIBLIOTECA_MAX_IMAGE_BYTES:-5242880}
     depends_on:
       - db
+    volumes:
+      - ./biblioteca/uploads:/app/uploads
     expose:
       - "3000"
 

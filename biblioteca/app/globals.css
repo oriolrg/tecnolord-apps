@@ -71,3 +71,7 @@ a {
 .prose-biblioteca pre code {
   @apply bg-transparent p-0 text-inherit;
 }
+
+.prose-biblioteca img {
+  @apply my-6 max-h-[720px] w-full rounded-md border border-line object-contain;
+}
