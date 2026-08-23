@@ -72,6 +72,10 @@ a {
   @apply bg-transparent p-0 text-inherit;
 }
 
-.prose-biblioteca img {
-  @apply my-6 max-h-[720px] w-full rounded-md border border-line object-contain;
+.prose-biblioteca .markdown-image-button {
+  @apply my-6 block w-full cursor-zoom-in rounded-md border border-line bg-white p-0 transition hover:border-teal;
+}
+
+.prose-biblioteca .markdown-image-button img {
+  @apply mx-auto h-auto max-w-full rounded-md;
 }
