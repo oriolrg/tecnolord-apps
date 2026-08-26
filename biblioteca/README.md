@@ -9,7 +9,7 @@ Aplicacio Next.js independent per servir `/biblioteca` i `/biblioteca/admin`.
 - `BIBLIOTECA_ADMIN_PASSWORD`: contrasenya inicial per executar el seed.
 - `BIBLIOTECA_ADMIN_NAME`: nom visible opcional.
 - `BIBLIOTECA_UPLOADS_DIR`: directori intern d'imatges. En Docker es fixa a `/app/uploads`.
-- `BIBLIOTECA_MAX_IMAGE_BYTES`: mida maxima d'imatge en bytes. Per defecte, `5242880`.
+- `BIBLIOTECA_MAX_IMAGE_BYTES`: mida maxima d'imatge en bytes. Per defecte, `2097152`.
 
 ## Primer desplegament
 

@@ -168,7 +168,9 @@ export function ArticleForm({ article, csrfToken }: Props) {
             articleId={article.id}
             csrfToken={csrfToken}
             initialAttachments={article.attachments}
+            content={content}
             onInsert={insertMarkdownAtCursor}
+            onContentChange={setContent}
           />
         ) : null}
 
@@ -289,7 +291,7 @@ export function ArticleForm({ article, csrfToken }: Props) {
         <div className="mb-4 border-b border-line pb-3">
           <p className="label">Previsualitzacio</p>
         </div>
-        <MarkdownView content={content} />
+        <MarkdownView content={content} onContentChange={setContent} />
       </aside>
     </div>
   );

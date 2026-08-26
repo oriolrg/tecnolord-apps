@@ -14,6 +14,7 @@ export async function GET(_request: Request, { params }: { params: { path: strin
     return new NextResponse(image, {
       headers: {
         "content-type": contentType,
+        "x-content-type-options": "nosniff",
         "cache-control": "public, max-age=31536000, immutable"
       }
     });

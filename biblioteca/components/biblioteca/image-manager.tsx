@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import type { DragEvent, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImagePlus, RefreshCw, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Attachment = {
   id: string;
@@ -19,7 +21,9 @@ type Props = {
   articleId: string;
   csrfToken: string;
   initialAttachments: Attachment[];
+  content: string;
   onInsert: (markdown: string) => void;
+  onContentChange: (content: string) => void;
 };
 
 function formatBytes(value?: number | null) {
@@ -32,17 +36,33 @@ function markdownFor(attachment: Attachment) {
   return `![${attachment.altText || attachment.originalName || "Imatge"}](${attachment.url})`;
 }
 
-export function ImageManager({ articleId, csrfToken, initialAttachments, onInsert }: Props) {
+export function ImageManager({ articleId, csrfToken, initialAttachments, content, onInsert, onContentChange }: Props) {
   const [attachments, setAttachments] = useState(initialAttachments);
   const [coverAlt, setCoverAlt] = useState(initialAttachments.find((item) => item.kind === "cover")?.altText ?? "");
   const [inlineAlt, setInlineAlt] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [dragTarget, setDragTarget] = useState<"cover" | "inline" | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const inlineInputRef = useRef<HTMLInputElement>(null);
 
   const cover = attachments.find((item) => item.kind === "cover");
   const inlineImages = attachments.filter((item) => item.kind !== "cover");
+
+  useEffect(() => {
+    function preventFileDrop(event: globalThis.DragEvent) {
+      if (!event.dataTransfer?.types.includes("Files")) return;
+      event.preventDefault();
+    }
+
+    window.addEventListener("dragover", preventFileDrop);
+    window.addEventListener("drop", preventFileDrop);
+
+    return () => {
+      window.removeEventListener("dragover", preventFileDrop);
+      window.removeEventListener("drop", preventFileDrop);
+    };
+  }, []);
 
   async function readError(response: Response) {
     const data = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -82,6 +102,23 @@ export function ImageManager({ articleId, csrfToken, initialAttachments, onInser
     setMessage("Imatge pujada.");
   }
 
+  async function uploadFiles(kind: "cover" | "inline", files: FileList | File[], altText: string) {
+    const selected = Array.from(files);
+    if (!selected.length) {
+      setMessage("Selecciona una imatge.");
+      return;
+    }
+
+    if (kind === "cover") {
+      await upload("cover", selected[0], altText);
+      return;
+    }
+
+    for (const file of selected) {
+      await upload("inline", file, altText);
+    }
+  }
+
   async function update(attachment: Attachment, file: File | undefined, altText: string) {
     setBusy(true);
     setMessage("Actualitzant imatge...");
@@ -103,21 +140,37 @@ export function ImageManager({ articleId, csrfToken, initialAttachments, onInser
 
     const data = (await response.json()) as { attachment: Attachment };
     setAttachments((items) => items.map((item) => (item.id === attachment.id ? data.attachment : item)));
+    if (storedInlineReplacement(attachment, data.attachment)) {
+      onContentChange(content.split(attachment.url).join(data.attachment.url));
+    }
     setMessage("Imatge actualitzada.");
   }
 
-  async function remove(attachment: Attachment) {
+  function storedInlineReplacement(previous: Attachment, next: Attachment) {
+    return previous.kind !== "cover" && previous.url !== next.url;
+  }
+
+  async function remove(attachment: Attachment, force = false) {
     if (!confirm("Eliminar aquesta imatge?")) return;
 
     setBusy(true);
     setMessage("Eliminant imatge...");
-    const response = await fetch(`/biblioteca/api/admin/articles/${articleId}/attachments/${attachment.id}`, {
+    const response = await fetch(`/biblioteca/api/admin/articles/${articleId}/attachments/${attachment.id}${force ? "?force=1" : ""}`, {
       method: "DELETE",
       headers: { "x-csrf-token": csrfToken }
     });
 
     setBusy(false);
     if (!response.ok) {
+      if (response.status === 409 && !force) {
+        const error = await readError(response);
+        if (confirm(`${error}\n\nVols eliminar-la igualment?`)) {
+          await remove(attachment, true);
+        } else {
+          setMessage(error);
+        }
+        return;
+      }
       setMessage(await readError(response));
       return;
     }
@@ -137,8 +190,13 @@ export function ImageManager({ articleId, csrfToken, initialAttachments, onInser
       </div>
 
       <div className="grid gap-5">
-        <div className="rounded-md border border-line p-3">
-          <h3 className="text-sm font-semibold">Portada</h3>
+        <DropPanel
+          title="Portada"
+          active={dragTarget === "cover"}
+          onPick={() => coverInputRef.current?.click()}
+          onDragState={(active) => setDragTarget(active ? "cover" : null)}
+          onFiles={(files) => uploadFiles("cover", files, coverAlt)}
+        >
           {cover ? (
             <div className="mt-3 grid gap-3 sm:grid-cols-[140px_1fr]">
               <img src={cover.url} alt={cover.altText || ""} className="h-28 w-full rounded-md object-cover" />
@@ -146,7 +204,13 @@ export function ImageManager({ articleId, csrfToken, initialAttachments, onInser
                 <p className="text-sm text-slate-700">{cover.originalName || cover.filename}</p>
                 <p className="text-xs text-slate-500">{formatBytes(cover.sizeBytes)}</p>
                 <input className="field" value={coverAlt} onChange={(event) => setCoverAlt(event.target.value)} placeholder="Text alternatiu" />
-                <input ref={coverInputRef} className="field" type="file" accept="image/jpeg,image/png,image/webp" />
+                <input
+                  ref={coverInputRef}
+                  className="hidden"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) => uploadFiles("cover", event.currentTarget.files ?? [], coverAlt)}
+                />
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -170,31 +234,49 @@ export function ImageManager({ articleId, csrfToken, initialAttachments, onInser
           ) : (
             <div className="mt-3 grid gap-2">
               <input className="field" value={coverAlt} onChange={(event) => setCoverAlt(event.target.value)} placeholder="Text alternatiu" />
-              <input ref={coverInputRef} className="field" type="file" accept="image/jpeg,image/png,image/webp" />
+              <input
+                ref={coverInputRef}
+                className="hidden"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => uploadFiles("cover", event.currentTarget.files ?? [], coverAlt)}
+              />
               <button
                 type="button"
-                className="flex w-fit items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90"
-                onClick={() => upload("cover", coverInputRef.current?.files?.[0], coverAlt)}
+                className="flex w-fit items-center gap-2 rounded-md border border-line px-3 py-2 text-sm hover:border-teal"
+                onClick={() => coverInputRef.current?.click()}
               >
                 <ImagePlus className="h-4 w-4" aria-hidden="true" />
-                Pujar portada
+                Seleccionar portada
               </button>
             </div>
           )}
-        </div>
+        </DropPanel>
 
-        <div className="rounded-md border border-line p-3">
-          <h3 className="text-sm font-semibold">Imatges del contingut</h3>
+        <DropPanel
+          title="Imatges del contingut"
+          active={dragTarget === "inline"}
+          onPick={() => inlineInputRef.current?.click()}
+          onDragState={(active) => setDragTarget(active ? "inline" : null)}
+          onFiles={(files) => uploadFiles("inline", files, inlineAlt)}
+        >
           <div className="mt-3 grid gap-2">
             <input className="field" value={inlineAlt} onChange={(event) => setInlineAlt(event.target.value)} placeholder="Text alternatiu" />
-            <input ref={inlineInputRef} className="field" type="file" accept="image/jpeg,image/png,image/webp" />
+            <input
+              ref={inlineInputRef}
+              className="hidden"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(event) => uploadFiles("inline", event.currentTarget.files ?? [], inlineAlt)}
+            />
             <button
               type="button"
-              className="flex w-fit items-center gap-2 rounded-md bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal/90"
-              onClick={() => upload("inline", inlineInputRef.current?.files?.[0], inlineAlt)}
+              className="flex w-fit items-center gap-2 rounded-md border border-line px-3 py-2 text-sm hover:border-teal"
+              onClick={() => inlineInputRef.current?.click()}
             >
               <ImagePlus className="h-4 w-4" aria-hidden="true" />
-              Pujar imatge
+              Seleccionar imatges
             </button>
           </div>
 
@@ -209,11 +291,60 @@ export function ImageManager({ articleId, csrfToken, initialAttachments, onInser
               />
             ))}
           </div>
-        </div>
+        </DropPanel>
       </div>
 
       {message ? <p className="mt-4 rounded-md border border-line bg-slate-50 p-3 text-sm text-slate-700">{message}</p> : null}
     </section>
+  );
+}
+
+function DropPanel({
+  title,
+  active,
+  children,
+  onPick,
+  onFiles,
+  onDragState
+}: {
+  title: string;
+  active: boolean;
+  children: ReactNode;
+  onPick: () => void;
+  onFiles: (files: FileList) => void;
+  onDragState: (active: boolean) => void;
+}) {
+  function prevent(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  return (
+    <div
+      className={cn("rounded-md border border-line p-3 transition", active && "border-teal bg-teal/5")}
+      onDragEnter={(event) => {
+        prevent(event);
+        onDragState(true);
+      }}
+      onDragOver={prevent}
+      onDragLeave={(event) => {
+        prevent(event);
+        onDragState(false);
+      }}
+      onDrop={(event) => {
+        prevent(event);
+        onDragState(false);
+        onFiles(event.dataTransfer.files);
+      }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <button type="button" className="text-xs font-semibold text-teal hover:underline" onClick={onPick}>
+          Arrossega o selecciona
+        </button>
+      </div>
+      {children}
+    </div>
   );
 }
 

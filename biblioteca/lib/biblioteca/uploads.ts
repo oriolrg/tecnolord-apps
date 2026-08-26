@@ -3,7 +3,7 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export const uploadsRoot = process.env.BIBLIOTECA_UPLOADS_DIR || "/app/uploads";
-export const maxImageBytes = Number(process.env.BIBLIOTECA_MAX_IMAGE_BYTES || 5 * 1024 * 1024);
+export const maxImageBytes = Number(process.env.BIBLIOTECA_MAX_IMAGE_BYTES || 2 * 1024 * 1024);
 
 const allowedTypes = {
   "image/jpeg": "jpg",

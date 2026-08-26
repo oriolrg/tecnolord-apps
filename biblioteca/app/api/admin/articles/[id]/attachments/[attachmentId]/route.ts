@@ -68,9 +68,27 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     assertCsrf(request);
     await requireAdmin();
 
+    const force = new URL(request.url).searchParams.get("force") === "1";
     const attachment = await findOwnedAttachment(params.id, params.attachmentId);
     if (!attachment) {
       return NextResponse.json({ error: "Imatge no trobada" }, { status: 404 });
+    }
+
+    if (attachment.kind !== "cover" && !force) {
+      const article = await prisma.article.findUnique({
+        where: { id: params.id },
+        select: { contentMarkdown: true }
+      });
+
+      if (article?.contentMarkdown.includes(attachment.url)) {
+        return NextResponse.json(
+          {
+            error: "La imatge encara esta referenciada al Markdown. Confirma l'eliminacio per esborrar-la igualment.",
+            referenced: true
+          },
+          { status: 409 }
+        );
+      }
     }
 
     await prisma.attachment.delete({ where: { id: attachment.id } });

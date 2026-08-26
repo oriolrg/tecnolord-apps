@@ -2,98 +2,161 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { ExpandableImage } from "./expandable-image";
+import { cn } from "@/lib/utils";
 
-export function MarkdownView({ content }: { content: string }) {
-  const [expandedImage, setExpandedImage] = useState<{ src: string; alt: string } | null>(null);
+type MarkdownBlock = {
+  text: string;
+  managedImageUrl?: string;
+};
+
+type Props = {
+  content: string;
+  onContentChange?: (content: string) => void;
+};
+
+const managedImagePattern = /^!\[[^\]]*]\((\/biblioteca\/api\/uploads\/[^)\s]+)\)\s*$/;
+
+export function MarkdownView({ content, onContentChange }: Props) {
+  if (onContentChange) {
+    return <EditableMarkdownPreview content={content} onContentChange={onContentChange} />;
+  }
 
   return (
     <div className="prose-biblioteca">
-      <ReactMarkdown
-        components={{
-          img: ({ src, alt }) => {
-            if (!src) return null;
-
-            return (
-              <MarkdownImage
-                src={src}
-                alt={alt ?? ""}
-                onExpand={() => setExpandedImage({ src, alt: alt ?? "" })}
-              />
-            );
-          }
-        }}
-      >
+      <ReactMarkdown components={markdownComponents}>
         {content}
       </ReactMarkdown>
-
-      {expandedImage ? (
-        <div
-          className="fixed inset-0 z-50 flex bg-slate-950/90 p-3 sm:p-6"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setExpandedImage(null)}
-        >
-          <button
-            type="button"
-            className="absolute right-4 top-4 rounded-md bg-white px-3 py-2 text-sm font-semibold text-ink shadow-panel"
-            onClick={() => setExpandedImage(null)}
-          >
-            Tancar
-          </button>
-          <div
-            className="m-auto flex max-h-full max-w-full overflow-auto rounded-md bg-white p-2"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <img
-              src={expandedImage.src}
-              alt={expandedImage.alt}
-              className="m-auto block h-auto max-h-[calc(100vh-5rem)] max-w-full object-contain"
-            />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
 
-function MarkdownImage({
-  src,
-  alt,
-  onExpand
-}: {
-  src: string;
-  alt: string;
-  onExpand: () => void;
-}) {
-  const [failed, setFailed] = useState(false);
+const markdownComponents = {
+  img: ({ src, alt }: { src?: string; alt?: string }) => {
+    if (!src) return null;
 
-  if (failed) {
     return (
-      <div className="markdown-image-error">
-        <p>No s'ha pogut carregar aquesta imatge.</p>
-        <a href={src} target="_blank" rel="noreferrer">
-          Obrir la imatge directament
-        </a>
-      </div>
+      <ExpandableImage
+        src={src}
+        alt={alt ?? ""}
+        className="markdown-image"
+        errorClassName="markdown-image-error"
+      />
     );
+  }
+};
+
+function EditableMarkdownPreview({ content, onContentChange }: Required<Props>) {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const [message, setMessage] = useState("");
+  const blocks = parseMarkdownBlocks(content);
+
+  function moveImage(targetIndex: number) {
+    if (draggedIndex === null) return;
+    const block = blocks[draggedIndex];
+    if (!block?.managedImageUrl) {
+      setMessage("Moviment invalid: aquesta imatge no es pot reordenar.");
+      return;
+    }
+
+    const nextContent = moveBlock(content, draggedIndex, targetIndex);
+    if (!nextContent) {
+      setMessage("Moviment invalid.");
+      return;
+    }
+
+    onContentChange(nextContent);
+    setMessage("Imatge moguda al Markdown.");
   }
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      className="markdown-image"
-      role="button"
-      tabIndex={0}
-      onClick={onExpand}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onExpand();
-        }
+    <div className="prose-biblioteca">
+      {blocks.map((block, index) => (
+        <div key={`${index}-${block.text.slice(0, 16)}`}>
+          <DropZone
+            active={dropIndex === index}
+            onDragEnter={() => setDropIndex(index)}
+            onDrop={() => moveImage(index)}
+          />
+          <div
+            draggable={Boolean(block.managedImageUrl)}
+            className={cn(block.managedImageUrl && "rounded-md outline outline-1 outline-transparent hover:outline-teal")}
+            onDragStart={(event) => {
+              if (!block.managedImageUrl) return;
+              setDraggedIndex(index);
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", block.managedImageUrl);
+            }}
+            onDragEnd={() => {
+              setDraggedIndex(null);
+              setDropIndex(null);
+            }}
+          >
+            <ReactMarkdown components={markdownComponents}>{block.text}</ReactMarkdown>
+          </div>
+        </div>
+      ))}
+      <DropZone
+        active={dropIndex === blocks.length}
+        onDragEnter={() => setDropIndex(blocks.length)}
+        onDrop={() => moveImage(blocks.length)}
+      />
+      {message ? <p className="rounded-md border border-line bg-slate-50 p-3 text-sm text-slate-700">{message}</p> : null}
+    </div>
+  );
+}
+
+function DropZone({
+  active,
+  onDragEnter,
+  onDrop
+}: {
+  active: boolean;
+  onDragEnter: () => void;
+  onDrop: () => void;
+}) {
+  return (
+    <div
+      className={cn("my-2 h-3 rounded border border-dashed border-transparent", active && "border-teal bg-teal/10")}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        onDragEnter();
       }}
-      onError={() => setFailed(true)}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop();
+      }}
     />
   );
+}
+
+function parseMarkdownBlocks(markdown: string): MarkdownBlock[] {
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  const rawBlocks = normalized.split(/\n{2,}/).filter((block) => block.trim().length > 0);
+
+  return rawBlocks.map((block) => {
+    const text = block.trim();
+    const match = text.match(managedImagePattern);
+    return {
+      text,
+      managedImageUrl: match?.[1]
+    };
+  });
+}
+
+function moveBlock(markdown: string, sourceIndex: number, targetIndex: number) {
+  const blocks = parseMarkdownBlocks(markdown);
+  if (sourceIndex < 0 || sourceIndex >= blocks.length || targetIndex < 0 || targetIndex > blocks.length) return null;
+  if (sourceIndex === targetIndex || sourceIndex + 1 === targetIndex) return null;
+
+  const moving = blocks[sourceIndex];
+  if (!moving.managedImageUrl) return null;
+
+  const remaining = blocks.filter((_, index) => index !== sourceIndex);
+  const insertionIndex = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
+  remaining.splice(insertionIndex, 0, moving);
+
+  return `${remaining.map((block) => block.text).join("\n\n")}\n`;
 }

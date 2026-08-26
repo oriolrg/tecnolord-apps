@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { ExpandableImage } from "@/components/biblioteca/expandable-image";
 import { MarkdownView } from "@/components/biblioteca/markdown-view";
 import { PublicNav } from "@/components/biblioteca/public-nav";
 import { getPublishedArticle } from "@/lib/biblioteca/repository";
@@ -30,10 +31,11 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           {article.createdWithAi ? <span className="rounded border border-brass px-2 py-1 text-xs text-brass">Assistit amb IA</span> : null}
         </div>
         {cover ? (
-          <img
+          <ExpandableImage
             src={cover.url}
             alt={cover.altText || article.title}
             className="mt-8 aspect-[16/9] w-full rounded-md border border-line object-cover"
+            errorClassName="mt-8"
           />
         ) : null}
         <article className="mt-8 border-t border-line pt-6">
