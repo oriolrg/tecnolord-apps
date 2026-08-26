@@ -3,19 +3,13 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ExpandableImage } from "./expandable-image";
+import { moveManagedImageBlock, parseMarkdownBlocks } from "@/lib/biblioteca/markdown-images";
 import { cn } from "@/lib/utils";
-
-type MarkdownBlock = {
-  text: string;
-  managedImageUrl?: string;
-};
 
 type Props = {
   content: string;
   onContentChange?: (content: string) => void;
 };
-
-const managedImagePattern = /^!\[[^\]]*]\((\/biblioteca\/api\/uploads\/[^)\s]+)\)\s*$/;
 
 export function MarkdownView({ content, onContentChange }: Props) {
   if (onContentChange) {
@@ -60,7 +54,7 @@ function EditableMarkdownPreview({ content, onContentChange }: Required<Props>) 
       return;
     }
 
-    const nextContent = moveBlock(content, draggedIndex, targetIndex);
+    const nextContent = moveManagedImageBlock(content, draggedIndex, targetIndex);
     if (!nextContent) {
       setMessage("Moviment invalid.");
       return;
@@ -130,33 +124,4 @@ function DropZone({
       }}
     />
   );
-}
-
-function parseMarkdownBlocks(markdown: string): MarkdownBlock[] {
-  const normalized = markdown.replace(/\r\n/g, "\n");
-  const rawBlocks = normalized.split(/\n{2,}/).filter((block) => block.trim().length > 0);
-
-  return rawBlocks.map((block) => {
-    const text = block.trim();
-    const match = text.match(managedImagePattern);
-    return {
-      text,
-      managedImageUrl: match?.[1]
-    };
-  });
-}
-
-function moveBlock(markdown: string, sourceIndex: number, targetIndex: number) {
-  const blocks = parseMarkdownBlocks(markdown);
-  if (sourceIndex < 0 || sourceIndex >= blocks.length || targetIndex < 0 || targetIndex > blocks.length) return null;
-  if (sourceIndex === targetIndex || sourceIndex + 1 === targetIndex) return null;
-
-  const moving = blocks[sourceIndex];
-  if (!moving.managedImageUrl) return null;
-
-  const remaining = blocks.filter((_, index) => index !== sourceIndex);
-  const insertionIndex = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
-  remaining.splice(insertionIndex, 0, moving);
-
-  return `${remaining.map((block) => block.text).join("\n\n")}\n`;
 }
