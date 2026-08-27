@@ -1,97 +1,82 @@
 import { NextResponse } from "next/server";
-import { createSession, verifyPassword } from "@/lib/biblioteca/auth";
-import { prisma } from "@/lib/biblioteca/db";
+import { createSession, isAdminUser, verifyPassword } from "@/lib/biblioteca/auth";
+import {
+  getRetryAfterSeconds,
+  isLoginRateLimited,
+  normalizeLoginIdentity,
+  recordFailedLoginIdentity,
+  runWithLoginIdentityRateLimitLock,
+  resetLoginIdentityRateLimit
+} from "@/lib/biblioteca/login-rate-limit";
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
+const DUMMY_PASSWORD_HASH =
+  "$argon2id$v=19$m=65536,t=3,p=4$Hs78GKVbET+H+vLKAPRWZA$qRVtB353/QIgTKKpAGFJgO+/JnJ/egne4hCywJ0F4e0";
 
-function canTry(key: string) {
-  const now = Date.now();
-  const current = attempts.get(key);
-
-  if (!current || current.resetAt < now) {
-    attempts.set(key, {
-      count: 1,
-      resetAt: now + 10 * 60 * 1000,
-    });
-    return true;
-  }
-
-  current.count += 1;
-  return current.count <= 8;
-}
-
-function getPublicOrigin(request: Request) {
-  const forwardedHost = request.headers
-    .get("x-forwarded-host")
-    ?.split(",")[0]
-    .trim();
-
-  const host =
-    forwardedHost ??
-    request.headers.get("host")?.split(",")[0].trim();
-
-  const forwardedProtocol = request.headers
-    .get("x-forwarded-proto")
-    ?.split(",")[0]
-    .trim();
-
-  const protocol =
-    forwardedProtocol ??
-    new URL(request.url).protocol.replace(":", "");
-
-  if (!host) {
-    return new URL(request.url).origin;
-  }
-
-  return `${protocol}://${host}`;
+function redirectTo(path: string) {
+  return new NextResponse(null, {
+    status: 303,
+    headers: {
+      Location: path
+    }
+  });
 }
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const email = String(formData.get("email") ?? "")
-    .toLowerCase()
-    .trim();
+  const email = normalizeLoginIdentity(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
 
-  const key = `${
-    request.headers.get("x-forwarded-for") ?? "local"
-  }:${email}`;
+  const result = await runWithLoginIdentityRateLimitLock(email, async (tx, rateLimitRecord, now) => {
+    if (isLoginRateLimited(rateLimitRecord, now)) {
+      return {
+        ok: false as const,
+        status: 429,
+        retryAfterSeconds: getRetryAfterSeconds(rateLimitRecord.blockedUntil!, now)
+      };
+    }
 
-  const origin = getPublicOrigin(request);
+    const user = await tx.user.findUnique({
+      where: { email },
+    });
 
-  if (!canTry(key)) {
-    return NextResponse.redirect(
-      new URL(
-        "/biblioteca/admin/login?error=rate",
-        origin
-      ),
-      303
+    const passwordMatches = await verifyPassword(
+      password,
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH
     );
-  }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
+    if (
+      !user ||
+      !isAdminUser(user) ||
+      !passwordMatches
+    ) {
+      await recordFailedLoginIdentity(email, now, tx, rateLimitRecord);
+      return {
+        ok: false as const,
+        status: 303
+      };
+    }
+
+    await resetLoginIdentityRateLimit(email, tx);
+    return {
+      ok: true as const,
+      userId: user.id
+    };
   });
 
-  if (
-    !user ||
-    user.status !== "active" ||
-    !(await verifyPassword(password, user.passwordHash))
-  ) {
-    return NextResponse.redirect(
-      new URL(
-        "/biblioteca/admin/login?error=1",
-        origin
-      ),
-      303
-    );
+  if (!result.ok && result.status === 429) {
+    return new NextResponse("Massa intents de login. Torna-ho a provar mes tard.", {
+      status: 429,
+      headers: {
+        "Retry-After": String(result.retryAfterSeconds)
+      }
+    });
   }
 
-  attempts.delete(key);
-  await createSession(user.id);
+  if (!result.ok) {
+    return redirectTo("/biblioteca/admin/login?error=1");
+  }
 
-  return NextResponse.redirect(
-    new URL("/biblioteca/admin", origin),
-    303
-  );
+  await createSession(result.userId);
+
+  return redirectTo("/biblioteca/admin");
 }

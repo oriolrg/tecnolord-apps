@@ -12,6 +12,11 @@ enum UserStatus {
   disabled
 }
 
+enum UserRole {
+  admin
+  editor
+}
+
 enum ArticleStatus {
   draft
   published
@@ -38,6 +43,7 @@ model User {
   name         String
   passwordHash String
   status       UserStatus @default(active)
+  role         UserRole   @default(editor)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   sessions     Session[]
@@ -53,6 +59,20 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
+}
+
+model LoginRateLimit {
+  id              String    @id @default(cuid())
+  scope           String
+  key             String
+  failedCount     Int       @default(0)
+  windowStartedAt DateTime
+  blockedUntil    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([scope, key])
+  @@index([blockedUntil])
 }
 
 model Topic {

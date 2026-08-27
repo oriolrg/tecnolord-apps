@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { ArticleForm } from "@/components/biblioteca/article-form";
 import { AdminNav } from "@/components/biblioteca/admin-nav";
-import { getCsrfToken, requireAdmin } from "@/lib/biblioteca/auth";
+import { getCsrfToken, requireAdminPage } from "@/lib/biblioteca/auth";
 import { getAdminArticle } from "@/lib/biblioteca/repository";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditArticlePage({ params }: { params: { id: string } }) {
-  await requireAdmin();
+  await requireAdminPage();
   const article = await getAdminArticle(params.id);
   if (!article) notFound();
 

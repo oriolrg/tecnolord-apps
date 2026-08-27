@@ -16,10 +16,13 @@ Aplicacio Next.js independent per servir `/biblioteca` i `/biblioteca/admin`.
 ```bash
 docker compose build biblioteca_web
 docker compose up -d biblioteca_web caddy
-docker compose exec biblioteca_web npm run db:seed
+docker compose run --rm \
+  -e BIBLIOTECA_ADMIN_PASSWORD \
+  biblioteca_web npm run db:seed
 ```
 
 Les migracions s'apliquen automaticament en arrencar el contenidor.
+`BIBLIOTECA_ADMIN_PASSWORD` nomes s'ha de passar al proces de seed, no al runtime permanent de `biblioteca_web`.
 
 ## Imatges
 

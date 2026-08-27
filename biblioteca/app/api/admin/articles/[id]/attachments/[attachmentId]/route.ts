@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assertCsrf, requireAdmin } from "@/lib/biblioteca/auth";
+import { assertCsrf, requireAdminApi } from "@/lib/biblioteca/auth";
 import { prisma } from "@/lib/biblioteca/db";
 import { deleteUploadedImage, saveUploadedImage } from "@/lib/biblioteca/uploads";
 
@@ -16,8 +16,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   let storedImage: Awaited<ReturnType<typeof saveUploadedImage>> | null = null;
 
   try {
+    const admin = await requireAdminApi();
+    if (!admin.ok) return admin.response;
     assertCsrf(request);
-    await requireAdmin();
 
     const attachment = await findOwnedAttachment(params.id, params.attachmentId);
     if (!attachment) {
@@ -65,8 +66,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
 export async function DELETE(request: Request, { params }: { params: { id: string; attachmentId: string } }) {
   try {
+    const admin = await requireAdminApi();
+    if (!admin.ok) return admin.response;
     assertCsrf(request);
-    await requireAdmin();
 
     const force = new URL(request.url).searchParams.get("force") === "1";
     const attachment = await findOwnedAttachment(params.id, params.attachmentId);

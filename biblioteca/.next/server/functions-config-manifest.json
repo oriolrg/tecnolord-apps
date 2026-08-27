@@ -1,0 +1,1 @@
+{"version":1,"functions":{"/api/uploads/[...path]":{},"/admin/articles/[id]":{},"/admin/articles/new":{},"/admin":{},"/cerca":{},"/article/[slug]":{},"/etiqueta/[slug]":{},"/tema/[slug]":{},"/":{}}}

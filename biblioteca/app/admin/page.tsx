@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { AdminNav } from "@/components/biblioteca/admin-nav";
-import { requireAdmin } from "@/lib/biblioteca/auth";
+import { requireAdminPage } from "@/lib/biblioteca/auth";
 import { getAdminArticles } from "@/lib/biblioteca/repository";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  await requireAdmin();
+  await requireAdminPage();
   const articles = await getAdminArticles();
 
   return (

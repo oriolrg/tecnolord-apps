@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assertCsrf, requireAdmin } from "@/lib/biblioteca/auth";
+import { assertCsrf, requireAdminApi } from "@/lib/biblioteca/auth";
 import { prisma } from "@/lib/biblioteca/db";
 import { deleteUploadedImage, saveUploadedImage } from "@/lib/biblioteca/uploads";
 
@@ -8,7 +8,8 @@ function sanitizeKind(value: FormDataEntryValue | null) {
 }
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  await requireAdmin();
+  const admin = await requireAdminApi();
+  if (!admin.ok) return admin.response;
   const article = await prisma.article.findUnique({
     where: { id: params.id },
     select: { id: true }
@@ -30,8 +31,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
   let storedImage: Awaited<ReturnType<typeof saveUploadedImage>> | null = null;
 
   try {
+    const admin = await requireAdminApi();
+    if (!admin.ok) return admin.response;
     assertCsrf(request);
-    await requireAdmin();
 
     const article = await prisma.article.findUnique({
       where: { id: params.id },

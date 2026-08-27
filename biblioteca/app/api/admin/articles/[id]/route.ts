@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { assertCsrf, requireAdmin } from "@/lib/biblioteca/auth";
+import { assertCsrf, requireAdminApi } from "@/lib/biblioteca/auth";
 import { deleteArticle, updateArticle } from "@/lib/biblioteca/repository";
 import { articleSchema, normalizeArticleInput } from "@/lib/biblioteca/validation";
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
+    const admin = await requireAdminApi();
+    if (!admin.ok) return admin.response;
     assertCsrf(request);
-    await requireAdmin();
     const json = await request.json();
     const input = normalizeArticleInput(articleSchema.parse(json));
     await updateArticle(params.id, input);
@@ -19,8 +20,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
+    const admin = await requireAdminApi();
+    if (!admin.ok) return admin.response;
     assertCsrf(request);
-    await requireAdmin();
     await deleteArticle(params.id);
 
     return NextResponse.json({ ok: true });

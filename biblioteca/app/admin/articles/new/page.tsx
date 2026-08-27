@@ -1,11 +1,11 @@
 import { ArticleForm } from "@/components/biblioteca/article-form";
 import { AdminNav } from "@/components/biblioteca/admin-nav";
-import { getCsrfToken, requireAdmin } from "@/lib/biblioteca/auth";
+import { getCsrfToken, requireAdminPage } from "@/lib/biblioteca/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewArticlePage() {
-  await requireAdmin();
+  await requireAdminPage();
 
   return (
     <>
