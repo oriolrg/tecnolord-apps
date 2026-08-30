@@ -43,17 +43,17 @@
 
 **RF:** suport estructural per RF-31 → RF-36.
 
-- [ ] Escriure primer els tests dels models.
-- [ ] Representar una incidència amb:
+- [x] Escriure primer els tests dels models.
+- [x] Representar una incidència amb:
   - severitat;
   - àmbit;
   - descripció;
   - ruta de spec quan sigui aplicable;
   - secció quan sigui aplicable;
   - RF quan sigui aplicable.
-- [ ] Representar el resultat d'una spec.
-- [ ] Representar el resultat d'un projecte.
-- [ ] Representar els estats `OK`, `WARN` i `FAIL`.
+- [x] Representar el resultat d'una spec.
+- [x] Representar el resultat d'un projecte.
+- [x] Representar els estats `OK`, `WARN` i `FAIL`.
 
 **Fet quan:**
 
@@ -75,13 +75,13 @@ Els tests demostren que:
 
 **RF:** RF-1, suport per RF-4.
 
-- [ ] Escriure primer els tests de descoberta.
-- [ ] Localitzar el directori `specs/`.
-- [ ] Recórrer-ne els subdirectoris recursivament.
-- [ ] Detectar només fitxers anomenats exactament `spec.md`.
-- [ ] Ignorar fitxers amb altres noms.
-- [ ] No seguir directoris symlink.
-- [ ] No considerar un `spec.md` symlink com a spec descoberta.
+- [x] Escriure primer els tests de descoberta.
+- [x] Localitzar el directori `specs/`.
+- [x] Recórrer-ne els subdirectoris recursivament.
+- [x] Detectar només fitxers anomenats exactament `spec.md`.
+- [x] Ignorar fitxers amb altres noms.
+- [x] No seguir directoris symlink.
+- [x] No considerar un `spec.md` symlink com a spec descoberta.
 
 **Fet quan:**
 
