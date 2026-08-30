@@ -1,0 +1,63 @@
+# AGENTS.md — SpecLord
+
+## Projecte
+
+SpecLord és una eina per validar i fer seguiment de projectes desenvolupats amb Spec-Driven Development (SDD).
+
+El projecte es desenvolupa seguint el mateix procés SDD que pretén ajudar a validar:
+
+Constitució → Spec → Clarificació → Pla → Tasques → Implementació → Validació → Canvi.
+
+La font de veritat funcional són les especificacions ubicades a `specs/`.
+
+## Documents obligatoris
+
+Abans de modificar codi:
+
+1. Llegeix `docs/constitution.md`.
+2. Llegeix la `spec.md` activa.
+3. Llegeix `plan.md`.
+4. Llegeix `tasks.md`.
+5. Identifica exactament quina tasca s'ha demanat implementar.
+
+Si hi ha contradiccions entre aquests documents, no improvisis una solució. Indica el conflicte.
+
+## Regles d'SDD
+
+- No implementis funcionalitats que no apareguin a la spec activa.
+- No modifiquis la spec durant una tasca d'implementació.
+- Implementa només la tasca sol·licitada.
+- No comencis automàticament la tasca següent.
+- Cada tasca ha d'indicar quins RF cobreix.
+- Els canvis de requisits s'han de fer primer a la spec.
+- No introdueixis funcionalitats “útils” no especificades.
+
+## Qualitat
+
+- Escriu primer els tests quan la tasca ho permeti.
+- Tot requisit funcional ha de ser verificable.
+- Els tests han de comprovar comportament observable, no detalls interns innecessaris.
+- Evita dependències externes si la biblioteca estàndard és suficient.
+- Mantén separada la lògica de domini de la interfície CLI.
+- Prioritza solucions simples i explícites.
+
+## Convencions
+
+- Codi i identificadors: anglès.
+- Documentació d'SDD: català.
+- Noms de requisits: `RF-1`, `RF-2`, ...
+- Noms de tasques: `T1`, `T2`, ...
+- No canviïs noms o estructures definides al pla sense justificar-ho.
+
+## Comandes
+
+Les comandes concretes d'execució, tests i lint s'afegiran quan el pla tècnic de la primera Spec defineixi l'stack.
+
+## En acabar una tasca
+
+1. Executa els tests relacionats.
+2. Executa la suite completa si existeix.
+3. Indica els tests executats i el resultat.
+4. Indica quins RF cobreix la tasca.
+5. Marca la tasca com completada només si compleix el seu criteri “Hecho cuando”.
+6. Atura't. No implementis la tasca següent.
