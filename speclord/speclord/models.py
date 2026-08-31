@@ -28,11 +28,45 @@ class Status(StrEnum):
     FAIL = "FAIL"
 
 
+class SpecReadStatus(StrEnum):
+    """Spec file read status."""
+
+    READ = "read"
+    EMPTY = "empty"
+    UNREADABLE = "unreadable"
+
+
 @dataclass(frozen=True)
 class DiscoveredSpec:
     """A spec discovered inside a project."""
 
     path: str
+
+
+@dataclass(frozen=True)
+class DiscoveryResult:
+    """The result of discovering specs inside a project."""
+
+    specs: tuple[DiscoveredSpec, ...] = field(default_factory=tuple)
+    project_issues: tuple[Issue, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class SpecReadResult:
+    """The result of reading one discovered spec."""
+
+    path: str
+    status: SpecReadStatus
+    content: str | None = None
+
+
+@dataclass(frozen=True)
+class MarkdownHeader:
+    """A recognized Markdown header."""
+
+    level: int
+    text: str
+    line_number: int
 
 
 @dataclass(frozen=True)

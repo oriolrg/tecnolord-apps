@@ -101,12 +101,12 @@ Els tests demostren que:
 
 **RF:** RF-2, RF-3, RF-5; suport per RF-36.
 
-- [ ] Escriure primer els tests d'errors de descoberta.
-- [ ] Gestionar `specs/` inexistent.
-- [ ] Gestionar `specs/` existent sense specs.
-- [ ] Generar incidències d'àmbit `project`.
-- [ ] Gestionar errors d'accés durant el recorregut.
-- [ ] Continuar pels directoris accessibles després d'un error recuperable.
+- [x] Escriure primer els tests d'errors de descoberta.
+- [x] Gestionar `specs/` inexistent.
+- [x] Gestionar `specs/` existent sense specs.
+- [x] Generar incidències d'àmbit `project`.
+- [x] Gestionar errors d'accés durant el recorregut.
+- [x] Continuar pels directoris accessibles després d'un error recuperable.
 
 **Fet quan:**
 
@@ -125,10 +125,10 @@ Els tests demostren que:
 
 **RF:** RF-37, parcial; la presentació final es verificarà també a la CLI.
 
-- [ ] Escriure primer els tests d'ordenació.
-- [ ] Representar les rutes relatives al projecte.
-- [ ] Normalitzar `/` com a separador.
-- [ ] Ordenar segons el valor Unicode i distingint majúscules/minúscules.
+- [x] Escriure primer els tests d'ordenació.
+- [x] Representar les rutes relatives al projecte.
+- [x] Normalitzar `/` com a separador.
+- [x] Ordenar segons el valor Unicode i distingint majúscules/minúscules.
 
 **Fet quan:**
 
@@ -142,11 +142,11 @@ Una mateixa col·lecció de specs produeix sempre exactament el mateix ordre nor
 
 **RF:** RF-26, RF-27; suport per RF-28 i RF-35.
 
-- [ ] Escriure primer els tests de lectura.
-- [ ] Llegir explícitament els fitxers com UTF-8.
-- [ ] Detectar UTF-8 invàlid.
-- [ ] Aplicar exactament la definició de spec buida.
-- [ ] Produir el resultat de lectura necessari per permetre aturar només la validació d'aquella spec.
+- [x] Escriure primer els tests de lectura.
+- [x] Llegir explícitament els fitxers com UTF-8.
+- [x] Detectar UTF-8 invàlid.
+- [x] Aplicar exactament la definició de spec buida.
+- [x] Produir el resultat de lectura necessari per permetre aturar només la validació d'aquella spec.
 
 **Fet quan:**
 
@@ -167,11 +167,11 @@ Els tests demostren que:
 
 **RF:** suport per RF-6 → RF-10 i RF-19 → RF-20.
 
-- [ ] Escriure primer els tests del subconjunt Markdown.
-- [ ] Reconèixer capçaleres Markdown de nivell 1–6.
-- [ ] Exigir almenys un espai després dels `#`.
-- [ ] Reconèixer inici i final de blocs de tres backticks.
-- [ ] Ignorar capçaleres dins dels blocs de codi.
+- [x] Escriure primer els tests del subconjunt Markdown.
+- [x] Reconèixer capçaleres Markdown de nivell 1–6.
+- [x] Exigir almenys un espai després dels `#`.
+- [x] Reconèixer inici i final de blocs de tres backticks.
+- [x] Ignorar capçaleres dins dels blocs de codi.
 
 **Fet quan:**
 
