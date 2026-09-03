@@ -65,7 +65,13 @@ El contingut dins d'aquests blocs no es considera per detectar:
 
 - capçaleres;
 - candidats RF;
-- `[NECESSITA ACLARACIÓ]`.
+- marcadors d'aclariment.
+
+El marcador d'aclariment és:
+
+```text
+[NECESSITA ACLARACIÓ]
+```
 
 Altres construccions Markdown queden fora de la gramàtica necessària per aquesta versió.
 
@@ -264,7 +270,7 @@ L'estat global és:
 
 - RF-10: QUAN `Requisits funcionals` aparegui diverses vegades, EL SISTEMA ha de validar conjuntament els RF de totes les ocurrències respectant l'ordre del document.
 
-### Requisits funcionals
+### Regles sobre RF
 
 - RF-11: QUAN s'analitzi `Requisits funcionals`, EL SISTEMA ha d'identificar els candidats RF segons les regles definides en aquesta spec.
 
@@ -284,7 +290,7 @@ L'estat global és:
 
 ### Dubtes pendents
 
-- RF-19: SI la spec conté `[NECESSITA ACLARACIÓ]` fora d'un bloc de codi, EL SISTEMA ha de registrar un `error`.
+- RF-19: SI la spec conté el marcador d'aclariment fora d'un bloc de codi, EL SISTEMA ha de registrar un `error`.
 
 - RF-20: QUAN busqui aquest marcador, EL SISTEMA ho ha de fer sobre tot el document i ignorant majúscules/minúscules.
 
@@ -377,7 +383,7 @@ S'han de contemplar:
 - RF duplicats;
 - numeració que no comença per 1;
 - diversos salts de numeració;
-- `[NECESSITA ACLARACIÓ]`;
+- marcador d'aclariment;
 - marcador dins d'un bloc de codi;
 - múltiples termes vagues en un RF;
 - RF sense patró EARS;

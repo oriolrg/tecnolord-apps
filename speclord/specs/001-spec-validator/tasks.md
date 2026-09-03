@@ -191,13 +191,13 @@ Els tests distingeixen:
 
 **RF:** suport estructural per RF-6 → RF-10.
 
-- [ ] Escriure primer els tests de parsing de seccions.
-- [ ] Normalitzar el nom de les seccions segons la SPEC.
-- [ ] Detectar l'inici de cada secció.
-- [ ] Determinar-ne el final segons el nivell de capçalera.
-- [ ] Incloure subseccions inferiors dins de la secció pare.
-- [ ] Conservar totes les ocurrències d'una mateixa secció.
-- [ ] Conservar l'ordre documental.
+- [x] Escriure primer els tests de parsing de seccions.
+- [x] Normalitzar el nom de les seccions segons la SPEC.
+- [x] Detectar l'inici de cada secció.
+- [x] Determinar-ne el final segons el nivell de capçalera.
+- [x] Incloure subseccions inferiors dins de la secció pare.
+- [x] Conservar totes les ocurrències d'una mateixa secció.
+- [x] Conservar l'ordre documental.
 
 **Fet quan:**
 
@@ -219,12 +219,12 @@ Aquesta tasca no genera encara errors ni warnings de validació.
 
 **RF:** RF-6, RF-7, RF-8, RF-9, RF-10.
 
-- [ ] Escriure primer els tests de regles de seccions.
-- [ ] Comprovar la presència de totes les seccions obligatòries.
-- [ ] Generar error per cada secció obligatòria absent.
-- [ ] Generar un warning per cada ocurrència posterior a la primera.
-- [ ] Generar warning per cada ocurrència buida.
-- [ ] Considerar conjuntament totes les ocurrències de `Requisits funcionals`.
+- [x] Escriure primer els tests de regles de seccions.
+- [x] Comprovar la presència de totes les seccions obligatòries.
+- [x] Generar error per cada secció obligatòria absent.
+- [x] Generar un warning per cada ocurrència posterior a la primera.
+- [x] Generar warning per cada ocurrència buida.
+- [x] Considerar conjuntament totes les ocurrències de `Requisits funcionals`.
 
 **Fet quan:**
 
@@ -248,14 +248,14 @@ Els tests cobreixen:
 
 **RF:** suport estructural per RF-11 → RF-15.
 
-- [ ] Escriure primer els tests de parsing dels RF.
-- [ ] Buscar candidats només dins de `Requisits funcionals`.
-- [ ] Reconèixer candidats que comencen per `- RF`.
-- [ ] Reconèixer `RF-[1-9][0-9]*:`.
-- [ ] Extreure identificador.
-- [ ] Extreure el contingut de la mateixa línia després dels dos punts.
-- [ ] Conservar l'ordre documental.
-- [ ] Distingir candidat invàlid de RF reconegut amb contingut buit.
+- [x] Escriure primer els tests de parsing dels RF.
+- [x] Buscar candidats només dins de `Requisits funcionals`.
+- [x] Reconèixer candidats que comencen per `- RF`.
+- [x] Reconèixer `RF-[1-9][0-9]*:`.
+- [x] Extreure identificador.
+- [x] Extreure el contingut de la mateixa línia després dels dos punts.
+- [x] Conservar l'ordre documental.
+- [x] Distingir candidat invàlid de RF reconegut amb contingut buit.
 
 **Fet quan:**
 
@@ -283,11 +283,11 @@ Aquesta tasca no genera encara les incidències de validació corresponents.
 
 **RF:** RF-11, RF-12, RF-14, RF-15.
 
-- [ ] Escriure primer els tests de les regles bàsiques de RF.
-- [ ] Aplicar la detecció de candidats definida per RF-11.
-- [ ] Generar error per candidat amb format invàlid.
-- [ ] Generar error si no existeix cap RF reconegut.
-- [ ] Generar error per RF reconegut amb contingut buit.
+- [x] Escriure primer els tests de les regles bàsiques de RF.
+- [x] Aplicar la detecció de candidats definida per RF-11.
+- [x] Generar error per candidat amb format invàlid.
+- [x] Generar error si no existeix cap RF reconegut.
+- [x] Generar error per RF reconegut amb contingut buit.
 
 **Fet quan:**
 
@@ -310,12 +310,12 @@ Els tests demostren explícitament:
 
 **RF:** RF-13, RF-16, RF-17, RF-18.
 
-- [ ] Escriure primer els tests.
-- [ ] Detectar identificadors RF duplicats.
-- [ ] Eliminar duplicats abans d'analitzar la seqüència.
-- [ ] Ordenar els identificadors pel valor numèric.
-- [ ] Detectar si el primer valor és diferent d'1.
-- [ ] Detectar cada salt independent de numeració.
+- [x] Escriure primer els tests.
+- [x] Detectar identificadors RF duplicats.
+- [x] Eliminar duplicats abans d'analitzar la seqüència.
+- [x] Ordenar els identificadors pel valor numèric.
+- [x] Detectar si el primer valor és diferent d'1.
+- [x] Detectar cada salt independent de numeració.
 
 **Fet quan:**
 
@@ -338,11 +338,11 @@ Els tests cobreixen:
 
 **RF:** RF-19, RF-20.
 
-- [ ] Escriure primer els tests.
-- [ ] Buscar el marcador sobre tot el document.
-- [ ] Ignorar majúscules/minúscules.
-- [ ] No detectar-lo dins de blocs de codi.
-- [ ] Generar l'error corresponent.
+- [x] Escriure primer els tests.
+- [x] Buscar el marcador sobre tot el document.
+- [x] Ignorar majúscules/minúscules.
+- [x] No detectar-lo dins de blocs de codi.
+- [x] Generar l'error corresponent.
 
 **Fet quan:**
 
@@ -360,13 +360,13 @@ Els tests demostren que:
 
 **RF:** RF-21, RF-22.
 
-- [ ] Escriure primer els tests.
-- [ ] Implementar exactament el catàleg tancat de la SPEC.
-- [ ] Ignorar majúscules/minúscules.
-- [ ] Cercar paraules o expressions completes.
-- [ ] Evitar coincidències parcials.
-- [ ] Generar un warning per cada terme vague diferent dins d'un RF.
-- [ ] No duplicar el warning quan el mateix terme apareix diverses vegades al mateix RF.
+- [x] Escriure primer els tests.
+- [x] Implementar exactament el catàleg tancat de la SPEC.
+- [x] Ignorar majúscules/minúscules.
+- [x] Cercar paraules o expressions completes.
+- [x] Evitar coincidències parcials.
+- [x] Generar un warning per cada terme vague diferent dins d'un RF.
+- [x] No duplicar el warning quan el mateix terme apareix diverses vegades al mateix RF.
 
 **Fet quan:**
 
@@ -387,14 +387,14 @@ Els tests cobreixen:
 
 **RF:** RF-23, RF-24 parcial.
 
-- [ ] Escriure primer els tests.
-- [ ] Reconèixer `QUAN <text> EL SISTEMA <text>`.
-- [ ] Reconèixer `SI <text> EL SISTEMA <text>`.
-- [ ] Reconèixer `MENTRE <text> EL SISTEMA <text>`.
-- [ ] Reconèixer `EL SISTEMA <text>`.
-- [ ] Exigir contingut no buit als fragments obligatoris.
-- [ ] Generar warning quan cap patró encaixi.
-- [ ] No introduir cap altra valoració semàntica.
+- [x] Escriure primer els tests.
+- [x] Reconèixer `QUAN <text> EL SISTEMA <text>`.
+- [x] Reconèixer `SI <text> EL SISTEMA <text>`.
+- [x] Reconèixer `MENTRE <text> EL SISTEMA <text>`.
+- [x] Reconèixer `EL SISTEMA <text>`.
+- [x] Exigir contingut no buit als fragments obligatoris.
+- [x] Generar warning quan cap patró encaixi.
+- [x] No introduir cap altra valoració semàntica.
 
 **Fet quan:**
 
@@ -413,17 +413,19 @@ Els tests cobreixen:
 
 **RF:** RF-24, RF-25.
 
-- [ ] Escriure tests específics dels límits funcionals.
-- [ ] Verificar que no existeixen regles semàntiques no especificades.
-- [ ] Verificar que la validació funciona sense accés a xarxa.
-- [ ] Mantenir zero dependències externes de runtime.
-- [ ] No introduir IA, LLM ni cap integració amb serveis externs.
+- [x] Escriure tests específics dels límits funcionals.
+- [x] Verificar que no existeixen regles semàntiques no especificades.
+- [x] Verificar que les regles ja implementades funcionen sense accés a xarxa.
+- [x] Mantenir zero dependències externes de runtime.
+- [x] No introduir IA, LLM ni cap integració amb serveis externs.
 
 **Fet quan:**
 
 - una entrada que compleix les regles sintàctiques però té significat arbitrari no rep incidències semàntiques inventades;
-- la validació completa funciona amb l'accés de xarxa bloquejat;
+- les regles implementades fins a T15 funcionen amb l'accés de xarxa bloquejat;
 - no existeix cap dependència externa de runtime.
+
+La prova de validació completa amb l'accés de xarxa bloquejat queda pendent per la fase d'orquestració, quan existeixi el flux complet de validació.
 
 ---
 
@@ -435,13 +437,13 @@ Els tests cobreixen:
 
 **RF:** RF-26, RF-27, RF-29, RF-30, RF-31.
 
-- [ ] Escriure primer tests d'integració d'una spec.
-- [ ] Gestionar el resultat de lectura.
-- [ ] Per una spec buida, generar únicament l'error corresponent.
-- [ ] Per una spec no llegible, generar únicament l'error corresponent.
-- [ ] Per una spec normal, executar totes les regles aplicables.
-- [ ] Acumular totes les incidències generades.
-- [ ] Calcular `FAIL`, `WARN` o `OK`.
+- [x] Escriure primer tests d'integració d'una spec.
+- [x] Gestionar el resultat de lectura.
+- [x] Per una spec buida, generar únicament l'error corresponent.
+- [x] Per una spec no llegible, generar únicament l'error corresponent.
+- [x] Per una spec normal, executar totes les regles aplicables.
+- [x] Acumular totes les incidències generades.
+- [x] Calcular `FAIL`, `WARN` o `OK`.
 
 **Fet quan:**
 
@@ -464,14 +466,14 @@ Els tests demostren:
 
 **Suport per:** RF-34.
 
-- [ ] Escriure primer tests d'integració de projecte.
-- [ ] Processar totes les specs descobertes.
-- [ ] Continuar després d'una spec buida o no llegible.
-- [ ] Acumular incidències `project` i resultats de specs.
-- [ ] Comptar totes les specs processades.
-- [ ] Incloure specs buides i no llegibles al comptador.
-- [ ] Calcular l'estat global.
-- [ ] Gestionar el cas zero specs.
+- [x] Escriure primer tests d'integració de projecte.
+- [x] Processar totes les specs descobertes.
+- [x] Continuar després d'una spec buida o no llegible.
+- [x] Acumular incidències `project` i resultats de specs.
+- [x] Comptar totes les specs processades.
+- [x] Incloure specs buides i no llegibles al comptador.
+- [x] Calcular l'estat global.
+- [x] Gestionar el cas zero specs.
 
 **Fet quan:**
 
@@ -495,11 +497,11 @@ Els tests cobreixen:
 
 **RF:** RF-38.
 
-- [ ] Escriure primer el test de no modificació.
-- [ ] Preparar un projecte amb múltiples specs.
-- [ ] Capturar-ne el contingut abans de validar.
-- [ ] Executar la validació.
-- [ ] Comparar el contingut després de validar.
+- [x] Escriure primer el test de no modificació.
+- [x] Preparar un projecte amb múltiples specs.
+- [x] Capturar-ne el contingut abans de validar.
+- [x] Executar la validació.
+- [x] Comparar el contingut després de validar.
 
 **Fet quan:**
 
@@ -515,18 +517,18 @@ Els tests demostren que cap fitxer del projecte analitzat és modificat durant l
 
 **Suport per:** RF-31, RF-33.
 
-- [ ] Escriure primer tests del flux CLI.
-- [ ] Permetre indicar el projecte que s'ha de validar.
-- [ ] Invocar el core sense duplicar-hi regles de validació.
-- [ ] Mostrar cada spec i el seu estat.
-- [ ] Mostrar les incidències associades.
-- [ ] Mostrar el resum global:
+- [x] Escriure primer tests del flux CLI.
+- [x] Permetre indicar el projecte que s'ha de validar.
+- [x] Invocar el core sense duplicar-hi regles de validació.
+- [x] Mostrar cada spec i el seu estat.
+- [x] Mostrar les incidències associades.
+- [x] Mostrar el resum global:
   - specs processades;
   - errors;
   - warnings;
   - estat global.
-- [ ] Respectar l'ordre de specs definit per RF-37.
-- [ ] Mostrar correctament el cas zero specs.
+- [x] Respectar l'ordre de specs definit per RF-37.
+- [x] Mostrar correctament el cas zero specs.
 
 **Fet quan:**
 
@@ -551,11 +553,11 @@ i la CLI no conté lògica de validació pròpia.
 
 **RF:** RF-1 → RF-38.
 
-- [ ] Revisar cada RF de `spec.md`.
-- [ ] Identificar almenys un test automatitzat que demostri el comportament.
-- [ ] Registrar explícitament la relació RF → test.
-- [ ] Detectar qualsevol RF sense cobertura.
-- [ ] Afegir només els tests que faltin, sense modificar els requisits per adaptar-los al codi.
+- [x] Revisar cada RF de `spec.md`.
+- [x] Identificar almenys un test automatitzat que demostri el comportament.
+- [x] Registrar explícitament la relació RF → test.
+- [x] Detectar qualsevol RF sense cobertura.
+- [x] Afegir només els tests que faltin, sense modificar els requisits per adaptar-los al codi.
 
 **Fet quan:**
 
@@ -571,12 +573,12 @@ No queda cap RF amb cobertura assumida o implícita.
 
 **RF:** RF-1 → RF-38.
 
-- [ ] Executar tota la suite.
-- [ ] Confirmar que no hi ha tests fallits.
-- [ ] Revisar la matriu RF → tasques.
-- [ ] Revisar la matriu RF → tests.
-- [ ] Confirmar que no hi ha funcionalitats implementades fora de SPEC-001.
-- [ ] Confirmar que `spec.md` i `plan.md` no s'han modificat per adaptar-los a la implementació.
+- [x] Executar tota la suite.
+- [x] Confirmar que no hi ha tests fallits.
+- [x] Revisar la matriu RF → tasques.
+- [x] Revisar la matriu RF → tests.
+- [x] Confirmar que no hi ha funcionalitats implementades fora de SPEC-001.
+- [x] Confirmar que `spec.md` i `plan.md` no s'han modificat per adaptar-los a la implementació.
 
 **Fet quan:**
 
@@ -593,19 +595,19 @@ No queda cap RF amb cobertura assumida o implícita.
 
 **RF:** validació dels criteris de finalització de SPEC-001.
 
-- [ ] Preparar un projecte SDD d'exemple amb:
+- [x] Preparar un projecte SDD d'exemple amb:
   - una spec `OK`;
   - una spec `WARN`;
   - una spec `FAIL`.
-- [ ] Documentar abans d'executar:
+- [x] Documentar abans d'executar:
   - nombre de specs esperat;
   - errors esperats;
   - warnings esperats;
   - estat de cada spec;
   - estat global esperat.
-- [ ] Executar SpecLord.
-- [ ] Comparar resultat real i esperat.
-- [ ] Revisar els vuit criteris de finalització de `spec.md`.
+- [x] Executar SpecLord.
+- [x] Comparar resultat real i esperat.
+- [x] Revisar els vuit criteris de finalització de `spec.md`.
 
 **Fet quan:**
 
@@ -704,6 +706,51 @@ T6 + T9 + T11 + T12 + T13 + T14 + T15 + T16
 | RF-36 | T4, T18, T20 |
 | RF-37 | T5, T20 |
 | RF-38 | T19 |
+
+---
+
+# Matriu de traçabilitat RF → tests
+
+| RF | Test automatitzat |
+|---|---|
+| RF-1 | `tests/test_discovery.py::test_discovers_direct_spec` |
+| RF-2 | `tests/test_discovery.py::test_missing_specs_directory_generates_project_error` |
+| RF-3 | `tests/test_discovery.py::test_empty_specs_directory_generates_same_project_error` |
+| RF-4 | `tests/test_validator.py::test_validate_project_with_multiple_correct_specs_is_ok` |
+| RF-5 | `tests/test_discovery.py::test_access_error_keeps_specs_from_accessible_directories` |
+| RF-6 | `tests/test_rules.py::test_all_required_sections_present_returns_no_issues` |
+| RF-7 | `tests/test_rules.py::test_missing_required_section_generates_error` |
+| RF-8 | `tests/test_rules.py::test_duplicate_required_section_generates_warning_for_later_occurrence` |
+| RF-9 | `tests/test_rules.py::test_empty_required_section_occurrence_generates_warning` |
+| RF-10 | `tests/test_rules.py::test_duplicate_functional_requirements_section_is_reported_as_duplicate_not_missing` |
+| RF-11 | `tests/test_parser.py::test_parses_rf_1_candidate_and_recognized_rf` |
+| RF-12 | `tests/test_rules.py::test_rf_a_candidate_generates_invalid_format_error` |
+| RF-13 | `tests/test_rules.py::test_duplicate_rf_identifier_generates_error` |
+| RF-14 | `tests/test_rules.py::test_absence_of_recognized_rfs_generates_error` |
+| RF-15 | `tests/test_rules.py::test_empty_recognized_rf_content_generates_error` |
+| RF-16 | `tests/test_rules.py::test_duplicates_are_removed_before_gap_analysis` |
+| RF-17 | `tests/test_rules.py::test_first_rf_different_from_1_generates_warning` |
+| RF-18 | `tests/test_rules.py::test_multiple_rf_numbering_gaps_generate_warnings` |
+| RF-19 | `tests/test_rules.py::test_literal_clarification_marker_generates_error` |
+| RF-20 | `tests/test_rules.py::test_clarification_marker_detection_ignores_case` |
+| RF-21 | `tests/test_rules.py::test_each_catalog_vague_term_generates_warning` |
+| RF-22 | `tests/test_rules.py::test_multiple_different_vague_terms_generate_multiple_warnings` |
+| RF-23 | `tests/test_rules.py::test_content_that_matches_no_ears_pattern_generates_warning` |
+| RF-24 | `tests/test_rules.py::test_syntactically_valid_arbitrary_meaning_gets_no_semantic_issues` |
+| RF-25 | `tests/test_rules.py::test_rules_implemented_until_t15_run_with_network_blocked` |
+| RF-26 | `tests/test_validator.py::test_validate_empty_spec_generates_single_issue` |
+| RF-27 | `tests/test_validator.py::test_validate_unreadable_spec_generates_single_issue` |
+| RF-28 | `tests/test_validator.py::test_validate_project_continues_after_defective_spec` |
+| RF-29 | `tests/test_validator.py::test_validate_spec_accumulates_multiple_errors_and_warnings` |
+| RF-30 | `tests/test_validator.py::test_validate_spec_accumulates_multiple_errors_and_warnings` |
+| RF-31 | `tests/test_validator.py::test_validate_spec_with_error_is_fail` |
+| RF-32 | `tests/test_cli.py::test_cli_shows_spec_issues` |
+| RF-33 | `tests/test_validator.py::test_validate_project_with_error_is_fail` |
+| RF-34 | `tests/test_cli.py::test_cli_accepts_project_path_and_shows_summary_and_specs` |
+| RF-35 | `tests/test_validator.py::test_validate_project_counts_defective_specs_as_processed` |
+| RF-36 | `tests/test_cli.py::test_cli_shows_zero_specs_case` |
+| RF-37 | `tests/test_cli.py::test_cli_respects_core_spec_order` |
+| RF-38 | `tests/test_validator.py::test_validate_project_does_not_modify_analyzed_project_files` |
 
 ---
 
