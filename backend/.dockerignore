@@ -1,0 +1,51 @@
+# Default-deny build context; re-include only declared runtime/E2E inputs.
+**
+!package.json
+!package-lock.json
+!server.js
+!db/
+!db/**/*.js
+!routes/
+!routes/**/*.js
+!services/
+!services/**/*.js
+!middleware/
+!middleware/**/*.js
+!utils/
+!utils/**/*.js
+!lib/
+!lib/**/*.js
+!test/
+!test/e2e/
+!test/e2e/**/*.js
+!playwright.config.js
+
+# Data, secrets, backups, and dumps always stay outside the context.
+*.csv
+*.env*
+backups/
+dumps/
+*.dump
+*.sql
+**/*.csv
+**/.env*
+**/backups/
+**/dumps/
+**/*.backup
+**/*.dump
+**/*.sql
+SECRET_CANARY.txt
+
+# Build, test-output, VCS, and local artifacts stay outside the context.
+node_modules/
+npm-debug.log*
+coverage/
+artifacts/
+logs/
+.git/
+.github/
+
+# Documentation and local repository configuration are not image inputs.
+docs/
+README.md
+.gitignore

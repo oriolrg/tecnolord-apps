@@ -4,11 +4,13 @@ npm-debug.log*
 .yarn*
 .pnpm*
 package-lock.json
+!backend/package-lock.json
 
 # Env
 .env
 .env.*
 *.local
+!backend/Dockerfile.local
 
 # OS
 .DS_Store
@@ -16,6 +18,18 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Configuració local
+config/meteolord/local.env
+config/meteolord/local.secrets.env
+
+# Artefactes i evidències
+artifacts/
+
+# Logs i dumps locals
+logs/
+*.dump
+*.sql
 
 # Devcontainer
 .devcontainer/*.local*

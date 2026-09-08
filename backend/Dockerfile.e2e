@@ -1,0 +1,16 @@
+ARG LOCAL_IMAGE=meteolord-local:test
+FROM ${LOCAL_IMAGE} AS e2e
+
+USER root
+ENV NODE_ENV=test \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+WORKDIR /app
+
+RUN npm ci --ignore-scripts \
+    && npm cache clean --force
+
+COPY --chown=node:node test/e2e ./test/e2e
+COPY --chown=node:node playwright.config.js ./
+
+USER node
+CMD ["npx", "playwright", "test"]

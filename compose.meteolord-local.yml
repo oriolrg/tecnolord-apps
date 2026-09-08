@@ -1,0 +1,61 @@
+name: meteolord-local
+
+services:
+  db:
+    image: postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: meteolord
+      POSTGRES_PASSWORD: local_synthetic_123
+      POSTGRES_DB: meteolord_local
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meteolord -d meteolord_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - meteolord_core
+
+  backend:
+    # Immutable local image ID built as meteolord-local:test in T05.
+    image: sha256:7fbefad459780d6abeb6e9d285eb0d6d57a01f9f9c97a55291d937c9c01897b5
+    pull_policy: never
+    platform: linux/amd64
+    env_file:
+      - ./config/meteolord/local.env
+    environment:
+      PORT: "8080"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: meteolord_local
+      POSTGRES_USER: meteolord
+      POSTGRES_PASSWORD: local_synthetic_123
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./site:/site:ro
+    ports:
+      - "127.0.0.1:8088:8080"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          require('http').get('http://127.0.0.1:8080/health',
+          response => process.exit(response.statusCode === 200 ? 0 : 1))
+          .on('error', () => process.exit(1))
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - meteolord_core
+
+volumes:
+  db_data:
+
+networks:
+  meteolord_core:

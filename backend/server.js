@@ -37,10 +37,7 @@ app.use(morgan('tiny'));
 app.use(cors());
 app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*+json'] }));
 
-// Estàtics (robust: no depèn de __dirname)
-const FRONTEND_DIR = path.resolve(process.cwd(), 'frontend');
-app.use(express.static(FRONTEND_DIR));
-app.get('/', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+const FRONTEND_DIR = path.resolve(__dirname, '../site');
 
 // ──────────────────────────────────────────────────────────
 // Helpers DB (usuaris/estacions/hidro)
@@ -111,6 +108,12 @@ app.use(makeTasksRouter({
   pullACAAndSave: acaService.pullACAAndSave,
   pullPreviAndSave: previService.pullPreviAndSave
 }));
+
+// Frontend local: les rutes API es registren abans dels estàtics.
+app.use('/meteo', express.static(FRONTEND_DIR));
+app.get('/meteo', (_req, res) => res.redirect(302, '/meteo/'));
+app.get('/meteo/*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+app.get('/', (_req, res) => res.redirect(302, '/meteo/'));
 
 // ──────────────────────────────────────────────────────────
 // Arrencada
