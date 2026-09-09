@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "origin": "generated-for-tests",
+  "estacions": [
+    {
+      "codi": "SYN-RIVER-01",
+      "nom": "Synthetic River 01",
+      "tipus": "riu",
+      "activa": true,
+      "lectures": [
+        {
+          "instant": "2030-01-15T11:54:00.000Z",
+          "cabal_m3s": 2.75,
+          "capacitat_pct": null,
+          "nivell_m": 0.82,
+          "extres": {
+            "synthetic_case": "success"
+          }
+        },
+        {
+          "instant": "2030-01-15T11:48:00.000Z",
+          "cabal_m3s": 0,
+          "capacitat_pct": null,
+          "nivell_m": 0,
+          "extres": {
+            "synthetic_case": "zero"
+          }
+        }
+      ]
+    },
+    {
+      "codi": "SYN-RIVER-02",
+      "nom": "Synthetic River 02",
+      "tipus": "riu",
+      "activa": true,
+      "lectures": [
+        {
+          "instant": "2029-12-15T12:00:00.000Z",
+          "cabal_m3s": 1.25,
+          "capacitat_pct": null,
+          "nivell_m": null,
+          "extres": {
+            "synthetic_case": "historic-absent"
+          }
+        }
+      ]
+    },
+    {
+      "codi": "SYN-RES-01",
+      "nom": "Synthetic Reservoir 01",
+      "tipus": "panta",
+      "activa": true,
+      "lectures": [
+        {
+          "instant": "2030-01-15T11:53:00.000Z",
+          "cabal_m3s": 0.65,
+          "capacitat_pct": 64.5,
+          "nivell_m": 18.4,
+          "extres": {
+            "synthetic_case": "success"
+          }
+        }
+      ]
+    }
+  ]
+}

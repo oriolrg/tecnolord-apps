@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "origin": "generated-for-tests",
+  "license": "internal-test-only",
+  "fixed_now_utc": "2030-01-15T12:00:00.000Z",
+  "description": "Deterministic MeteoLord fixtures containing no captured or production data.",
+  "files": [
+    "meteo.json",
+    "hidro.json",
+    "forecast.json",
+    "provider-scenarios.json"
+  ],
+  "sha256": {
+    "meteo.json": "5574fca986d31ea79d01c49f9b885afc369ba6e95ba774510d761f2796d7246a",
+    "hidro.json": "f797a50abc7eeb8f6f21ef355df1b62770c681fcae5f31fc373ac0304ec35a4e",
+    "forecast.json": "38ae45edecbb1e88765e1f113e658e6e191ed280f31e0f2621098a135d6de9b8",
+    "provider-scenarios.json": "ba5f20c68e8779d95b5f6404ce00bf5eefa8a0b82490398099626131c8539636"
+  },
+  "providers": [
+    "ecowitt",
+    "aca",
+    "open-meteo"
+  ],
+  "scenarios": [
+    "success",
+    "absent",
+    "zero",
+    "empty",
+    "timeout",
+    "http_error",
+    "invalid_timestamp",
+    "fallback"
+  ]
+}

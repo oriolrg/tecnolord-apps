@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "origin": "generated-for-tests",
+  "runs": [
+    {
+      "run_id": 900000000001,
+      "source": "synthetic",
+      "model": "fixture-v1",
+      "station_code": "synthetic-meteo-01",
+      "issued_at": "2030-01-15T12:00:00.000Z",
+      "hours": 48,
+      "hourly": [
+        {
+          "valid_time": "2030-01-15T10:00:00.000Z",
+          "temp_c": 16.5,
+          "hum_pct": 58,
+          "wind_ms": 2.4,
+          "wind_dir": 180,
+          "rain_mm": 0
+        },
+        {
+          "valid_time": "2030-01-15T12:00:00.000Z",
+          "temp_c": 18,
+          "hum_pct": 52,
+          "wind_ms": 3.1,
+          "wind_dir": 205,
+          "rain_mm": 0.3
+        },
+        {
+          "valid_time": "2030-01-15T18:00:00.000Z",
+          "temp_c": 13.2,
+          "hum_pct": 70,
+          "wind_ms": 1.2,
+          "wind_dir": 245,
+          "rain_mm": 2.4
+        },
+        {
+          "valid_time": "2030-01-16T12:00:00.000Z",
+          "temp_c": null,
+          "hum_pct": null,
+          "wind_ms": 0,
+          "wind_dir": 0,
+          "rain_mm": 0
+        }
+      ]
+    }
+  ]
+}

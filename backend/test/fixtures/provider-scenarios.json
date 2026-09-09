@@ -1,0 +1,449 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "origin": "generated-for-tests",
+  "providers": {
+    "ecowitt": {
+      "success": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/success",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "code": 0,
+              "time": 1894708500,
+              "data": {
+                "outdoor": {
+                  "temperature": { "value": "18.5" },
+                  "feels_like": { "value": "18.1" },
+                  "dew_point": { "value": "8.2" },
+                  "humidity": { "value": "51" }
+                },
+                "solar_and_uvi": {
+                  "solar": { "value": "420.5" },
+                  "uvi": { "value": "3" }
+                },
+                "rainfall": {
+                  "rain_rate": { "value": "1.2" },
+                  "daily": { "value": "4.8" },
+                  "event": { "value": "5.1" },
+                  "1_hour": { "value": "1.2" },
+                  "weekly": { "value": "12.4" },
+                  "monthly": { "value": "30.2" },
+                  "yearly": { "value": "30.2" }
+                },
+                "wind": {
+                  "wind_speed": { "value": "12.6" },
+                  "wind_gust": { "value": "24.1" },
+                  "wind_direction": { "value": "225" }
+                },
+                "pressure": {
+                  "relative": { "value": "1012.4" },
+                  "absolute": { "value": "1001.7" }
+                },
+                "battery": {
+                  "sensor_array": { "value": "1" }
+                }
+              }
+            }
+          }
+        ],
+        "expected": "success"
+      },
+      "absent": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/absent",
+            "outcome": "json",
+            "status": 200,
+            "body": null
+          }
+        ],
+        "expected": "absent"
+      },
+      "zero": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/zero",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "code": 0,
+              "time": 1894707900,
+              "data": {
+                "outdoor": {
+                  "temperature": { "value": "0" },
+                  "humidity": { "value": "0" }
+                },
+                "rainfall": {
+                  "rain_rate": { "value": "0" },
+                  "daily": { "value": "0" }
+                },
+                "wind": {
+                  "wind_speed": { "value": "0" },
+                  "wind_gust": { "value": "0" },
+                  "wind_direction": { "value": "0" }
+                },
+                "battery": {
+                  "sensor_array": { "value": "0" }
+                }
+              }
+            }
+          }
+        ],
+        "expected": "zero"
+      },
+      "empty": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/empty",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "code": 0,
+              "time": 1894708500,
+              "data": {}
+            }
+          }
+        ],
+        "expected": "empty"
+      },
+      "timeout": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/timeout",
+            "outcome": "timeout"
+          }
+        ],
+        "expected": "timeout"
+      },
+      "http_error": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/http-error",
+            "outcome": "json",
+            "status": 503,
+            "body": { "synthetic_error": "unavailable" }
+          }
+        ],
+        "expected": "http_error"
+      },
+      "invalid_timestamp": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/invalid-timestamp",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "code": 0,
+              "time": "not-a-timestamp",
+              "data": {
+                "outdoor": { "temperature": { "value": "18.5" } }
+              }
+            }
+          }
+        ],
+        "expected": "invalid_timestamp"
+      },
+      "fallback": {
+        "routes": [
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/fallback-primary",
+            "outcome": "json",
+            "status": 503,
+            "body": { "synthetic_error": "primary-unavailable" }
+          },
+          {
+            "url": "https://ecowitt.synthetic.test.invalid/fallback-secondary",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "code": 0,
+              "time": 1894708500,
+              "data": {
+                "outdoor": { "temperature": { "value": "17.9" } }
+              }
+            }
+          }
+        ],
+        "expected": "fallback"
+      }
+    },
+    "aca": {
+      "success": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/rivers/success",
+            "outcome": "json",
+            "status": 200,
+            "body": [
+              {
+                "siteCode": "SYN-RIVER-01",
+                "popup": {
+                  "river_flow": { "value": "2.75", "time": "2030-01-15T11:54:00.000Z" }
+                }
+              }
+            ]
+          },
+          {
+            "url": "https://aca.synthetic.test.invalid/reservoirs/success",
+            "outcome": "json",
+            "status": 200,
+            "body": [
+              {
+                "siteCode": "SYN-RES-CAP-01",
+                "popup": {
+                  "capacity": { "value": "64.5", "time": "2030-01-15T11:53:00.000Z" },
+                  "level": { "value": "18.4" }
+                }
+              }
+            ]
+          }
+        ],
+        "expected": "success"
+      },
+      "absent": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/absent",
+            "outcome": "json",
+            "status": 200,
+            "body": null
+          }
+        ],
+        "expected": "absent"
+      },
+      "zero": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/zero",
+            "outcome": "json",
+            "status": 200,
+            "body": [
+              {
+                "siteCode": "SYN-RIVER-01",
+                "popup": {
+                  "river_flow": { "value": 0, "time": "2030-01-15T11:48:00.000Z" }
+                }
+              }
+            ]
+          }
+        ],
+        "expected": "zero"
+      },
+      "empty": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/empty",
+            "outcome": "json",
+            "status": 200,
+            "body": []
+          }
+        ],
+        "expected": "empty"
+      },
+      "timeout": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/timeout",
+            "outcome": "timeout"
+          }
+        ],
+        "expected": "timeout"
+      },
+      "http_error": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/http-error",
+            "outcome": "json",
+            "status": 502,
+            "body": { "synthetic_error": "upstream-failure" }
+          }
+        ],
+        "expected": "http_error"
+      },
+      "invalid_timestamp": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/invalid-timestamp",
+            "outcome": "json",
+            "status": 200,
+            "body": [
+              {
+                "siteCode": "SYN-RIVER-02",
+                "popup": {
+                  "river_flow": { "value": "1.25", "time": "not-a-timestamp" }
+                }
+              }
+            ]
+          }
+        ],
+        "expected": "invalid_timestamp"
+      },
+      "fallback": {
+        "routes": [
+          {
+            "url": "https://aca.synthetic.test.invalid/fallback-primary",
+            "outcome": "json",
+            "status": 503,
+            "body": { "synthetic_error": "primary-unavailable" }
+          },
+          {
+            "url": "https://aca.synthetic.test.invalid/fallback-secondary",
+            "outcome": "json",
+            "status": 200,
+            "body": [
+              {
+                "siteCode": "SYN-RIVER-02",
+                "popup": {
+                  "river_flow": { "value": "1.5", "time": "2030-01-15T11:54:00.000Z" }
+                }
+              }
+            ]
+          }
+        ],
+        "expected": "fallback"
+      }
+    },
+    "open-meteo": {
+      "success": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/success",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "hourly": {
+                "time": ["2030-01-15T12:00:00.000Z", "2030-01-15T13:00:00.000Z"],
+                "temperature_2m": [18, 18.4],
+                "relative_humidity_2m": [52, 50],
+                "precipitation": [0.3, 0.1],
+                "wind_speed_10m": [3.1, 3.4],
+                "wind_direction_10m": [205, 210]
+              }
+            }
+          }
+        ],
+        "expected": "success"
+      },
+      "absent": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/absent",
+            "outcome": "json",
+            "status": 200,
+            "body": null
+          }
+        ],
+        "expected": "absent"
+      },
+      "zero": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/zero",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "hourly": {
+                "time": ["2030-01-15T12:00:00.000Z"],
+                "temperature_2m": [0],
+                "relative_humidity_2m": [0],
+                "precipitation": [0],
+                "wind_speed_10m": [0],
+                "wind_direction_10m": [0]
+              }
+            }
+          }
+        ],
+        "expected": "zero"
+      },
+      "empty": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/empty",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "hourly": {
+                "time": [],
+                "temperature_2m": [],
+                "relative_humidity_2m": [],
+                "precipitation": [],
+                "wind_speed_10m": [],
+                "wind_direction_10m": []
+              }
+            }
+          }
+        ],
+        "expected": "empty"
+      },
+      "timeout": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/timeout",
+            "outcome": "timeout"
+          }
+        ],
+        "expected": "timeout"
+      },
+      "http_error": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/http-error",
+            "outcome": "json",
+            "status": 503,
+            "body": { "synthetic_error": "forecast-unavailable" }
+          }
+        ],
+        "expected": "http_error"
+      },
+      "invalid_timestamp": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/invalid-timestamp",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "hourly": {
+                "time": ["not-a-timestamp"],
+                "temperature_2m": [18],
+                "relative_humidity_2m": [52],
+                "precipitation": [0.3],
+                "wind_speed_10m": [3.1],
+                "wind_direction_10m": [205]
+              }
+            }
+          }
+        ],
+        "expected": "invalid_timestamp"
+      },
+      "fallback": {
+        "routes": [
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/fallback-primary",
+            "outcome": "json",
+            "status": 503,
+            "body": { "synthetic_error": "primary-unavailable" }
+          },
+          {
+            "url": "https://open-meteo.synthetic.test.invalid/fallback-secondary",
+            "outcome": "json",
+            "status": 200,
+            "body": {
+              "hourly": {
+                "time": ["2030-01-15T12:00:00.000Z"],
+                "temperature_2m": [17.5],
+                "relative_humidity_2m": [55],
+                "precipitation": [0],
+                "wind_speed_10m": [2.8],
+                "wind_direction_10m": [190]
+              }
+            }
+          }
+        ],
+        "expected": "fallback"
+      }
+    }
+  }
+}

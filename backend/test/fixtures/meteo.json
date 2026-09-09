@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "origin": "generated-for-tests",
+  "estacions": [
+    {
+      "codi": "synthetic-meteo-01",
+      "nom": "Meteo Synthetic 01",
+      "coordenades": {
+        "latitud": 12.3456,
+        "longitud": -45.6789
+      },
+      "activa": true,
+      "ultima_observacio": "2030-01-15T11:55:00.000Z",
+      "observacions": [
+        {
+          "cas": "recent",
+          "instant": "2030-01-15T11:55:00.000Z",
+          "temp_c": 18.5,
+          "sensacio_c": 18.1,
+          "punt_rosada_c": 8.2,
+          "humitat_pct": 51,
+          "solar_wm2": 420.5,
+          "uvi": 3,
+          "taxa_pluja_mm_h": 1.2,
+          "pluja_diaria_mm": 4.8,
+          "pluja_event_mm": 5.1,
+          "pluja_hora_mm": 1.2,
+          "pluja_setmana_mm": 12.4,
+          "pluja_mes_mm": 30.2,
+          "pluja_any_mm": 30.2,
+          "vent_ms": 3.5,
+          "vent_rafega_ms": 6.7,
+          "vent_direccio_graus": 225,
+          "pressio_rel_hpa": 1012.4,
+          "pressio_abs_hpa": 1001.7,
+          "bateria_pct": 100,
+          "extres": {
+            "synthetic_case": "recent"
+          }
+        },
+        {
+          "cas": "historic",
+          "instant": "2029-12-15T12:00:00.000Z",
+          "temp_c": 7.5,
+          "humitat_pct": 72,
+          "taxa_pluja_mm_h": 0.4,
+          "vent_ms": 1.8,
+          "pressio_rel_hpa": 1007.2,
+          "extres": {
+            "synthetic_case": "historic"
+          }
+        },
+        {
+          "cas": "absent",
+          "instant": "2030-01-15T11:50:00.000Z",
+          "temp_c": 18.3,
+          "sensacio_c": null,
+          "punt_rosada_c": null,
+          "humitat_pct": 52,
+          "solar_wm2": null,
+          "uvi": null,
+          "taxa_pluja_mm_h": null,
+          "vent_ms": null,
+          "vent_rafega_ms": null,
+          "pressio_rel_hpa": 1012.2,
+          "extres": {
+            "synthetic_case": "absent"
+          }
+        },
+        {
+          "cas": "zero",
+          "instant": "2030-01-15T11:45:00.000Z",
+          "temp_c": 0,
+          "sensacio_c": 0,
+          "punt_rosada_c": 0,
+          "humitat_pct": 0,
+          "solar_wm2": 0,
+          "uvi": 0,
+          "taxa_pluja_mm_h": 0,
+          "pluja_diaria_mm": 0,
+          "pluja_event_mm": 0,
+          "pluja_hora_mm": 0,
+          "pluja_setmana_mm": 0,
+          "pluja_mes_mm": 0,
+          "pluja_any_mm": 0,
+          "vent_ms": 0,
+          "vent_rafega_ms": 0,
+          "vent_direccio_graus": 0,
+          "pressio_rel_hpa": 0,
+          "pressio_abs_hpa": 0,
+          "bateria_pct": 0,
+          "extres": {
+            "synthetic_case": "zero",
+            "known_defect": "DEFECT-01-characterization-only"
+          }
+        },
+        {
+          "cas": "extrem_valid",
+          "instant": "2030-01-15T11:40:00.000Z",
+          "temp_c": 50,
+          "humitat_pct": 100,
+          "solar_wm2": 1400,
+          "uvi": 15,
+          "taxa_pluja_mm_h": 300,
+          "vent_ms": 75,
+          "vent_rafega_ms": 90,
+          "vent_direccio_graus": 359,
+          "pressio_rel_hpa": 1080,
+          "bateria_pct": 100,
+          "extres": {
+            "synthetic_case": "extreme-valid"
+          }
+        }
+      ]
+    }
+  ]
+}
