@@ -5,6 +5,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 
 const DEFAULT_RUNNER = path.resolve(__dirname, '../../db/migrate.js');
+const DEFAULT_FIXTURE_LOADER = path.resolve(__dirname, '../../scripts/load-local-fixtures.js');
 const DATABASE_PREFIX = 'meteolord_test_';
 
 function getClientConstructor() {
@@ -13,10 +14,10 @@ function getClientConstructor() {
 
 function connectionFromEnv(environment = process.env) {
   return Object.freeze({
-    host: environment.T10_DB_HOST || 'db',
-    port: Number(environment.T10_DB_PORT || 5432),
-    user: environment.T10_DB_USER || 'meteolord',
-    password: environment.T10_DB_PASSWORD || 'local_synthetic_123',
+    host: environment.T13_DB_HOST || environment.T10_DB_HOST || 'db',
+    port: Number(environment.T13_DB_PORT || environment.T10_DB_PORT || 5432),
+    user: environment.T13_DB_USER || environment.T10_DB_USER || 'meteolord',
+    password: environment.T13_DB_PASSWORD || environment.T10_DB_PASSWORD || 'local_synthetic_123',
   });
 }
 
@@ -129,6 +130,39 @@ function runMigrator(options) {
   return spawnMigrator(options).completion;
 }
 
+function loadFixtures({
+  database,
+  connection = connectionFromEnv(),
+  runner = DEFAULT_FIXTURE_LOADER,
+  environment = process.env,
+  mode = 'test',
+}) {
+  assertTemporaryDatabase(database);
+  const child = spawn(process.execPath, [runner], {
+    env: {
+      ...environment,
+      METEOLORD_ENV: mode,
+      POSTGRES_HOST: connection.host,
+      POSTGRES_PORT: String(connection.port),
+      POSTGRES_USER: connection.user,
+      POSTGRES_PASSWORD: connection.password,
+      POSTGRES_DB: database,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+  return new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('close', (code, signal) => resolve({ code, signal, stdout, stderr }));
+  });
+}
+
 function waitForOutput(processHandle, pattern, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const deadline = setTimeout(() => {
@@ -152,6 +186,7 @@ module.exports = {
   connectionFromEnv,
   createTestDatabase,
   destroyTestDatabase,
+  loadFixtures,
   queryTestDatabase,
   runMigrator,
   spawnMigrator,
