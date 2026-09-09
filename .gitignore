@@ -30,6 +30,8 @@ artifacts/
 logs/
 *.dump
 *.sql
+!backend/db/migrations/
+!backend/db/migrations/*.sql
 
 # Devcontainer
 .devcontainer/*.local*
