@@ -1,4 +1,5 @@
 import { CONFIG } from "../../config.js";
+import { trackEvent } from "../../analytics.js";
 import { $ } from "../dom.js";
 import { card } from "../components/card.js";
 import { num, fmt1, clamp, windAbbr16, windFromCa, fmtTime } from "../format.js";
@@ -6,15 +7,47 @@ import { windNameCa } from "../format.js";
 import { fetchMeteo } from "../../services/meteoService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
-// Umami (analytics) – tracking segur (no trenca si no està carregat)
-function trackEvent(name, props) {
-  try {
-    const u = window.umami;
-    if (u && typeof u.track === "function") u.track(name, props);
-  } catch (_) {}
-}
-
 function buildMeteoUI(root) {
+  const externalResources = CONFIG.externalLinksEnabled ? `
+      <div id="meteo-support" style="margin-top: 40px; margin-bottom: 20px; padding: 0 10px;">
+        <div style="background: white; border-radius: 15px; padding: 20px; border: 1px solid #edf2f7; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <h4 style="font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">
+            <i class="fas fa-satellite-dish"></i> Equipament
+          </h4>
+          <p style="font-size: 0.85rem; color: #4a5568; line-height: 1.5; margin-bottom: 15px;">
+            Vols tenir la teva pròpia estació meteorològica a casa?
+            Comprant des d'aquí ens <strong>ajudes a mantenir tecnolord.cat</strong> i les dades lliures.
+          </p>
+          <a data-umami-event="Click Amazon - Meteo" href="https://amzn.to/4kJcsCt" target="_blank" rel="noopener"
+             style="display: inline-block; background: #3182ce; color: white; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+            <i class="fab fa-amazon"></i> Veure estació a Amazon
+          </a>
+          <p style="font-size: 0.7rem; color: #cbd5e0; margin-top: 12px; font-style: italic;">
+            <i class="fas fa-heart" style="color: #e53e3e;"></i> Gràcies pel teu suport
+          </p>
+        </div>
+      </div>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #cbd5e0; text-align: center;">
+        <p style="font-size: 0.8rem; color: #718096; margin-bottom: 10px;">Explora altres serveis Tecnolord:</p>
+        <div style="display: flex; justify-content: center; gap: 15px;">
+          <a href="https://tecnolord.cat/meteo" data-umami-event="Anem a Meteo"
+             style="text-decoration: none; font-size: 0.75rem; color: #3182ce; font-weight: bold;">
+            <img src="https://tecnolord.cat/meteo/assets/icons/favicon-96x96.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
+            METEO Temps Real
+          </a>
+          <a href="https://tecnolord.cat/pap/" data-umami-event="Anem a PaP"
+             style="text-decoration: none; font-size: 0.75rem; color: #48bb78; font-weight: bold;">
+            <img src="https://tecnolord.cat/pap/icon-512.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
+            PaP SANT LLORENÇ
+          </a>
+          <a href="https://tecnolord.cat/orientatrack" data-umami-event="Anem a Orientatrack"
+             style="text-decoration: none; font-size: 0.75rem; color: #ed8936; font-weight: bold;">
+            <img src="https://tecnolord.cat/orientatrack/icons/icon-512x512.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
+            ORIENTATRACK (v. Beta)
+          </a>
+        </div>
+      </div>` : "";
+
   root.innerHTML = `
     <div class="wrap">
       <div class="section-title">
@@ -28,47 +61,7 @@ function buildMeteoUI(root) {
 
       <div class="grid" id="meteo-cards"></div>
 
-      <div id="meteo-support" style="margin-top: 40px; margin-bottom: 20px; padding: 0 10px;">
-        <div style="background: white; border-radius: 15px; padding: 20px; border: 1px solid #edf2f7; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-          <h4 style="font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">
-            <i class="fas fa-satellite-dish"></i> Equipament
-          </h4>
-          <p style="font-size: 0.85rem; color: #4a5568; line-height: 1.5; margin-bottom: 15px;">
-            Vols tenir la teva pròpia estació meteorològica a casa? 
-            Comprant des d'aquí ens <strong>ajudes a mantenir tecnolord.cat</strong> i les dades lliures.
-          </p>
-          <a data-umami-event="Click Amazon - Meteo" href="https://amzn.to/4kJcsCt" target="_blank" rel="noopener" 
-             style="display: inline-block; background: #3182ce; color: white; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-            <i class="fab fa-amazon"></i> Veure estació a Amazon
-          </a>
-          <p style="font-size: 0.7rem; color: #cbd5e0; margin-top: 12px; font-style: italic;">
-            <i class="fas fa-heart" style="color: #e53e3e;"></i> Gràcies pel teu suport
-          </p>
-        </div>
-      </div>
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #cbd5e0; text-align: center;">
-        <p style="font-size: 0.8rem; color: #718096; margin-bottom: 10px;">Explora altres serveis Tecnolord:</p>
-        <div style="display: flex; justify-content: center; gap: 15px;">
-            <a href="https://tecnolord.cat/meteo" 
-            data-umami-event="Anem a Meteo"
-            style="text-decoration: none; font-size: 0.75rem; color: #3182ce; font-weight: bold;">
-            <img src="https://tecnolord.cat/meteo/assets/icons/favicon-96x96.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
-        METEO Temps Real
-            </a>
-            <a href="https://tecnolord.cat/pap/" 
-            data-umami-event="Anem a PaP"
-            style="text-decoration: none; font-size: 0.75rem; color: #48bb78; font-weight: bold;">
-            <img src="https://tecnolord.cat/pap/icon-512.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
-        PaP SANT LLORENÇ
-            </a>
-            <a href="https://tecnolord.cat/orientatrack" 
-            data-umami-event="Anem a Orientatrack"
-            style="text-decoration: none; font-size: 0.75rem; color: #ed8936; font-weight: bold;">
-            <img src="https://tecnolord.cat/orientatrack/icons/icon-512x512.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="Anar a">
-        ORIENTATRACK  (v. Beta)
-            </a>
-        </div>
-      </div>
+      ${externalResources}
     </div>
   `;
 
@@ -92,7 +85,7 @@ async function refreshMeteo(ui, store) {
     if (ui.cards) ui.cards.innerHTML = "";
 
     // Tracking: refresh OK (sense dades)
-    trackEvent("meteo_refresh_ok", { limit, has_station: !!estacio });
+    trackEvent(CONFIG, "meteo_refresh_ok", { limit, has_station: !!estacio });
 
     if (!meteoRows.length) {
       if (ui.summary) ui.summary.textContent = "Meteo: Sense registres.";
@@ -364,7 +357,7 @@ async function refreshMeteo(ui, store) {
 
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
-    trackEvent("meteo_refresh_error", { msg: String(e && (e.message || e)) });
+    trackEvent(CONFIG, "meteo_refresh_error", { msg: String(e && (e.message || e)) });
   }
 }
 
@@ -401,7 +394,7 @@ export function initMeteoScreen(root, store) {
   const ui = buildMeteoUI(root);
 
   // Tracking: screen view
-  trackEvent("screen_view", { screen: "meteo" });
+  trackEvent(CONFIG, "screen_view", { screen: "meteo" });
 
   let timer = null;
   if (store.get().auto) {

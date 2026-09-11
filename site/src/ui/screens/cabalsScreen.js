@@ -1,4 +1,5 @@
 import { CONFIG } from "../../config.js";
+import { trackEvent } from "../../analytics.js";
 import { $ } from "../dom.js";
 import { card } from "../components/card.js";
 import { num, fmt1, clamp, fmtTime, norm } from "../format.js";
@@ -15,14 +16,6 @@ const SYNTHETIC_HYDRO_CODES = Object.freeze({
   llosa: "SYN-RES-01",
 });
 const ACA_CATALOG_URL = "https://aplicacions.aca.gencat.cat/sentilo-catalog-web/component/map#";
-
-// Umami (analytics) – tracking segur (no trenca si no està carregat)
-function trackEvent(name, props) {
-  try {
-    const u = window.umami;
-    if (u && typeof u.track === "function") u.track(name, props);
-  } catch (_) {}
-}
 
 function buildCabalsUI(root) {
   root.innerHTML = `
@@ -123,7 +116,7 @@ async function refreshCabals(ui, store) {
     const hidroRows = await fetchHidro({ codi, limit, period, date_from, date_to, mode, ensure });
     if (ui.cards) ui.cards.innerHTML = "";
 
-    trackEvent("cabals_refresh_ok", { mode, period, limit });
+    trackEvent(CONFIG, "cabals_refresh_ok", { mode, period, limit });
 
     if (!hidroRows.length) {
       if (ui.last) ui.last.textContent = "Sense dades";
@@ -204,13 +197,17 @@ async function refreshCabals(ui, store) {
 
     const acaCode = rowLlosa?.codi || "—";
 
+const acaLabelHtml = CONFIG.externalLinksEnabled
+  ? `<a href="${ACA_CATALOG_URL}" target="_blank" rel="noopener noreferrer"
+        style="color: var(--link, #2b6cb0); text-decoration: underline;">
+       <span style="opacity:.9">Oficial ACA (capacitat útil):</span>
+     </a>`
+  : `<span style="opacity:.9">Capacitat útil:</span>`;
+
 const capDetailsHtml = `
   <div style="margin-top:8px; display:grid; gap:6px; color: var(--muted); font-size: 0.95em;">
     <div>
-      <a href="${ACA_CATALOG_URL}" target="_blank" rel="noopener noreferrer"
-         style="color: var(--link, #2b6cb0); text-decoration: underline;">
-        <span style="opacity:.9">Oficial ACA (capacitat útil):</span>
-      </a>
+      ${acaLabelHtml}
       <strong style="color:inherit"> ${cap == null ? "—" : fmt1(cap)}%</strong>
     </div>
 
@@ -330,14 +327,14 @@ const capDetailsHtml = `
     }
   } catch (e) {
     if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
-    trackEvent("cabals_refresh_error", { msg: String(e && (e.message || e)) });
+    trackEvent(CONFIG, "cabals_refresh_error", { msg: String(e && (e.message || e)) });
   }
 }
 
 export function initCabalsScreen(root, store) {
   const ui = buildCabalsUI(root);
 
-  trackEvent("screen_view", { screen: "cabals" });
+  trackEvent(CONFIG, "screen_view", { screen: "cabals" });
 
   let timer = null;
   if (store.get().auto) {

@@ -1,9 +1,11 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 
-const { createApp, redactRequestUrl } = require('../../server');
+const { LOCAL_FRONTEND_CSP, createApp, redactRequestUrl } = require('../../server');
 const { DEFAULT_DB_TIMEOUT_MS, checkDatabase } = require('../../routes/health');
 const { createFixedClock } = require('../helpers/clock');
 
@@ -230,7 +232,26 @@ test('/meteo/ serves the local frontend without making an external request', asy
     const html = await response.text();
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /^text\/html/);
+    assert.equal(response.headers.get('content-security-policy'), LOCAL_FRONTEND_CSP);
     assert.match(html, /<title>Tecnolord — MeteoLord<\/title>/);
+    assert.ok(html.indexOf('runtime-config.js') < html.indexOf('src/main.js'));
+    assert.doesNotMatch(html, /https:\/\/stats\.tecnolord\.cat/);
+    assert.doesNotMatch(html, /\sonerror\s*=/i);
+  });
+});
+
+test('/meteo/runtime-config.js is served verbatim, no-store and with the approved local CSP', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/meteo/runtime-config.js`);
+    const source = await response.text();
+    const expected = fs.readFileSync(path.resolve(__dirname, '../../../site/runtime-config.js'), 'utf8');
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store, max-age=0');
+    assert.equal(response.headers.get('content-security-policy'), LOCAL_FRONTEND_CSP);
+    assert.equal(source, expected);
+    assert.doesNotMatch(LOCAL_FRONTEND_CSP, /script-src[^;]*'unsafe-inline'/);
+    assert.match(LOCAL_FRONTEND_CSP, /style-src 'self' 'unsafe-inline'/);
   });
 });
 

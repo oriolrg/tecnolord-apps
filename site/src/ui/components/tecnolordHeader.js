@@ -17,12 +17,7 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
                  width="44"
                  height="44"
                  loading="eager"
-                 decoding="async"
-                 onerror="
-                   const w=this.closest('.tl-logoWrap');
-                   if(w) w.classList.add('is-missing');
-                   this.style.display='none';
-                 " />
+                 decoding="async" />
             <span class="tl-logoFallback" aria-hidden="true">TL</span>
           </span>
 
@@ -40,6 +35,18 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
       </div>
     </header>
   `;
+}
+
+export function installTecnolordHeaderImageFallback(root) {
+  const logo = root?.querySelector?.(".tl-logo");
+  if (!logo) return;
+
+  const markMissing = () => {
+    logo.closest(".tl-logoWrap")?.classList.add("is-missing");
+    logo.style.display = "none";
+  };
+  logo.addEventListener("error", markMissing, { once: true });
+  if (logo.complete && logo.naturalWidth === 0) markMissing();
 }
 
 function escapeHtml(s) {

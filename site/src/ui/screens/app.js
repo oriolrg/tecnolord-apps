@@ -1,36 +1,19 @@
 import { CONFIG } from "../../config.js";
+import { trackEvent, trackPageview } from "../../analytics.js";
 import { createStore } from "../../state/store.js";
 import { $ } from "../dom.js";
 import { clamp } from "../format.js";
-import { renderTecnolordHeader } from "../components/tecnolordHeader.js";
+import { renderTecnolordHeader, installTecnolordHeaderImageFallback } from "../components/tecnolordHeader.js";
 import { renderBottomNav } from "../components/bottomNav.js";
 import { initMeteoScreen } from "./meteoScreen.js";
 import { initCabalsScreen } from "./cabalsScreen.js";
 import { initHistoricsScreen } from "./historicsScreen.js";
 
-// Umami (analytics) – tracking segur (no trenca si no està carregat)
-function umamiEvent(name, props) {
-  try {
-    const u = window.umami;
-    if (u && typeof u.track === "function") u.track(name, props);
-  } catch (_) {}
-}
-
-// Umami – Pageviews per SPA (URL virtual)
-function umamiPageview(url, title) {
-  try {
-    const u = window.umami;
-    if (u && typeof u.track === "function") {
-      u.track((props) => ({ ...props, url, title }));
-    }
-  } catch (_) {}
-}
-
 function trackScreen(screenId) {
   // Si canvies noms de pantalles, ajusta aquí
-  if (screenId === "meteo") umamiPageview("/meteo/", "Meteo");
-  else if (screenId === "cabals") umamiPageview("/meteo/cabals", "Cabals");
-  else if (screenId === "historics") umamiPageview("/meteo/historics", "Històrics");
+  if (screenId === "meteo") trackPageview(CONFIG, "/meteo/", "Meteo");
+  else if (screenId === "cabals") trackPageview(CONFIG, "/meteo/cabals", "Cabals");
+  else if (screenId === "historics") trackPageview(CONFIG, "/meteo/historics", "Històrics");
 }
 
 function readUrlParams(store) {
@@ -110,6 +93,7 @@ export function initApp(root) {
   readUrlParams(store);
 
   const ui = buildUI(root);
+  installTecnolordHeaderImageFallback(root);
 
   // Inicialitzar cada pantalla
   const cleanupMeteo = initMeteoScreen(ui.screenMeteo, store);
@@ -126,14 +110,14 @@ export function initApp(root) {
       trackScreen(screenId);
 
       // Event (opcional) per analítica d'ús
-      umamiEvent(`nav_${screenId}`);
+      trackEvent(CONFIG, `nav_${screenId}`);
     });
   });
 
   // Pantalla per defecte: Meteo
   switchScreen("meteo", ui);
   trackScreen("meteo");
-  umamiEvent("nav_meteo");
+  trackEvent(CONFIG, "nav_meteo");
 
   return () => {
     cleanupMeteo();

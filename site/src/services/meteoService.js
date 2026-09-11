@@ -14,8 +14,7 @@ export async function fetchMeteo({ estacio, limit, period, date_from, date_to })
   if (date_to) params.set("to", date_to);
   params.set("limit", String(limit || CONFIG.defaultLimit));
 
-  const base = (CONFIG?.apiBase || "").replace(/\/$/, "");
-  const url = `${base}/api/v1/mesures/darreres?${params.toString()}`;
+  const url = `${CONFIG.meteoEndpoint}?${params.toString()}`;
 
   const data = await httpGetJson(url);
   return data?.items || [];

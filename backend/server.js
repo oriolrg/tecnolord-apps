@@ -29,6 +29,14 @@ const { makeEcowittService } = require('./services/ecowittService');
 
 const FRONTEND_DIR = path.resolve(__dirname, '../site');
 const REAL_CLOCK = Object.freeze({ now: () => new Date() });
+const LOCAL_FRONTEND_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+
+function runtimeMode(environment) {
+  return environment.METEOLORD_ENV
+    || environment.APP_ENV
+    || environment.NODE_ENV
+    || 'production';
+}
 
 function redactRequestUrl(originalUrl) {
   try {
@@ -52,10 +60,7 @@ function createRuntime({
   const hasRuntimeInjection = injectedPool !== undefined
     || httpClient !== undefined
     || clock !== undefined;
-  const mode = environment.METEOLORD_ENV
-    || environment.APP_ENV
-    || environment.NODE_ENV
-    || 'production';
+  const mode = runtimeMode(environment);
 
   if (hasRuntimeInjection && !['local', 'test'].includes(mode)) {
     throw new Error('Runtime dependency injection is forbidden outside local/test');
@@ -177,11 +182,18 @@ function createApp({
   });
   const runtime = createRuntime({ pool, httpClient, clock, logger: appLogger, environment });
   const app = express();
+  const mode = runtimeMode(environment);
   app.locals.meteolordRuntime = runtime;
   app.locals.logger = appLogger;
 
   // ──────────────────────────────────────────────────────────
   // Middlewares
+  app.use((_req, res, next) => {
+    if (['local', 'test'].includes(mode)) {
+      res.setHeader('Content-Security-Policy', LOCAL_FRONTEND_CSP);
+    }
+    next();
+  });
   app.use(createRequestContext({ idFactory: correlationIdFactory }));
   app.use((req, res, next) => {
     const startedAt = process.hrtime.bigint();
@@ -212,6 +224,10 @@ function createApp({
   }));
 
   // Frontend local: les rutes API es registren abans dels estàtics.
+  app.get('/meteo/runtime-config.js', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.sendFile(path.join(FRONTEND_DIR, 'runtime-config.js'));
+  });
   app.use('/meteo', express.static(FRONTEND_DIR));
   app.get('/meteo', (_req, res) => res.redirect(302, '/meteo/'));
   app.get('/meteo/*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
@@ -232,4 +248,11 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { createApp, createRuntime, redactRequestUrl, startServer };
+module.exports = {
+  LOCAL_FRONTEND_CSP,
+  createApp,
+  createRuntime,
+  redactRequestUrl,
+  runtimeMode,
+  startServer,
+};
