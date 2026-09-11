@@ -20,6 +20,22 @@ const HIDRO_ROW = Object.freeze({
   tipus: 'riu',
   cabal_m3s: 2.75,
 });
+const FORECAST_RUN = Object.freeze({
+  id: 7,
+  source: 'open-meteo',
+  model: 'best_match',
+  station_code: 'synthetic-meteo-01',
+  issued_at: '2030-01-15T12:00:00.000Z',
+  hours: 48,
+});
+const FORECAST_ITEM = Object.freeze({
+  valid_time: '2030-01-15T13:00:00.000Z',
+  temp_c: 17.5,
+  hum_pct: 60,
+  wind_ms: 2.5,
+  wind_dir: 180,
+  rain_mm: 0,
+});
 
 function createRoutePool({ healthCheck } = {}) {
   return {
@@ -30,6 +46,14 @@ function createRoutePool({ healthCheck } = {}) {
       }
       if (/FROM meteo\.mesures/.test(sql)) return { rows: [{ ...METEO_ROW }] };
       if (/FROM meteo\.lectures_hidro/.test(sql)) return { rows: [{ ...HIDRO_ROW }] };
+      if (/WITH picked AS/.test(sql)) {
+        return { rows: [{ ...FORECAST_ITEM, run_id: FORECAST_RUN.id, issued_at: FORECAST_RUN.issued_at }] };
+      }
+      if (/SELECT model\s+FROM forecast_run/.test(sql)) return { rows: [{ model: FORECAST_RUN.model }] };
+      if (/SELECT id, source, model, station_code, issued_at, hours\s+FROM forecast_run/.test(sql)) {
+        return { rows: [{ ...FORECAST_RUN }] };
+      }
+      if (/FROM forecast_hourly/.test(sql)) return { rows: [{ ...FORECAST_ITEM }] };
       return { rows: [{ ok: 1 }] };
     },
   };
@@ -164,6 +188,49 @@ test('/api/v1/hidro/darreres returns the existing body contract', async () => {
     const response = await fetch(`${baseUrl}/api/v1/hidro/darreres?limit=10`);
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { ok: true, items: [{ ...HIDRO_ROW }] });
+  });
+});
+
+test('/api/v1/previ/48h returns the saved forecast contract', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/v1/previ/48h?station=synthetic-meteo-01`);
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.deepEqual(body.run, {
+      id: FORECAST_RUN.id,
+      source: FORECAST_RUN.source,
+      model: FORECAST_RUN.model,
+      station: FORECAST_RUN.station_code,
+      issued_at: FORECAST_RUN.issued_at,
+      hours: FORECAST_RUN.hours,
+    });
+    assert.deepEqual(body.items, [{ ...FORECAST_ITEM }]);
+  });
+});
+
+test('/api/v1/previ/past48-next48 returns the existing window contract', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/v1/previ/past48-next48?station=synthetic-meteo-01`);
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.deepEqual(body.window, { past_hours: 48, future_hours: 48 });
+    assert.deepEqual(body.items, [{
+      ...FORECAST_ITEM,
+      run_id: FORECAST_RUN.id,
+      issued_at: FORECAST_RUN.issued_at,
+    }]);
+  });
+});
+
+test('/meteo/ serves the local frontend without making an external request', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/meteo/`);
+    const html = await response.text();
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^text\/html/);
+    assert.match(html, /<title>Tecnolord — MeteoLord<\/title>/);
   });
 });
 

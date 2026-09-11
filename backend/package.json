@@ -5,7 +5,12 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node --test --experimental-test-coverage test/unit/*.test.js test/integration/*.test.js test/http/*.test.js test/security/*.test.js",
+    "test:unit": "node --test --experimental-test-coverage test/unit/*.test.js",
+    "test:integration": "node --test --experimental-test-coverage test/integration/*.test.js",
+    "test:http": "node --test --experimental-test-coverage test/http/*.test.js",
+    "test:security": "node --test --experimental-test-coverage test/security/*.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
