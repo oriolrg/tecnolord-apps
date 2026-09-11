@@ -20,7 +20,7 @@ const { makeHealthRouter } = require('./routes/health');
 const { makeMesuresRouter } = require('./routes/mesures');
 const { makeHidroRouter } = require('./routes/hidro');
 const { makePreviRouter } = require('./routes/previ');
-const { makeTasksRouter } = require('./routes/tasks');
+const { createTaskRunner, makeTasksRouter } = require('./routes/tasks');
 
 const { makePreviService } = require('./services/previService');
 const { makeAcaService } = require('./services/acaService');
@@ -28,10 +28,23 @@ const { makeEcowittService } = require('./services/ecowittService');
 
 const FRONTEND_DIR = path.resolve(__dirname, '../site');
 const REAL_CLOCK = Object.freeze({ now: () => new Date() });
+const ACCESS_LOG_FORMAT = ':method :safe-url :status :res[content-length] - :response-time ms';
+
+function redactRequestUrl(originalUrl) {
+  try {
+    const parsed = new URL(originalUrl, 'http://local.invalid');
+    if (parsed.searchParams.has('key')) parsed.searchParams.set('key', '[REDACTED]');
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return String(originalUrl).replace(/([?&]key=)[^&]*/gi, '$1[REDACTED]');
+  }
+}
+
+morgan.token('safe-url', (req) => redactRequestUrl(req.originalUrl || req.url));
 
 // ──────────────────────────────────────────────────────────
-// Helpers DB (usuaris/estacions/hidro)
-function createApp({
+// Composició comuna per HTTP i CLI.
+function createRuntime({
   pool: injectedPool,
   httpClient,
   clock,
@@ -51,20 +64,15 @@ function createApp({
   if (httpClient !== undefined && typeof httpClient !== 'function') {
     throw new TypeError('Injected HTTP client must be a function');
   }
-  if (clock !== undefined && (!clock || typeof clock.now !== 'function')) {
-    throw new TypeError('Injected clock must implement now()');
+  if (clock !== undefined
+      && typeof clock !== 'function'
+      && (!clock || typeof clock.now !== 'function')) {
+    throw new TypeError('Injected clock must be a function or implement now()');
   }
 
   const pool = createPool({ environment, pool: injectedPool });
   const transport = httpClient === undefined ? globalThis.fetch : httpClient;
   const runtimeClock = clock === undefined ? REAL_CLOCK : clock;
-  const app = express();
-
-  // ──────────────────────────────────────────────────────────
-  // Middlewares
-  app.use(morgan('tiny'));
-  app.use(cors());
-  app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*+json'] }));
 
   // ──────────────────────────────────────────────────────────
   // Helpers DB (usuaris/estacions/hidro)
@@ -111,7 +119,7 @@ function createApp({
   }
 
   // ──────────────────────────────────────────────────────────
-  // Serveis. httpClient/clock són defaults reals fins que T14 aporti dobles guarded.
+  // Serveis compartits per tots els transports d'entrada.
   const sharedDependencies = { pool, httpClient: transport, clock: runtimeClock };
   const previService = makePreviService(sharedDependencies);
   const acaService = makeAcaService({ ...sharedDependencies, assegurarHidro });
@@ -121,20 +129,58 @@ function createApp({
     assegurarEstacio,
     assegurarMembreEstacio,
   });
+  const taskRunner = createTaskRunner({
+    pullEcowittAndSave: ecowittService.pullEcowittAndSave,
+    pullACAAndSave: acaService.pullACAAndSave,
+    pullPreviAndSave: previService.pullPreviAndSave,
+  });
+
+  return {
+    pool,
+    transport,
+    clock: runtimeClock,
+    previService,
+    acaService,
+    ecowittService,
+    taskRunner,
+  };
+}
+
+function createApp({
+  pool,
+  httpClient,
+  clock,
+  environment = process.env,
+  accessLogStream,
+} = {}) {
+  if (accessLogStream !== undefined
+      && (!accessLogStream || typeof accessLogStream.write !== 'function')) {
+    throw new TypeError('Access log stream must implement write()');
+  }
+  const runtime = createRuntime({ pool, httpClient, clock, environment });
+  const app = express();
+  app.locals.meteolordRuntime = runtime;
+
+  // ──────────────────────────────────────────────────────────
+  // Middlewares
+  app.use(morgan(
+    ACCESS_LOG_FORMAT,
+    accessLogStream === undefined ? undefined : { stream: accessLogStream }
+  ));
+  app.use(cors());
+  app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*+json'] }));
 
   // ──────────────────────────────────────────────────────────
   // Routers
   app.use(pingRouter);
-  app.use(makeHealthRouter({ pool }));
-  app.use(makeMesuresRouter({ pool }));
-  app.use(makeHidroRouter({ pool }));
-  app.use(makePreviRouter({ previService }));
+  app.use(makeHealthRouter({ pool: runtime.pool }));
+  app.use(makeMesuresRouter({ pool: runtime.pool }));
+  app.use(makeHidroRouter({ pool: runtime.pool }));
+  app.use(makePreviRouter({ previService: runtime.previService }));
 
   app.use(makeTasksRouter({
     checkApiKey,
-    pullEcowittAndSave: ecowittService.pullEcowittAndSave,
-    pullACAAndSave: acaService.pullACAAndSave,
-    pullPreviAndSave: previService.pullPreviAndSave,
+    taskRunner: runtime.taskRunner,
   }));
 
   // Frontend local: les rutes API es registren abans dels estàtics.
@@ -156,4 +202,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { createApp, startServer };
+module.exports = { createApp, createRuntime, redactRequestUrl, startServer };
