@@ -16,6 +16,11 @@ export function renderBottomNav() {
           <span class="nav-btn__icon" aria-hidden="true">📊</span>
           <span class="nav-btn__label">Històrics</span>
         </button>
+
+        <button class="nav-btn" data-screen="previ" type="button" aria-label="Previsió">
+          <span class="nav-btn__icon" aria-hidden="true">🗓️</span>
+          <span class="nav-btn__label">Previsió</span>
+        </button>
       </div>
     </nav>
   `;

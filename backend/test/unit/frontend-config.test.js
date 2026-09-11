@@ -59,6 +59,7 @@ test('frontend config resolves the valid local schema and same-origin API paths'
   assert.equal(module.CONFIG.apiBase, '/api');
   assert.equal(module.CONFIG.meteoEndpoint, '/api/v1/mesures/darreres');
   assert.equal(module.CONFIG.hidroEndpoint, '/api/v1/hidro/darreres');
+  assert.equal(module.CONFIG.previEndpoint, '/api/v1/previ/48h');
   assert.equal(module.CONFIG.analyticsEnabled, false);
   assert.equal(module.CONFIG.externalLinksEnabled, false);
   assert.equal(module.CONFIG.syntheticData, true);

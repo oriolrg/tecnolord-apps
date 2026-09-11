@@ -71,6 +71,7 @@ export function resolveRuntimeConfig(runtimeConfig) {
     syntheticData: runtimeConfig.SYNTHETIC_DATA,
     meteoEndpoint: `${apiBase}/v1/mesures/darreres`,
     hidroEndpoint: `${apiBase}/v1/hidro/darreres`,
+    previEndpoint: `${apiBase}/v1/previ/48h`,
   });
 }
 

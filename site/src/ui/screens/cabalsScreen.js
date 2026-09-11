@@ -226,7 +226,7 @@ const capDetailsHtml = `
 
 
     const cCap = card({
-      title: "Capacitat",
+      title: "Embassament · Capacitat",
       value: cap == null ? "—" : fmt1(cap),
       unit: "%",
       subHtml:

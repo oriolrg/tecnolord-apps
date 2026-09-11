@@ -1,16 +1,18 @@
-ARG LOCAL_IMAGE=meteolord-local:test
-FROM ${LOCAL_IMAGE} AS e2e
+ARG PLAYWRIGHT_IMAGE=mcr.microsoft.com/playwright@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+FROM ${PLAYWRIGHT_IMAGE} AS e2e
 
 USER root
 ENV NODE_ENV=test \
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 WORKDIR /app
 
+COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts \
+    && npx playwright install --with-deps chromium \
     && npm cache clean --force
 
 COPY --chown=node:node test/e2e ./test/e2e
 COPY --chown=node:node playwright.config.js ./
 
-USER node
+USER pwuser
 CMD ["npx", "playwright", "test"]

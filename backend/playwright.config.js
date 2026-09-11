@@ -1,16 +1,24 @@
 'use strict';
 
+const path = require('node:path');
 const { defineConfig } = require('@playwright/test');
+
+const evidenceDir = process.env.T20_EVIDENCE_DIR || '/tmp/meteolord-e2e';
 
 module.exports = defineConfig({
   testDir: './test/e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
-  retries: 0,
+  retries: 1,
   workers: 1,
-  reporter: [['html', { outputFolder: '/tmp/playwright-report', open: 'never' }]],
-  outputDir: '/tmp/playwright-test-results',
+  reporter: [
+    ['line'],
+    ['junit', { outputFile: path.join(evidenceDir, 'junit.xml') }],
+  ],
+  outputDir: path.join(evidenceDir, 'test-results'),
   use: {
-    baseURL: 'http://caddy:8080',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://backend:8080',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
 });
