@@ -1,6 +1,26 @@
 // backend/services/previService.js
 const { normalizeOpenMeteoModel } = require('../utils/previ');
 
+function resolveFetch(injectedFetch, httpClient) {
+  const transport = injectedFetch ?? httpClient ?? globalThis.fetch;
+  if (typeof transport !== 'function') throw new TypeError('Forecast fetch must be a function');
+  return transport;
+}
+
+function resolveClock(clock) {
+  const now = clock === undefined
+    ? () => new Date()
+    : typeof clock === 'function'
+      ? clock
+      : clock?.now?.bind(clock);
+  if (typeof now !== 'function') throw new TypeError('Forecast clock must be a function or implement now()');
+  return () => {
+    const instant = new Date(now());
+    if (Number.isNaN(instant.getTime())) throw new TypeError('Forecast clock returned an invalid instant');
+    return instant;
+  };
+}
+
 function mustNumEnv(name) {
   const v = process.env[name];
   const n = Number(v);
@@ -47,7 +67,10 @@ function openMeteoURL({ lat, lon, model, hours }) {
   return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
 }
 
-function makePreviService({ pool }) {
+function makePreviService({ pool, fetch: injectedFetch, httpClient, clock }) {
+  const fetchImpl = resolveFetch(injectedFetch, httpClient);
+  const now = resolveClock(clock);
+
   async function resolveModelCode({ stationCode, sourceCode, rawModel }) {
     const normalized =
       normalizeOpenMeteoModel(rawModel || process.env.PREVI_MODEL || 'best_match') || 'best_match';
@@ -161,14 +184,14 @@ function makePreviService({ pool }) {
 
   async function pullPreviAndSave() {
     const cfg = previConfig();
-    const issuedAt = new Date().toISOString();
+    const issuedAt = now().toISOString();
 
     if (cfg.source !== 'open-meteo') {
       throw new Error(`Unsupported PREVI_SOURCE=${cfg.source} (for now only 'open-meteo')`);
     }
 
     const url = openMeteoURL(cfg);
-    const r = await fetch(url);
+    const r = await fetchImpl(url);
 
     if (!r.ok) {
       let body = '';

@@ -3,6 +3,26 @@
 // - Fallback: ECW_* -> si falla/buit -> ECW_FB_*
 // - Si no hi ha dades bones: skipped=true (no peta)
 
+function resolveFetch(injectedFetch, httpClient) {
+  const transport = injectedFetch ?? httpClient ?? globalThis.fetch;
+  if (typeof transport !== 'function') throw new TypeError('Ecowitt fetch must be a function');
+  return transport;
+}
+
+function resolveClock(clock) {
+  const now = clock === undefined
+    ? () => new Date()
+    : typeof clock === 'function'
+      ? clock
+      : clock?.now?.bind(clock);
+  if (typeof now !== 'function') throw new TypeError('Ecowitt clock must be a function or implement now()');
+  return () => {
+    const instant = new Date(now());
+    if (Number.isNaN(instant.getTime())) throw new TypeError('Ecowitt clock returned an invalid instant');
+    return instant;
+  };
+}
+
 function kmhToMs(v) {
   if (v == null || v === '') return null;
   const n = Number(v);
@@ -65,17 +85,17 @@ function isEcowittEmpty(data) {
   return pick.every(v => v == null || v === '');
 }
 
-async function fetchWithTimeout(url, ms = 15000) {
+async function fetchWithTimeout(url, ms, fetchImpl) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { signal: ctrl.signal });
+    return await fetchImpl(url, { signal: ctrl.signal });
   } finally {
     clearTimeout(t);
   }
 }
 
-async function fetchEcowitt(prefix) {
+async function fetchEcowitt(prefix, fetchImpl) {
   if (!hasEcw(prefix)) {
     return { ok: false, prefix, reason: 'missing_config', http: null, payload: null };
   }
@@ -83,7 +103,11 @@ async function fetchEcowitt(prefix) {
   const url = ecowittURL(prefix);
 
   try {
-    const r = await fetchWithTimeout(url, Number(process.env.ECW_TIMEOUT_MS || 15000));
+    const r = await fetchWithTimeout(
+      url,
+      Number(process.env.ECW_TIMEOUT_MS || 15000),
+      fetchImpl
+    );
     const http = r.status;
 
     if (!r.ok) {
@@ -105,8 +129,18 @@ async function fetchEcowitt(prefix) {
   }
 }
 
-function makeEcowittService({ pool, assegurarUsuariAdmin, assegurarEstacio, assegurarMembreEstacio }) {
+function makeEcowittService({
+  pool,
+  assegurarUsuariAdmin,
+  assegurarEstacio,
+  assegurarMembreEstacio,
+  fetch: injectedFetch,
+  httpClient,
+  clock,
+}) {
   if (!pool) throw new Error('makeEcowittService: missing pool');
+  const fetchImpl = resolveFetch(injectedFetch, httpClient);
+  const now = resolveClock(clock);
 
   async function pullEcowittAndSave() {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
@@ -118,14 +152,14 @@ function makeEcowittService({ pool, assegurarUsuariAdmin, assegurarEstacio, asse
     await assegurarMembreEstacio(adminId, estacioId, 'propietari');
 
     // 1) Primary
-    const primary = await fetchEcowitt('ECW');
+    const primary = await fetchEcowitt('ECW', fetchImpl);
     let chosen = primary;
 
     // 2) Fallback si cal
     if (!primary.ok) {
       if (hasEcw('ECW_FB')) {
         console.warn(`[ecowitt] primary failed (${primary.reason}) -> trying fallback`);
-        const fb = await fetchEcowitt('ECW_FB');
+        const fb = await fetchEcowitt('ECW_FB', fetchImpl);
         chosen = fb; // si fb.ok=false, quedem igualment amb fb per retornar reason
         if (!fb.ok) console.warn(`[ecowitt] fallback failed (${fb.reason}) -> skipped`);
       } else {
@@ -148,7 +182,7 @@ function makeEcowittService({ pool, assegurarUsuariAdmin, assegurarEstacio, asse
     const d = p?.data;
 
     const epochSec = Number(p?.time);
-    const instant = !Number.isNaN(epochSec) ? new Date(epochSec * 1000).toISOString() : new Date().toISOString();
+    const instant = !Number.isNaN(epochSec) ? new Date(epochSec * 1000).toISOString() : now().toISOString();
 
     const params = [
       estacioId, instant,

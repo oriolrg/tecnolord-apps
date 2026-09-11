@@ -5,11 +5,34 @@ const ACA_RIVER_URL =
 const ACA_RESERVOIR_URL =
   'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/reservoir/capacity_6min';
 
-function makeAcaService({ pool, assegurarHidro }) {
+function resolveFetch(injectedFetch, httpClient) {
+  const transport = injectedFetch ?? httpClient ?? globalThis.fetch;
+  if (typeof transport !== 'function') throw new TypeError('ACA fetch must be a function');
+  return transport;
+}
+
+function resolveClock(clock) {
+  const now = clock === undefined
+    ? () => new Date()
+    : typeof clock === 'function'
+      ? clock
+      : clock?.now?.bind(clock);
+  if (typeof now !== 'function') throw new TypeError('ACA clock must be a function or implement now()');
+  return () => {
+    const instant = new Date(now());
+    if (Number.isNaN(instant.getTime())) throw new TypeError('ACA clock returned an invalid instant');
+    return instant;
+  };
+}
+
+function makeAcaService({ pool, assegurarHidro, fetch: injectedFetch, httpClient, clock }) {
+  const fetchImpl = resolveFetch(injectedFetch, httpClient);
+  const now = resolveClock(clock);
+
   async function pullACAAndSave() {
     const [riversRes, reservoirsRes] = await Promise.all([
-      fetch(ACA_RIVER_URL),
-      fetch(ACA_RESERVOIR_URL),
+      fetchImpl(ACA_RIVER_URL),
+      fetchImpl(ACA_RESERVOIR_URL),
     ]);
     if (!riversRes.ok) throw new Error('aca rivers status ' + riversRes.status);
     if (!reservoirsRes.ok) throw new Error('aca reservoirs status ' + reservoirsRes.status);
@@ -75,7 +98,7 @@ function makeAcaService({ pool, assegurarHidro }) {
         flowKey: CODE_LLOSA_FLOW, capKey: CODE_LLOSA_CAP },
     ].filter(s => s.siteCode);
 
-    const nowIso = new Date().toISOString();
+    const nowIso = now().toISOString();
     const results = [];
 
     for (const s of SITES) {
