@@ -11,10 +11,11 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U meteolord -d meteolord_local"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U meteolord"]
+      interval: 10s
       timeout: 5s
-      retries: 12
+      retries: 5
+      start_period: 10s
     networks:
       - meteolord_core
 
@@ -45,12 +46,13 @@ services:
         - node
         - -e
         - >-
-          require('http').get('http://127.0.0.1:8080/health',
-          response => process.exit(response.statusCode === 200 ? 0 : 1))
-          .on('error', () => process.exit(1))
-      interval: 5s
+          fetch('http://localhost:8080/health')
+          .then(response => process.exit(response.ok ? 0 : 1))
+          .catch(() => process.exit(1))
+      interval: 10s
       timeout: 5s
-      retries: 12
+      retries: 5
+      start_period: 30s
     networks:
       - meteolord_core
 
