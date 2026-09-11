@@ -188,13 +188,21 @@ for (const [taskName, suffix] of TASK_CASES) {
           assert.equal(queryCompatibility.status, 200);
           assert.deepEqual(await queryCompatibility.json(), httpResult);
           assert.deepEqual(await businessCounts(database), countsAfterHttp);
+          const queryCorrelationId = queryCompatibility.headers.get('x-correlation-id');
+          assert.ok(queryCorrelationId);
 
           await new Promise((resolve) => setImmediate(resolve));
           const logs = http.logs.join('');
+          const logEvents = logs.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
           assert.ok(!logs.includes(API_KEY));
           assert.ok(!cli.stdout.includes(API_KEY));
           assert.ok(!cli.stderr.includes(API_KEY));
-          assert.match(logs, /key=%5BREDACTED%5D/);
+          assert.ok(!logs.includes('key='));
+          assert.ok(logEvents.some((event) => (
+            event.operation === 'http.request'
+              && event.correlation_id === queryCorrelationId
+              && event.result === 'HTTP_200'
+          )));
           console.log(`T15 parity task=${taskName} http=200 cli=0 idempotent=true key_redacted=true`);
         } finally {
           await http.close();

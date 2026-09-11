@@ -1,5 +1,7 @@
 // backend/services/acaService.js
 
+const { NULL_LOGGER, isLogger } = require('../lib/logger');
+
 const ACA_RIVER_URL =
   'http://aplicacions.aca.gencat.cat/aetr/vishid/v2/data/public/rivergauges/river_flow_6min';
 const ACA_RESERVOIR_URL =
@@ -25,7 +27,15 @@ function resolveClock(clock) {
   };
 }
 
-function makeAcaService({ pool, assegurarHidro, fetch: injectedFetch, httpClient, clock }) {
+function makeAcaService({
+  pool,
+  assegurarHidro,
+  fetch: injectedFetch,
+  httpClient,
+  clock,
+  logger = NULL_LOGGER,
+}) {
+  if (!isLogger(logger)) throw new TypeError('ACA logger must implement debug/info/warn/error');
   const fetchImpl = resolveFetch(injectedFetch, httpClient);
   const now = resolveClock(clock);
 
@@ -151,7 +161,10 @@ function makeAcaService({ pool, assegurarHidro, fetch: injectedFetch, httpClient
       const instant = (flowTs || capTs || nowIso);
 
       if (flowVal === null && capVal === null && levelVal === null) {
-        console.warn('[ACA] sense valors per', s.siteCode, { flowKey: s.flowKey, capKey: s.capKey });
+        logger.warn('provider.aca', {
+          result: 'skipped',
+          error_code: 'ACA_NO_VALUES',
+        });
         continue;
       }
 

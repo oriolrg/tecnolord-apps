@@ -1,7 +1,9 @@
 const express = require('express');
 const { getWindowFromQuery } = require('../utils/periods');
+const { NULL_LOGGER, isLogger } = require('../lib/logger');
 
-function makeHidroRouter({ pool }) {
+function makeHidroRouter({ pool, logger = NULL_LOGGER }) {
+    if (!isLogger(logger)) throw new TypeError('Hidro logger must implement debug/info/warn/error');
     const router = express.Router();  
     // ──────────────────────────────────────────────────────────
     // HIDRO (tal qual el teu original)
@@ -234,8 +236,11 @@ function makeHidroRouter({ pool }) {
         const { rows } = await pool.query(sql, params);
         return res.json({ ok: true, items: rows });
         }
-    } catch (e) {
-        console.error(e);
+    } catch {
+        logger.error('route.hidro', {
+            result: 'error',
+            error_code: 'DB_QUERY_FAILED',
+        });
         res.status(500).json({ ok:false, error:'db query error' });
     }
     });

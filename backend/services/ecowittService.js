@@ -3,6 +3,8 @@
 // - Fallback: ECW_* -> si falla/buit -> ECW_FB_*
 // - Si no hi ha dades bones: skipped=true (no peta)
 
+const { NULL_LOGGER, isLogger } = require('../lib/logger');
+
 function resolveFetch(injectedFetch, httpClient) {
   const transport = injectedFetch ?? httpClient ?? globalThis.fetch;
   if (typeof transport !== 'function') throw new TypeError('Ecowitt fetch must be a function');
@@ -137,8 +139,10 @@ function makeEcowittService({
   fetch: injectedFetch,
   httpClient,
   clock,
+  logger = NULL_LOGGER,
 }) {
   if (!pool) throw new Error('makeEcowittService: missing pool');
+  if (!isLogger(logger)) throw new TypeError('Ecowitt logger must implement debug/info/warn/error');
   const fetchImpl = resolveFetch(injectedFetch, httpClient);
   const now = resolveClock(clock);
 
@@ -158,12 +162,23 @@ function makeEcowittService({
     // 2) Fallback si cal
     if (!primary.ok) {
       if (hasEcw('ECW_FB')) {
-        console.warn(`[ecowitt] primary failed (${primary.reason}) -> trying fallback`);
+        logger.warn('provider.ecowitt', {
+          result: 'fallback',
+          error_code: 'ECOWITT_PRIMARY_FAILED',
+        });
         const fb = await fetchEcowitt('ECW_FB', fetchImpl);
         chosen = fb; // si fb.ok=false, quedem igualment amb fb per retornar reason
-        if (!fb.ok) console.warn(`[ecowitt] fallback failed (${fb.reason}) -> skipped`);
+        if (!fb.ok) {
+          logger.warn('provider.ecowitt', {
+            result: 'skipped',
+            error_code: 'ECOWITT_FALLBACK_FAILED',
+          });
+        }
       } else {
-        console.warn(`[ecowitt] primary failed (${primary.reason}) and no fallback configured -> skipped`);
+        logger.warn('provider.ecowitt', {
+          result: 'skipped',
+          error_code: 'ECOWITT_PRIMARY_FAILED',
+        });
       }
     }
 

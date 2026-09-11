@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { NULL_LOGGER, isLogger } = require('../lib/logger');
 
 const INJECTABLE_ENVIRONMENTS = new Set(['local', 'test']);
 
@@ -43,15 +44,22 @@ function validateLocalConnection(options, mode) {
   }
 }
 
-function attachSearchPath(pool) {
+function attachSearchPath(pool, logger) {
   pool.on('connect', (client) => {
-    client.query('SET search_path TO meteo,auth,public').catch(console.error);
+    client.query('SET search_path TO meteo,auth,public').catch(() => {
+      logger.error('database.search_path', {
+        result: 'error',
+        error_code: 'DB_SESSION_INIT_FAILED',
+      });
+    });
   });
   return pool;
 }
 
 function createPool(config = {}) {
   const environment = config.environment || process.env;
+  const logger = config.logger || NULL_LOGGER;
+  if (!isLogger(logger)) throw new TypeError('Pool logger must implement debug/info/warn/error');
   const mode = environmentMode(environment);
   const injectable = isInjectableEnvironment(environment);
   const syntheticRequested = isSyntheticRequested(config, environment);
@@ -73,7 +81,7 @@ function createPool(config = {}) {
     validateLocalConnection(options, mode);
   }
 
-  return attachSearchPath(new Pool(options));
+  return attachSearchPath(new Pool(options), logger);
 }
 
 module.exports = {

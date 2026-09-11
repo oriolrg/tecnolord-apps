@@ -6,10 +6,11 @@
 // ──────────────────────────────────────────────────────────
 
 const express = require('express');
-const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
 const { createPool } = require('./db/pool');
+const { createLogger, isLogger } = require('./lib/logger');
+const { createRequestContext } = require('./middleware/requestContext');
 
 require('dotenv').config();
 
@@ -28,7 +29,6 @@ const { makeEcowittService } = require('./services/ecowittService');
 
 const FRONTEND_DIR = path.resolve(__dirname, '../site');
 const REAL_CLOCK = Object.freeze({ now: () => new Date() });
-const ACCESS_LOG_FORMAT = ':method :safe-url :status :res[content-length] - :response-time ms';
 
 function redactRequestUrl(originalUrl) {
   try {
@@ -40,14 +40,13 @@ function redactRequestUrl(originalUrl) {
   }
 }
 
-morgan.token('safe-url', (req) => redactRequestUrl(req.originalUrl || req.url));
-
 // ──────────────────────────────────────────────────────────
 // Composició comuna per HTTP i CLI.
 function createRuntime({
   pool: injectedPool,
   httpClient,
   clock,
+  logger,
   environment = process.env,
 } = {}) {
   const hasRuntimeInjection = injectedPool !== undefined
@@ -69,8 +68,12 @@ function createRuntime({
       && (!clock || typeof clock.now !== 'function')) {
     throw new TypeError('Injected clock must be a function or implement now()');
   }
+  if (logger !== undefined && !isLogger(logger)) {
+    throw new TypeError('Injected logger must implement debug/info/warn/error');
+  }
 
-  const pool = createPool({ environment, pool: injectedPool });
+  const runtimeLogger = logger || createLogger();
+  const pool = createPool({ environment, pool: injectedPool, logger: runtimeLogger });
   const transport = httpClient === undefined ? globalThis.fetch : httpClient;
   const runtimeClock = clock === undefined ? REAL_CLOCK : clock;
 
@@ -120,7 +123,12 @@ function createRuntime({
 
   // ──────────────────────────────────────────────────────────
   // Serveis compartits per tots els transports d'entrada.
-  const sharedDependencies = { pool, httpClient: transport, clock: runtimeClock };
+  const sharedDependencies = {
+    pool,
+    httpClient: transport,
+    clock: runtimeClock,
+    logger: runtimeLogger,
+  };
   const previService = makePreviService(sharedDependencies);
   const acaService = makeAcaService({ ...sharedDependencies, assegurarHidro });
   const ecowittService = makeEcowittService({
@@ -133,12 +141,14 @@ function createRuntime({
     pullEcowittAndSave: ecowittService.pullEcowittAndSave,
     pullACAAndSave: acaService.pullACAAndSave,
     pullPreviAndSave: previService.pullPreviAndSave,
+    logger: runtimeLogger,
   });
 
   return {
     pool,
     transport,
     clock: runtimeClock,
+    logger: runtimeLogger,
     previService,
     acaService,
     ecowittService,
@@ -150,33 +160,51 @@ function createApp({
   pool,
   httpClient,
   clock,
+  logger,
   environment = process.env,
   accessLogStream,
+  correlationIdFactory,
 } = {}) {
   if (accessLogStream !== undefined
       && (!accessLogStream || typeof accessLogStream.write !== 'function')) {
     throw new TypeError('Access log stream must implement write()');
   }
-  const runtime = createRuntime({ pool, httpClient, clock, environment });
+  if (correlationIdFactory !== undefined && typeof correlationIdFactory !== 'function') {
+    throw new TypeError('Correlation ID factory must be a function');
+  }
+  const appLogger = logger || createLogger({
+    stream: accessLogStream === undefined ? process.stdout : accessLogStream,
+  });
+  const runtime = createRuntime({ pool, httpClient, clock, logger: appLogger, environment });
   const app = express();
   app.locals.meteolordRuntime = runtime;
+  app.locals.logger = appLogger;
 
   // ──────────────────────────────────────────────────────────
   // Middlewares
-  app.use(morgan(
-    ACCESS_LOG_FORMAT,
-    accessLogStream === undefined ? undefined : { stream: accessLogStream }
-  ));
+  app.use(createRequestContext({ idFactory: correlationIdFactory }));
+  app.use((req, res, next) => {
+    const startedAt = process.hrtime.bigint();
+    res.once('finish', () => {
+      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+      appLogger.info('http.request', {
+        correlation_id: req.requestContext.correlation_id,
+        result: `HTTP_${res.statusCode}`,
+        duration_ms: Number(durationMs.toFixed(3)),
+      });
+    });
+    next();
+  });
   app.use(cors());
   app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*+json'] }));
 
   // ──────────────────────────────────────────────────────────
   // Routers
   app.use(pingRouter);
-  app.use(makeHealthRouter({ pool: runtime.pool }));
-  app.use(makeMesuresRouter({ pool: runtime.pool }));
-  app.use(makeHidroRouter({ pool: runtime.pool }));
-  app.use(makePreviRouter({ previService: runtime.previService }));
+  app.use(makeHealthRouter({ pool: runtime.pool, logger: runtime.logger }));
+  app.use(makeMesuresRouter({ pool: runtime.pool, logger: runtime.logger }));
+  app.use(makeHidroRouter({ pool: runtime.pool, logger: runtime.logger }));
+  app.use(makePreviRouter({ previService: runtime.previService, logger: runtime.logger }));
 
   app.use(makeTasksRouter({
     checkApiKey,
@@ -195,7 +223,9 @@ function createApp({
 function startServer({ environment = process.env } = {}) {
   const app = createApp({ environment });
   const port = environment.PORT || 3000;
-  return app.listen(port, () => console.log(`Backend escoltant a :${port}`));
+  return app.listen(port, () => {
+    app.locals.logger.info('server.start', { result: 'ok' });
+  });
 }
 
 if (require.main === module) {

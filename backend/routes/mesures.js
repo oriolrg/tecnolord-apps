@@ -1,8 +1,10 @@
 // backend/routes/mesures.js
 const express = require('express');
 const { getWindowFromQuery } = require('../utils/periods');
+const { NULL_LOGGER, isLogger } = require('../lib/logger');
 
-function makeMesuresRouter({ pool }) {
+function makeMesuresRouter({ pool, logger = NULL_LOGGER }) {
+  if (!isLogger(logger)) throw new TypeError('Mesures logger must implement debug/info/warn/error');
   const router = express.Router();
 
   // ──────────────────────────────────────────────────────────
@@ -42,8 +44,11 @@ function makeMesuresRouter({ pool }) {
 
       const { rows } = await pool.query(sql, params);
       res.json({ ok: true, items: rows });
-    } catch (e) {
-      console.error(e);
+    } catch {
+      logger.error('route.mesures', {
+        result: 'error',
+        error_code: 'DB_QUERY_FAILED',
+      });
       res.status(500).json({ ok: false, error: 'db query error' });
     }
   });

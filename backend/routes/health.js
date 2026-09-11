@@ -1,5 +1,6 @@
 // backend/routes/health.js
 const express = require('express');
+const { NULL_LOGGER, isLogger } = require('../lib/logger');
 
 const DEFAULT_DB_TIMEOUT_MS = 2000;
 
@@ -23,7 +24,8 @@ function checkDatabase(pool, { timeoutMs = DEFAULT_DB_TIMEOUT_MS } = {}) {
   return Promise.race([query, deadline]).finally(() => clearTimeout(timeoutHandle));
 }
 
-function makeHealthRouter({ pool, timeoutMs = DEFAULT_DB_TIMEOUT_MS }) {
+function makeHealthRouter({ pool, timeoutMs = DEFAULT_DB_TIMEOUT_MS, logger = NULL_LOGGER }) {
+  if (!isLogger(logger)) throw new TypeError('Health logger must implement debug/info/warn/error');
   const router = express.Router();
 
   router.get('/health', async (_req, res) => {
@@ -31,6 +33,10 @@ function makeHealthRouter({ pool, timeoutMs = DEFAULT_DB_TIMEOUT_MS }) {
       await checkDatabase(pool, { timeoutMs });
       return res.status(200).json({ ok: true });
     } catch {
+      logger.error('health.database', {
+        result: 'unavailable',
+        error_code: 'DB_UNAVAILABLE',
+      });
       return res.status(503).json({ ok: false, code: 'DB_UNAVAILABLE' });
     }
   });
