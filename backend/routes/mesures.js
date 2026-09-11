@@ -18,7 +18,7 @@ function makeMesuresRouter({ pool }) {
 
       if (estacioCodi) {
         params.push(estacioCodi);
-        wheres.push(`m.estacio_id = (SELECT id FROM estacions WHERE codi = $${params.length})`);
+        wheres.push(`m.estacio_id = (SELECT id FROM meteo.estacions WHERE codi = $${params.length})`);
       }
       if (start) {
         params.push(start.toISOString());
@@ -35,9 +35,9 @@ function makeMesuresRouter({ pool }) {
       let sql;
       if (diffDays > 3) {
         // Agregació horària si demanem més de 3 dies
-        sql = `SELECT date_trunc('hour', m.instant) AS instant, AVG(m.temp_c) AS temp_c, AVG(m.humitat_pct) AS humitat_pct, AVG(m.pressio_rel_hpa) AS pressio_rel_hpa, SUM(m.taxa_pluja_mm_h)/60.0 AS pluja_hora_mm, MAX(m.vent_rafega_ms) AS vent_rafega_ms, AVG(m.vent_ms) AS vent_ms FROM mesures m ${whereSql} GROUP BY 1 ORDER BY 1 DESC LIMIT ${limit}`;
+        sql = `SELECT date_trunc('hour', m.instant) AS instant, AVG(m.temp_c) AS temp_c, AVG(m.humitat_pct) AS humitat_pct, AVG(m.pressio_rel_hpa) AS pressio_rel_hpa, SUM(m.taxa_pluja_mm_h)/60.0 AS pluja_hora_mm, MAX(m.vent_rafega_ms) AS vent_rafega_ms, AVG(m.vent_ms) AS vent_ms FROM meteo.mesures m ${whereSql} GROUP BY 1 ORDER BY 1 DESC LIMIT ${limit}`;
       } else {
-        sql = `SELECT m.* FROM mesures m ${whereSql} ORDER BY instant DESC LIMIT ${limit}`;
+        sql = `SELECT m.* FROM meteo.mesures m ${whereSql} ORDER BY instant DESC LIMIT ${limit}`;
       }
 
       const { rows } = await pool.query(sql, params);

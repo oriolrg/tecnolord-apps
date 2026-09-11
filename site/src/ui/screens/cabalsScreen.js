@@ -9,6 +9,11 @@ import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 const THEO_CAPACITY_HM3 = {
   "081419-003": 80.0, // Llosa del Cavall
 };
+const SYNTHETIC_HYDRO_CODES = Object.freeze({
+  cardener: "SYN-RIVER-01",
+  valls: "SYN-RIVER-02",
+  llosa: "SYN-RES-01",
+});
 const ACA_CATALOG_URL = "https://aplicacions.aca.gencat.cat/sentilo-catalog-web/component/map#";
 
 // Umami (analytics) – tracking segur (no trenca si no està carregat)
@@ -55,6 +60,10 @@ function pickRow(rows, predicates) {
     if (found) return found;
   }
   return null;
+}
+
+function hasStationCode(row, code) {
+  return norm(row?.codi) === norm(code);
 }
 
 function ymdLocal(d) {
@@ -122,16 +131,19 @@ async function refreshCabals(ui, store) {
     }
 
     const rowLlosa = pickRow(hidroRows, [
+      (r) => hasStationCode(r, SYNTHETIC_HYDRO_CODES.llosa),
       (r) => norm(r.nom).includes("llosa") || norm(r.nom).includes("cavall"),
       (r) => norm(r.codi).includes("081419-003") || norm(r.codi).includes("llosa") || norm(r.codi).includes("cavall"),
     ]);
 
     const rowCardener = pickRow(hidroRows, [
+      (r) => hasStationCode(r, SYNTHETIC_HYDRO_CODES.cardener),
       (r) => norm(r.nom).includes("cardener"),
       (r) => norm(r.codi).includes("cardener"),
     ]);
 
     const rowValls = pickRow(hidroRows, [
+      (r) => hasStationCode(r, SYNTHETIC_HYDRO_CODES.valls),
       (r) => norm(r.nom).includes("valls"),
       (r) => norm(r.codi).includes("valls"),
     ]);
@@ -260,13 +272,22 @@ const capDetailsHtml = `
 
       const rowsLlosa = ytdRows.filter(
         (r) =>
+          hasStationCode(r, SYNTHETIC_HYDRO_CODES.llosa) ||
           norm(r.nom).includes("llosa") ||
           norm(r.nom).includes("cavall") ||
           norm(r.codi).includes("llosa") ||
           norm(r.codi).includes("cavall")
       );
-      const rowsCardener = ytdRows.filter((r) => norm(r.nom).includes("cardener") || norm(r.codi).includes("cardener"));
-      const rowsValls = ytdRows.filter((r) => norm(r.nom).includes("valls") || norm(r.codi).includes("valls"));
+      const rowsCardener = ytdRows.filter(
+        (r) => hasStationCode(r, SYNTHETIC_HYDRO_CODES.cardener)
+          || norm(r.nom).includes("cardener")
+          || norm(r.codi).includes("cardener")
+      );
+      const rowsValls = ytdRows.filter(
+        (r) => hasStationCode(r, SYNTHETIC_HYDRO_CODES.valls)
+          || norm(r.nom).includes("valls")
+          || norm(r.codi).includes("valls")
+      );
 
       const capCanvas = cCap.querySelector("#tl-chart-cap");
       if (capCanvas) {

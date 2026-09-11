@@ -31,8 +31,8 @@ function makeHidroRouter({ pool }) {
             (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale,
             false AS is_fallback,
             false AS is_outside_range
-            FROM lectures_hidro h
-            JOIN estacions_hidro e ON e.id = h.estacio_id
+            FROM meteo.lectures_hidro h
+            JOIN meteo.estacions_hidro e ON e.id = h.estacio_id
             ${where}
             ORDER BY h.instant DESC
             LIMIT ${limit}
@@ -66,8 +66,8 @@ function makeHidroRouter({ pool }) {
                 e.codi, e.nom, e.tipus, e.id AS estacio_id,
                 false AS is_fallback,
                 false AS is_outside_range
-            FROM lectures_hidro h
-            JOIN estacions_hidro e ON e.id = h.estacio_id
+            FROM meteo.lectures_hidro h
+            JOIN meteo.estacions_hidro e ON e.id = h.estacio_id
             ${wWhere}
             GROUP BY 1, e.codi, e.nom, e.tipus, e.id
             ORDER BY 1 DESC
@@ -83,8 +83,8 @@ function makeHidroRouter({ pool }) {
                 (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale,
                 false AS is_fallback,
                 false AS is_outside_range
-            FROM lectures_hidro h
-            JOIN estacions_hidro e ON e.id = h.estacio_id
+            FROM meteo.lectures_hidro h
+            JOIN meteo.estacions_hidro e ON e.id = h.estacio_id
             ${wWhere}
             ORDER BY h.instant DESC
             LIMIT ${limit}
@@ -105,7 +105,7 @@ function makeHidroRouter({ pool }) {
 
         let targetCodis = targets;
         if (!targetCodis.length) {
-            const allStations = await pool.query(`SELECT codi FROM estacions_hidro WHERE activa = true`);
+            const allStations = await pool.query(`SELECT codi FROM meteo.estacions_hidro WHERE activa = true`);
             targetCodis = allStations.rows.map(r => r.codi);
         }
 
@@ -120,8 +120,8 @@ function makeHidroRouter({ pool }) {
                 h.id, h.instant, h.cabal_m3s, h.capacitat_pct, h.nivell_m, h.extres,
                 e.codi, e.nom, e.tipus, e.id AS estacio_id
             FROM wanted w
-            JOIN estacions_hidro e ON e.codi = w.codi
-            JOIN lectures_hidro h ON h.estacio_id = e.id
+            JOIN meteo.estacions_hidro e ON e.codi = w.codi
+            JOIN meteo.lectures_hidro h ON h.estacio_id = e.id
             ORDER BY e.codi, h.instant DESC
             )
             SELECT l.*,
@@ -154,8 +154,8 @@ function makeHidroRouter({ pool }) {
                 (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale,
                 false AS is_fallback,
                 false AS is_outside_range
-            FROM lectures_hidro h
-            JOIN estacions_hidro e ON e.id = h.estacio_id
+            FROM meteo.lectures_hidro h
+            JOIN meteo.estacions_hidro e ON e.id = h.estacio_id
             ${wWhere}
             ORDER BY h.instant DESC
             LIMIT 1
@@ -171,8 +171,8 @@ function makeHidroRouter({ pool }) {
                 (NOW() - h.instant) > INTERVAL '24 hours' AS is_stale,
                 true AS is_fallback,
                 true AS is_outside_range
-            FROM lectures_hidro h
-            JOIN estacions_hidro e ON e.id = h.estacio_id
+            FROM meteo.lectures_hidro h
+            JOIN meteo.estacions_hidro e ON e.id = h.estacio_id
             WHERE e.codi = $1
             ORDER BY h.instant DESC
             LIMIT 1
@@ -183,7 +183,7 @@ function makeHidroRouter({ pool }) {
 
         let targetCodis = targets;
         if (!targetCodis.length) {
-            const allStations = await pool.query(`SELECT codi FROM estacions_hidro WHERE activa = true`);
+            const allStations = await pool.query(`SELECT codi FROM meteo.estacions_hidro WHERE activa = true`);
             targetCodis = allStations.rows.map(r => r.codi);
         }
 
@@ -196,8 +196,8 @@ function makeHidroRouter({ pool }) {
                 false AS is_fallback,
                 false AS is_outside_range
             FROM wanted w
-            JOIN estacions_hidro e ON e.codi = w.codi
-            JOIN lectures_hidro h ON h.estacio_id = e.id
+            JOIN meteo.estacions_hidro e ON e.codi = w.codi
+            JOIN meteo.lectures_hidro h ON h.estacio_id = e.id
             ${start ? `WHERE h.instant >= $2` : ''} ${start && end ? 'AND' : ''} ${end ? `h.instant < $3` : ''}
             ORDER BY e.codi, h.instant DESC
             ),
@@ -211,8 +211,8 @@ function makeHidroRouter({ pool }) {
                 true AS is_fallback,
                 true AS is_outside_range
             FROM missing m
-            JOIN estacions_hidro e ON e.codi = m.codi
-            JOIN lectures_hidro h ON h.estacio_id = e.id
+            JOIN meteo.estacions_hidro e ON e.codi = m.codi
+            JOIN meteo.lectures_hidro h ON h.estacio_id = e.id
             ORDER BY e.codi, h.instant DESC
             )
             SELECT
