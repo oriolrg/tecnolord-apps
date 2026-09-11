@@ -75,6 +75,9 @@ readonly METEOLORD_PROJECT_DEV
 readonly METEOLORD_PROJECT_TEST
 readonly PROJECT
 readonly EVIDENCE_DIR="${PROJECT_ROOT}/artifacts/phase-a/${COMMIT}/${RUN_ID}"
+readonly REPORT_SCRIPT="${PROJECT_ROOT}/backend/scripts/phase-a-report.js"
+readonly REPORT_INPUT="${EVIDENCE_DIR}/report-input.json"
+readonly REPORT_OUTPUT="${EVIDENCE_DIR}/report.json"
 
 guard_paths() {
   local resolved_evidence
@@ -89,6 +92,8 @@ guard_paths() {
     die 'Compose path is not the expected literal project path'
   [[ ! -L "${COMPOSE_FILE}" ]] ||
     die 'Compose path must not be a symbolic link'
+  [[ "${REPORT_SCRIPT}" == "${PROJECT_ROOT}/backend/scripts/phase-a-report.js" ]] ||
+    die 'report script path is not the expected literal project path'
   [[ "${EVIDENCE_DIR}" == "${PROJECT_ROOT}/artifacts/phase-a/${COMMIT}/${RUN_ID}" ]] ||
     die 'evidence path is outside the expected run directory'
   if [[ -e "${EVIDENCE_DIR}" ]]; then
@@ -170,6 +175,30 @@ cleanup() {
     down --volumes --remove-orphans
 }
 
+report() {
+  guard_paths
+  guard_project "${PROJECT}"
+  [[ -f "${REPORT_SCRIPT}" && ! -L "${REPORT_SCRIPT}" ]] ||
+    die 'phase A report script is missing or unsafe'
+
+  if [[ ! -e "${EVIDENCE_DIR}" ]]; then
+    umask 077
+    mkdir -p -- "${EVIDENCE_DIR}"
+    chmod 0755 -- "${EVIDENCE_DIR}"
+  fi
+  guard_paths
+  [[ -f "${REPORT_INPUT}" && ! -L "${REPORT_INPUT}" ]] ||
+    die 'report-input.json is missing or unsafe'
+  [[ ! -L "${REPORT_OUTPUT}" ]] || die 'report output must not be a symbolic link'
+
+  node "${REPORT_SCRIPT}" \
+    --commit "${COMMIT}" \
+    --run-id "${RUN_ID}" \
+    --evidence-root "${EVIDENCE_DIR}" \
+    --input "${REPORT_INPUT}" \
+    --output "${REPORT_OUTPUT}"
+}
+
 CLEANUP_ARMED=false
 
 cleanup_trap() {
@@ -189,7 +218,7 @@ trap 'cleanup_trap 130' INT TERM
 trap 'cleanup_trap $?' EXIT
 
 usage() {
-  printf 'Usage: %s {validate|inventory|cleanup}\n' "${0##*/}"
+  printf 'Usage: %s {validate|inventory|cleanup|report}\n' "${0##*/}"
 }
 
 main() {
@@ -208,6 +237,9 @@ main() {
     cleanup)
       CLEANUP_ARMED=true
       log "Cleanup armed for guarded project ${PROJECT}"
+      ;;
+    report)
+      report
       ;;
     *)
       usage >&2
