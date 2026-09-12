@@ -15,6 +15,8 @@ COPY --chown=node:node package.json package-lock.json server.js ./
 COPY --chown=node:node db ./db
 COPY --chown=node:node routes ./routes
 COPY --chown=node:node services ./services
+COPY --chown=node:node lib ./lib
+COPY --chown=node:node providers ./providers
 COPY --chown=node:node middleware ./middleware
 COPY --chown=node:node utils ./utils
 

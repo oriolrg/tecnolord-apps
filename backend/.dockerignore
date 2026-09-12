@@ -9,6 +9,8 @@
 !routes/**/*.js
 !services/
 !services/**/*.js
+!providers/
+!providers/**/*.js
 !middleware/
 !middleware/**/*.js
 !utils/
