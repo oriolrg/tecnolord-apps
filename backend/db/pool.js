@@ -56,6 +56,20 @@ function attachSearchPath(pool, logger) {
   return pool;
 }
 
+function attachPoolErrorHandler(pool, logger) {
+  // Plain injected test doubles may not expose EventEmitter semantics. Real pg
+  // pools (including injected pg pools) always do, so guard the optional API.
+  if (typeof pool.on === 'function') {
+    pool.on('error', (error) => {
+      logger.warn('pool_client_error', {
+        result: 'connection_lost',
+        error_code: error && error.code ? error.code : 'DB_POOL_CLIENT_ERROR',
+      });
+    });
+  }
+  return pool;
+}
+
 function createPool(config = {}) {
   const environment = config.environment || process.env;
   const logger = config.logger || NULL_LOGGER;
@@ -73,7 +87,7 @@ function createPool(config = {}) {
       throw new Error('Pool injection is forbidden outside local/test');
     }
     validateInjectedPool(config.pool);
-    return config.pool;
+    return attachPoolErrorHandler(config.pool, logger);
   }
 
   const options = connectionOptions(environment);
@@ -81,10 +95,12 @@ function createPool(config = {}) {
     validateLocalConnection(options, mode);
   }
 
-  return attachSearchPath(new Pool(options), logger);
+  const pool = attachSearchPath(new Pool(options), logger);
+  return attachPoolErrorHandler(pool, logger);
 }
 
 module.exports = {
+  attachPoolErrorHandler,
   createPool,
   environmentMode,
   isInjectableEnvironment,

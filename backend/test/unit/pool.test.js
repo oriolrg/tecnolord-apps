@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const test = require('node:test');
 
 const { createPool } = require('../../db/pool');
@@ -41,6 +42,7 @@ test('production defaults use the real PostgreSQL environment configuration', as
     assert.equal(pool.options.port, Number(environment.POSTGRES_PORT));
     assert.equal(pool.options.database, environment.POSTGRES_DB);
     assert.equal(pool.listenerCount('connect'), 1);
+    assert.equal(pool.listenerCount('error'), 1);
   } finally {
     await pool.end();
   }
@@ -73,6 +75,31 @@ test('local composition accepts injected pool, transport, and clock', () => {
     clock: fixedClock,
   });
   assert.equal(typeof app.listen, 'function');
+});
+
+test('an injected pg-compatible pool receives the non-crashing error handler', () => {
+  const syntheticPool = new EventEmitter();
+  syntheticPool.query = async () => ({ rows: [] });
+  const warnings = [];
+  const logger = {
+    debug() {},
+    info() {},
+    warn(operation, fields) { warnings.push({ operation, fields }); },
+    error() {},
+  };
+
+  const result = createPool({
+    environment: localEnvironment(),
+    pool: syntheticPool,
+    logger,
+  });
+  assert.equal(result, syntheticPool);
+  assert.equal(syntheticPool.listenerCount('error'), 1);
+  assert.doesNotThrow(() => syntheticPool.emit('error', { code: 'ECONNRESET' }));
+  assert.deepEqual(warnings, [{
+    operation: 'pool_client_error',
+    fields: { result: 'connection_lost', error_code: 'ECONNRESET' },
+  }]);
 });
 
 test('synthetic mode is rejected in production before a pool is created', () => {

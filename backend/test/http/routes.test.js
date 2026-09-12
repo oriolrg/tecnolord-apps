@@ -1,11 +1,13 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
 const { LOCAL_FRONTEND_CSP, createApp, redactRequestUrl } = require('../../server');
+const { createPool } = require('../../db/pool');
 const { DEFAULT_DB_TIMEOUT_MS, checkDatabase } = require('../../routes/health');
 const { createFixedClock } = require('../helpers/clock');
 
@@ -40,7 +42,7 @@ const FORECAST_ITEM = Object.freeze({
 });
 
 function createRoutePool({ healthCheck } = {}) {
-  return {
+  const pool = {
     async query(query) {
       const sql = typeof query === 'string' ? query : query?.text;
       if (/^\s*SELECT 1\s*$/i.test(sql)) {
@@ -59,6 +61,11 @@ function createRoutePool({ healthCheck } = {}) {
       return { rows: [{ ok: 1 }] };
     },
   };
+  pool.connect = async () => ({
+    query: (query) => pool.query(query),
+    release() {},
+  });
+  return pool;
 }
 
 async function withServer(callback, { pool = createRoutePool() } = {}) {
@@ -124,8 +131,8 @@ test('/health returns sanitized 503 when the database is unavailable', async () 
   }, { pool });
 });
 
-test('/health automatically returns to 200 after database recovery', async () => {
-  let available = false;
+test('/health recovers 200 -> 503 -> 200 while /api/ping remains live', async () => {
+  let available = true;
   const pool = createRoutePool({
     healthCheck: async () => {
       if (!available) throw new Error('temporary database outage');
@@ -133,9 +140,18 @@ test('/health automatically returns to 200 after database recovery', async () =>
     },
   });
   await withServer(async (baseUrl) => {
+    const ready = await fetch(`${baseUrl}/health`);
+    assert.equal(ready.status, 200);
+    assert.deepEqual(await ready.json(), { ok: true });
+
+    available = false;
     const unavailable = await fetch(`${baseUrl}/health`);
     assert.equal(unavailable.status, 503);
     assert.deepEqual(await unavailable.json(), { ok: false, code: 'DB_UNAVAILABLE' });
+
+    const ping = await fetch(`${baseUrl}/api/ping`);
+    assert.equal(ping.status, 200);
+    assert.deepEqual(await ping.json(), { ok: true });
 
     available = true;
     const recovered = await fetch(`${baseUrl}/health`);
@@ -162,19 +178,58 @@ test('/health returns sanitized 503 when the database query exceeds two seconds'
 test('database readiness has a two-second default and enforces its deadline', async () => {
   assert.equal(DEFAULT_DB_TIMEOUT_MS, 2000);
   let receivedQuery;
+  let releaseCount = 0;
   await checkDatabase({
-    async query(query) {
-      receivedQuery = query;
-      return { rows: [{ ok: 1 }] };
+    async connect() {
+      return {
+        async query(query) {
+          receivedQuery = query;
+          return { rows: [{ ok: 1 }] };
+        },
+        release() {
+          releaseCount += 1;
+        },
+      };
     },
   });
   assert.deepEqual(receivedQuery, { text: 'SELECT 1', query_timeout: 2000 });
+  assert.equal(releaseCount, 1);
 
-  const neverSettles = { query: () => new Promise(() => {}) };
+  const neverSettles = {
+    async connect() {
+      return { query: () => new Promise(() => {}), release() {} };
+    },
+  };
   await assert.rejects(
     checkDatabase(neverSettles, { timeoutMs: 20 }),
     /timed out/
   );
+});
+
+test('an idle pool client error is logged without terminating the process', () => {
+  const injectedPool = new EventEmitter();
+  injectedPool.query = async () => ({ rows: [] });
+  const events = [];
+  const logger = {
+    debug() {},
+    info() {},
+    warn(operation, fields) { events.push({ operation, fields }); },
+    error() {},
+  };
+  const pool = createPool({
+    environment: { METEOLORD_ENV: 'test' },
+    pool: injectedPool,
+    logger,
+  });
+
+  assert.doesNotThrow(() => pool.emit('error', Object.assign(new Error('private detail'), {
+    code: 'ECONNRESET',
+  })));
+  assert.deepEqual(events, [{
+    operation: 'pool_client_error',
+    fields: { result: 'connection_lost', error_code: 'ECONNRESET' },
+  }]);
+  assert.equal(events.some((event) => JSON.stringify(event).includes('private detail')), false);
 });
 
 test('/api/v1/mesures/darreres returns the existing body contract', async () => {
