@@ -1,9 +1,9 @@
 # QA-PLAN-06 v0.1 — Revisió documental de PLAN-06 v0.1
 
-**Versió:** 0.1  
-**Estat:** COMPLETAT  
-**Data:** 2026-09-17  
-**Document revisat:** PLAN-06 v0.1  
+**Versió:** 0.1
+**Estat:** COMPLETAT
+**Data:** 2026-09-17
+**Document revisat:** PLAN-06 v0.1
 **Naturalesa:** QA documental de planificació
 
 ## 1. Veredicte

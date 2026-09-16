@@ -1,13 +1,13 @@
 # PLAN-06 v0.1 — Mapa públic d'estacions: baseline cartogràfica MAP-A
 
-**Versió:** 0.1  
-**Estat:** CANDIDAT A REFINAMENT v0.2  
-**Data:** 2026-09-17  
-**SPEC de referència:** SPEC-06 v0.8  
-**Resolucions vinculants:** DCF-06 v1.2, DCF-04 v1.0, DCF-08 v1.0, DCF-11 v1.0  
-**QA de la SPEC:** QA-06 v3.0; QA-06 v4.0  
-**QA del PLAN:** QA-PLAN-06 v0.1  
-**Abast:** DLT-MAP-01 a DLT-MAP-05; MAP-A amb dades exclusivament sintètiques.  
+**Versió:** 0.1
+**Estat:** CANDIDAT A REFINAMENT v0.2
+**Data:** 2026-09-17
+**SPEC de referència:** SPEC-06 v0.8
+**Resolucions vinculants:** DCF-06 v1.2, DCF-04 v1.0, DCF-08 v1.0, DCF-11 v1.0
+**QA de la SPEC:** QA-06 v3.0; QA-06 v4.0
+**QA del PLAN:** QA-PLAN-06 v0.1
+**Abast:** DLT-MAP-01 a DLT-MAP-05; MAP-A amb dades exclusivament sintètiques.
 **No autoritza:** TASKS-06, implementació, dades reals, desplegament ni MAP-B/MAP-C.
 
 ## 1. Objectiu
@@ -57,7 +57,7 @@ El clustering és visual; no determina identitat ni deduplicació.
 
 ### DLT-MAP-01 — Motor cartogràfic
 
-**Estat:** RESOLT  
+**Estat:** RESOLT
 **Decisió:** MapLibre GL JS, autoallotjat al mateix origen.
 
 La versió exacta s'ha de fixar al lockfile i als artefactes de build; el
@@ -67,7 +67,7 @@ DLT-MAP-24, però ha de permetre `worker-src 'self'` sense recursos externs.
 
 ### DLT-MAP-02 — Sistema de tiles
 
-**Estat:** RESOLT  
+**Estat:** RESOLT
 **Decisió:** PMTiles vectorial autoallotjat al mateix origen.
 
 MAP-A servirà un basemap local, sintètic i determinista:
@@ -83,7 +83,7 @@ cartogràfiques reals, la seva llicència i atribució no formen part de MAP-A.
 
 ### DLT-MAP-03 — Format cartogràfic
 
-**Estat:** RESOLT  
+**Estat:** RESOLT
 **Decisió:** vectorial.
 
 PMTiles és el contenidor de distribució; el contingut del basemap és vectorial
@@ -92,7 +92,7 @@ dataset autoritzat en fases posteriors sense canviar el contracte tècnic.
 
 ### DLT-MAP-04 — Clustering
 
-**Estat:** RESOLT  
+**Estat:** RESOLT
 **Decisió:** clustering natiu d'una font GeoJSON, amb valors inicials
 `clusterRadius: 50` i `cluster: true`.
 
@@ -103,7 +103,7 @@ propietaris ni estats interns.
 
 ### DLT-MAP-05 — Desclustering i coincidències
 
-**Estat:** RESOLT AMB VALIDACIÓ DE BENCHMARK  
+**Estat:** RESOLT AMB VALIDACIÓ DE BENCHMARK
 **Decisió:** `clusterMaxZoom: 14` com a valor inicial; a `z >= 15` es
 mostren punts individuals, amb `maxZoom: 18`.
 
@@ -138,12 +138,12 @@ disponible temporalment i conserva llista, cerca, filtres i fitxa.
 
 ## 7. Validació requerida per MAP-A
 
-P06-A-10 verifica motor, worker, style i PMTiles same-origin.  
+P06-A-10 verifica motor, worker, style i PMTiles same-origin.
 P06-A-11 verifica GeoJSON `MAP_VISIBLE`, clustering, expansió i selector de
-punts coincidents.  
-P06-A-17 verifica la CSP específica.  
-P06-A-18 verifica E2E, zero egress, fallada de basemap i coincidències.  
-P06-A-19 executa el benchmark normatiu amb 100 i 500 estacions.  
+punts coincidents.
+P06-A-17 verifica la CSP específica.
+P06-A-18 verifica E2E, zero egress, fallada de basemap i coincidències.
+P06-A-19 executa el benchmark normatiu amb 100 i 500 estacions.
 P06-A-20 és la gate de MAP-A.
 
 El benchmark de P06-A-19 ha de registrar browser, viewport, classe de
