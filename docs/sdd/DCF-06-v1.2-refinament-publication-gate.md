@@ -16,7 +16,7 @@ Resta de v1.1 (DCF-02, DCF-03, DCF-07, DCF-09) es manté vigent i ratificat.
 
 Motiu: SPEC-00 v0.5, ara disponible íntegrament, diu explícitament que un
 usuari aprovat publica directament sense segona aprovació administrativa.
-DCF-06 v1.1 havia introduït \`PUBLICATION_APPROVER\` com a gate humà
+DCF-06 v1.1 havia introduït `PUBLICATION_APPROVER` com a gate humà
 obligatori, contradient SPEC-00. Cal resoldre la contradicció sense
 trencar cap de les dues.
 
@@ -32,25 +32,25 @@ titular fa opt-in i totes les condicions es compleixen.
 - classificació DCF-02 completada (estació/sensor/camp);
 - consentiment registrat, quan sigui la base aplicable;
 - política de precisió geogràfica vàlida;
-- \`quality_profile_id\` versionat existent;
+- `quality_profile_id` versionat existent;
 - procedència i llicència/base jurídica aplicable;
 - cap indicador productiu.
 
-**Si totes les condicions passen:** l'estació passa a \`PUBLIC_ALLOWED\`
+**Si totes les condicions passen:** l'estació passa a `PUBLIC_ALLOWED`
 sense intervenció humana.
 
 **Si alguna condició no es pot resoldre automàticament** (per exemple,
 llicència ambigua, procedència no verificable), s'escala al capability
-\`PUBLICATION_APPROVER\` (SPEC-09), que revisa i aprova o rebutja.
+`PUBLICATION_APPROVER` (SPEC-09), que revisa i aprova o rebutja.
 
 ### 1.2 Correspondència amb SPEC-00 v0.5
 
 | Aspecte | SPEC-00 v0.5 §2.2 / RF-03 | DCF-06 v1.2 |
 |---------|---------------------------|-------------|
-| Aprovació d'usuari | Manual, \`SUPERADMIN\` | Es manté |
+| Aprovació d'usuari | Manual, `SUPERADMIN` | Es manté |
 | Publicació d'estació per usuari aprovat | Directa, sense segona aprovació | Es manté: gate automàtic, no humà |
 | Intervenció administrativa a la publicació | No per defecte | Només excepcional, per escalat |
-| Revocació | \`SUPERADMIN\` pot despublicar | Es manté |
+| Revocació | `SUPERADMIN` pot despublicar | Es manté |
 
 **Conclusió:** DCF-06 v1.2 **no contradiu SPEC-00**. El gate automàtic
 no és una "segona aprovació": és una validació tècnica equivalent a les
@@ -59,12 +59,12 @@ observació correcta, ubicació pública, acceptació).
 
 ### 1.3 Capabilities implicats
 
-- **\`PUBLICATION_APPROVER\`**: capability de domini per resoldre casos
+- **`PUBLICATION_APPROVER`**: capability de domini per resoldre casos
   ambigus. SPEC-09 en defineix la implementació (rol o grup).
-- **\`DATA_REVIEWER\`**: capability de domini per resoldre estats
-  \`EN_REVISIO\` de qualitat.
+- **`DATA_REVIEWER`**: capability de domini per resoldre estats
+  `EN_REVISIO` de qualitat.
 
-Ambdós són compatibles amb \`SUPERADMIN\` segons SPEC-00.
+Ambdós són compatibles amb `SUPERADMIN` segons SPEC-00.
 
 ## 2. Impacte sobre DCF-06 v1.1
 
@@ -87,7 +87,7 @@ DCF-06 v1.1.
 **Decisió ratificada:**
 
 - el gate de publicació és automàtic;
-- \`PUBLICATION_APPROVER\` intervé només per escalat quan el gate
+- `PUBLICATION_APPROVER` intervé només per escalat quan el gate
   automàtic no es pot resoldre;
 - SPEC-00 v0.5 i DCF-06 v1.2 són coherents;
 - la resta de DCF-06 v1.1 continua vigent.
