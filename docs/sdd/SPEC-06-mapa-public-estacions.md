@@ -1,24 +1,24 @@
-📄 SPEC-06 v0.6 — Mapa públic d'estacions de MeteoLord
-Versió: 0.6
+📄 SPEC-06 v0.8 — Mapa públic d'estacions de MeteoLord
+Versió: 0.8
 Estat: CANDIDATA A QA DOCUMENTAL
 Data: 2026-09-16
-SPEC paraigua: SPEC-00 v0.5 — pendent d'aprovació i no disponible íntegrament
+SPEC paraigua: SPEC-00 v0.5 — disponible; DCF-06 v1.2 la reconcilia
 SPEC base de fase: SPEC-10 v0.3 — fase A aprovada
 Descoberta relacionada: SPIKE-04 v1.1 — Grafana/i2CAT, viable amb condicions
-Resolucions DCF: DCF-06 v1.1 (RESOLT), DCF-04 v1.0 (04A RESOLT, 04B PENDENT), DCF-08 v1.0 (RESOLT), DCF-11 v1.0 (RESOLT)
-QA prèvia: QA-06 v1.0 — resolt a v0.5 i v0.6
+Resolucions DCF: DCF-06 v1.1 + v1.2, DCF-04 v1.0 (04A RESOLT, 04B PENDENT), DCF-08 v1.0, DCF-11 v1.0
+QA prèvia: QA-06 v1.0, v2.0, v3.0 — resolta a v0.8
 Naturalesa: reconstrucció refinada; no autoritza PLAN-06 ni implementació.
 
 0. Autoritat, fonts i límits
 Aquesta especificació defineix el comportament públic desitjat del mapa d'estacions. No selecciona motor cartogràfic, llibreria de gràfiques, sistema de tiles, arquitectura, base de dades ni topologia. Aquestes decisions corresponen a un futur PLAN-06, després de QA documental i aprovació explícita.
 
-Com que no es disposa del contingut complet de SPEC-00 v0.5, qualsevol requisit que en depengui es conserva com a REQ-00 i no es considera confirmat. INFERIT identifica una reconstrucció que no pot convertir-se en decisió d'implementació sense validació de producte.
+Relació amb SPEC-00 v0.5: ara disponible íntegrament. DCF-06 v1.2
+reconcilia el gate de publicació de §6.1 amb SPEC-00 (§2.2, RF-03):
+la validació és automàtica i l'escalat humà és excepcional.
 
 HA DE, NO POT i BLOQUEJA són normatius.
 
 PENDENT requereix una decisió abans del PLAN-06.
-
-INFERIT és una proposta de treball, no una font normativa.
 
 Marca	Significat
 FET-REPO	fet confirmat en documentació o evidència versionada
@@ -26,17 +26,16 @@ REQ-00	requisit atribuït a SPEC-00 pendent de contrast íntegre
 REQ-06	requisit propi d'aquesta SPEC
 SPIKE-04	condició de la descoberta Grafana/i2CAT
 DCF-06	resolució DCF-02, DCF-03, DCF-07, DCF-09
-DCF-04	resolució DCF-04A (DCF-04B delegat a SPEC-08)
+DCF-04	resolució DCF-04A (04B delegat a SPEC-08)
 DCF-08	resolució de l'àmbit geogràfic i ubicació
 DCF-11	resolució de la política de duplicats
-INFERIT	reconstrucció pendent de validació
 PENDENT	decisió oberta que bloqueja el seu àmbit
 1. Objectiu
 Definir un mapa públic que permeti a un visitant no autenticat:
 
 consultar únicament estacions i camps autoritzats per a publicació;
 
-identificar una estació i el seu estat global (derivat de diversos eixos);
+identificar una estació i el seu estat global derivat de quatre eixos;
 
 veure un resum actual i accedir a una fitxa per URL directa;
 
@@ -47,48 +46,32 @@ filtrar o cercar només elements del catàleg públic;
 no rebre, deduir ni enumerar dades INTERNAL_ONLY.
 
 2. Abast i exclusions
-Inclou: mapa amb marcadors públics, resum, fitxa, llista alternativa, filtres/cerca condicionats als contractes pendents, proves negatives de la frontera INTERNAL_ONLY, validació local amb fixtures sintètiques i historials governats per history_profile.
+Inclou: mapa amb marcadors públics, resum, fitxa, llista alternativa, filtres/cerca, proves negatives de la frontera INTERNAL_ONLY, validació local amb fixtures sintètiques i historials governats per history_profile.
 
 Exclou: identitat, sessions, rols i fluxos de propietari; alta o aprovació d'estacions; ingesta, retenció física i adaptadors; Grafana/i2CAT al mapa públic; canvis d'esquema, infraestructura o desplegament; dades privades i promoció.
 
-Consumeix però no implementa: el procés de consentiment i publicació d'estacions és responsabilitat de SPEC-01 i SPEC-02. SPEC-06 només consumeix: publicacio_estacio, publicacio_sensor, publicacio_camp, precisio_autoritzada, publicacio_revocada, catalog_version, retention_policy_ref i canonical_station_id.
+Consumeix però no implementa: el procés de consentiment i publicació d'estacions correspon a SPEC-01 i SPEC-02. SPEC-06 consumeix: publicacio_estacio, publicacio_sensor, publicacio_camp, precisio_autoritzada, publicacio_revocada, catalog_version, retention_policy_ref i canonical_station_id.
 
 3. Model de classificació pública
 3.1 Classificació a tres nivells
-La publicació es decideix a tres nivells independents:
+Nivell estació: PUBLIC_ALLOWED | INTERNAL_ONLY
+Nivell sensor: PUBLIC_ALLOWED | INTERNAL_ONLY
+Nivell camp: PUBLIC_ALLOWED | INTERNAL_ONLY
 
-Nivell estació:
-
-Valor	Significat
-PUBLIC_ALLOWED	L'estació pot aparèixer en superfícies públiques
-INTERNAL_ONLY	L'estació no pot aparèixer en cap superfície pública
-Nivell sensor:
-
-Valor	Significat
-PUBLIC_ALLOWED	El sensor pot aparèixer en superfícies públiques
-INTERNAL_ONLY	El sensor no pot aparèixer en cap superfície pública
-Nivell camp:
-
-Valor	Significat
-PUBLIC_ALLOWED	El camp pot aparèixer en superfícies públiques
-INTERNAL_ONLY	El camp no pot aparèixer en cap superfície pública
 3.2 Regla de visibilitat efectiva
-Un camp és visible en una superfície pública si i només si:
-
 text
 PUBLIC(field) =
     source.publication_allowed
     AND station.classification == PUBLIC_ALLOWED
     AND sensor.classification == PUBLIC_ALLOWED
     AND field.classification == PUBLIC_ALLOWED
-    AND publication_approval == APPROVED
-    AND consent_gate == SATISFIED
+    AND publication_gate == PASSED
     AND quality_gate != NO_PUBLICABLE
-Quan no existeixi el nivell sensor per a una font determinada, aquest gate pot considerar-se estructuralment no aplicable, però mai pot convertir un camp no classificat en públic.
+Quan no existeixi el nivell sensor, el gate és estructuralment no aplicable però mai converteix un camp no classificat en públic.
 
-Qualsevol resultat false, null, error de lectura o contracte desconegut HA DE produir un resultat no públic.
+Qualsevol resultat false, null, error o contracte desconegut → no públic.
 
-Aquesta regla s'aplica al backend. El frontend no pot inferir, reconstruir ni sobreescriure aquesta decisió.
+Aquesta regla s'aplica al backend.
 
 3.3 Model de dades (conceptual)
 text
@@ -106,152 +89,126 @@ Estacio
 │       ├── publicacio: PUBLIC_ALLOWED | INTERNAL_ONLY
 │       └── history_profile_id: string|null
 └── publicacio_revocada: boolean
-Nota: El model físic concret (SQL, JSON, etc.) correspon al PLAN-06.
-
 3.4 Fail-closed per defecte
-Una classificació absent, desconeguda, caducada, inconsistent o que no es pugui verificar equival a INTERNAL_ONLY.
+Classificació absent, desconeguda, caducada, inconsistent o no verificable → INTERNAL_ONLY.
 
 3.5 Catalog version
-A més de classification_version per element classificable, el catàleg global HA DE mantenir un catalog_version.
+catalog_version (monòton) canvia amb qualsevol modificació que alteri el conjunt o contingut públic:
 
-catalog_version HA DE canviar amb qualsevol modificació que pugui alterar el conjunt o contingut públic, incloent com a mínim:
+publicació o despublicació d'estació;
 
-publicació o despublicació d'una estació;
+canvi de classificació (estació/sensor/camp);
 
-canvi de classificació d'estació, sensor o camp;
+canvi de public_geometry, privacy_radius_m, geo_publication;
 
-canvi de public_geometry, privacy_radius_m o geo_publication;
-
-canvi de history_profile associat a un camp;
+canvi de history_profile_id associat a un camp;
 
 canvi de duplicate_group_id o canonical_station_id;
 
 canvi de política que modifiqui la visibilitat efectiva.
 
-El valor HA DE ser monòton o equivalentment inequívoc per detectar una versió anterior del catàleg.
-
-L'API pública HA DE retornar el catalog_version corresponent a les dades servides.
-
-El frontend, abans de reutilitzar dades procedents de cache, HA DE poder comprovar que corresponen a una versió encara vàlida del catàleg.
-
-Una cache amb catalog_version anterior NO POT considerar-se autoritativa quan existeix una versió posterior coneguda.
-
-La invalidació explícita definida a §5.4 continua essent obligatòria: catalog_version és una defensa addicional i no substitueix la purga de caches.
+L'API pública HA DE retornar el catalog_version. El frontend HA DE verificar-lo abans de reutilitzar cache. Una cache amb catalog_version anterior no és autoritativa.
 
 3.6 Sensors múltiples
-Els sensors individuals d'una mateixa estació poden tenir classificacions diferents.
-
-Exemple admissible:
-
-text
-station = PUBLIC_ALLOWED
-temperature_sensor = PUBLIC_ALLOWED
-humidity_sensor    = PUBLIC_ALLOWED
-diagnostic_sensor  = INTERNAL_ONLY
-La publicació s'avalua independentment per sensor/camp. L'autorització pública de l'estació NO implica l'autorització automàtica de tots els sensors que conté.
+Una estació pot tenir sensors amb classificacions diferents. L'autorització pública de l'estació NO implica l'autorització automàtica de tots els sensors.
 
 3.7 Identitat de duplicats
-Una estació pot pertànyer a un duplicate_group_id si s'ha confirmat que ella i unes altres representen la mateixa estació física/lògica. En aquest cas:
-
-el grup HA DE tenir exactament una canonical_station_id;
-
-només la canònica és representable públicament;
-
-els aliases no apareixen com a entitats independents;
-
-les observacions de fonts diferents NO es fusionen.
-
-Veure §6.7 per al contracte complet.
+Veure §6.7.
 
 4. Model d'estats multidimensionals
 4.1 Quatre eixos ortogonals
-Eix 1 — Publicació:
+Eix 1 — Publicació: PUBLIC_ALLOWED | INTERNAL_ONLY
 
-Valor	Significat
-PUBLIC_ALLOWED	Visible en superfícies públiques
-INTERNAL_ONLY	No visible
-Eix 2 — Disponibilitat (frescor):
+Eix 2 — Disponibilitat (frescor): FRESCA | SENSE_DADES_RECENTS | OBSOLETA
 
-Valor	Significat
-FRESCA	Dades recents (< llindar)
-SENSE_DADES_RECENTS	Última dada > llindar
-OBSOLETA	Última dada > llindar crític
-Eix 3 — Qualitat:
+Eix 3 — Qualitat: OK | SOSPITOSA | NO_PUBLICABLE
 
-Valor	Significat
-OK	Dades dins dels paràmetres esperats
-SOSPITOSA	Dades fora de paràmetres però no invalidades
-NO_PUBLICABLE	Dades invalidades, no es poden mostrar
-Eix 4 — Workflow de revisió:
+Eix 4 — Workflow de revisió: NORMAL | EN_REVISIO | REVISADA
 
-Valor	Significat
-NORMAL	Sense revisió pendent
-EN_REVISIO	Revisió manual en curs
-REVISADA	Revisió completada
-4.2 Estat presentable (derivat)
-La UI deriva un estat presentable combinant els quatre eixos. La regla exacta correspon al PLAN-06, però ha de complir:
-
-Si publicacio == INTERNAL_ONLY → no es mostra.
-
-Si qualitat == NO_PUBLICABLE → no es mostra.
-
-Si disponibilitat == OBSOLETA → es mostra amb indicador "sense dades recents" o s'oculta (decisió de producte).
-
-Si qualitat == SOSPITOSA → es mostra amb indicador visual.
-
-Si revisio == EN_REVISIO → es mostra amb indicador "en revisió" (o s'oculta, decisió de producte).
-
-4.3 Taula de comportament públic
-Estat	Comportament públic
-DISPONIBLE	Es poden mostrar valors actuals autoritzats
-SENSE_DADES_RECENTS	L'estació pot continuar visible; la dada antiga no es presenta com a actual
-SOSPITOSA	L'estació pot continuar visible; els camps afectats no es presenten com a dades fiables
-EN_REVISIO	L'estació pot continuar visible si DCF-02/09 ho permeten; les mesures sotmeses a revisió no es publiquen
-NO_PUBLICABLE	L'estació queda exclosa de totes les superfícies públiques
-4.4 DEFECT-01 com a condició de camp
-DEFECT_01_AFFECTED NO és un estat global de l'estació. És una condició aplicada a camps individuals afectats pel defecte de conversió de zeros Ecowitt.
-
-Els camps afectats es tracten com INTERNAL_ONLY a efectes de publicació fins que la seva semàntica sigui validada. Això és independent de l'estat global de l'estació.
-
-Exemple:
+4.2 Llindars i comportament — tancat normativament
+Definicions temporals:
 
 text
-station.status = DISPONIBLE
+freshness_limit   = max(30 minuts, 3 × expected_update_interval)
+obsolete_limit    = max(24 hores, 12 × expected_update_interval)
+Si expected_update_interval no està definit:
+
+freshness_limit = 30 minuts;
+
+obsolete_limit = 24 hores;
+
+la mesura NO POT considerar-se actual fiable.
+
+Classificació per edat:
+
+text
+age <= freshness_limit                → FRESCA
+freshness_limit < age <= obsolete_limit → SENSE_DADES_RECENTS
+age > obsolete_limit                   → OBSOLETA
+Comportament públic per estat:
+
+Estat	Visible al mapa?	Valors actuals?	Indicador
+FRESCA	SÍ	SÍ	cap
+SENSE_DADES_RECENTS	SÍ	NO (només observed_at i valor històric)	"Sense dades recents"
+OBSOLETA	SÍ	NO	"Dada obsoleta"
+SOSPITOSA (qualitat)	SÍ	Camps afectats marcats "no fiable"; **no s'oculten**	"Dada sospitosa"
+EN_REVISIO (workflow)	SÍ	Mesures sota revisió NO es publiquen	"En revisió"
+NO_PUBLICABLE (qualitat)	NO	—	—
+
+**Regla normativa única per a SOSPITOSA:** una estació `SOSPITOSA`
+roman visible amb l'indicador "Dada sospitosa". Els camps afectats es
+mostren amb marca "no fiable", **no s'oculten**. Aquesta és l'única
+semàntica admesa; no és una decisió del PLAN-06.
+
+Regla normativa explícita: una estació OBSOLETA continua sent visible al mapa amb l'indicador corresponent. Una estació EN_REVISIO continua sent visible amb l'indicador corresponent. Aquest comportament és normatiu i no pot ser canviat pel PLAN-06 sense modificar aquesta SPEC.
+
+Justificació: eliminar una estació del mapa quan perd dades recents és pitjor per a l'usuari final que mostrar-la amb un indicador clar. La NO_PUBLICABLE per qualitat sí que l'elimina, perquè les dades són invalidades.
+
+4.3 Taula resum
+Situació	Visible	Valors actuals	Indicador
+FRESCA + OK + NORMAL	SÍ	SÍ	—
+SENSE_DADES_RECENTS	SÍ	NO	"Sense dades recents"
+OBSOLETA	SÍ	NO	"Dada obsoleta"
+SOSPITOSA	SÍ	parcial	"Dada sospitosa"
+EN_REVISIO	SÍ	parcial	"En revisió"
+NO_PUBLICABLE	NO	NO	—
+INTERNAL_ONLY	NO	NO	—
+4.4 DEFECT-01 com a condició de camp
+DEFECT_01_AFFECTED NO és un estat global. És una condició aplicada a camps individuals.
+
+Els camps afectats es tracten com INTERNAL_ONLY fins que la seva semàntica sigui validada. Exemple:
+
+text
+station.status = FRESCA + OK + NORMAL
 temperature = PUBLIC_ALLOWED
 humidity    = PUBLIC_ALLOWED
 rain        = DEFECT_01_AFFECTED → INTERNAL_ONLY
-L'estació continua visible, però rain no apareix a cap superfície pública.
-
-La resolució de DEFECT-01 HA DE provocar una nova classificació explícita abans que el camp pugui esdevenir PUBLIC_ALLOWED.
-
-Aquest principi s'aplica també a historials, agregacions, estadístiques i derivats: un camp afectat per DEFECT-01 no pot participar en cap càlcul públic.
+L'estació continua visible; rain no apareix a cap superfície pública ni historial ni agregat.
 
 4.5 Separació de responsabilitats
 Backend: manté els quatre eixos i les condicions de camp.
 
-API pública: retorna els eixos per a cada estació.
+API pública: retorna els eixos.
 
-Frontend: deriva l'estat presentable i el mostra.
+Frontend: deriva l'estat presentable i el mostra segons §4.2.
 
 5. Frontera de publicació i INTERNAL_ONLY
 5.1 Principi fail-closed
-Tota estació, sensor o camp sense classificació pública explícita és INTERNAL_ONLY. La decisió d'inclusió és autoritativa al backend: el frontend no pot convertir una dada interna en pública mitjançant filtre, cache, paràmetre o estat de UI.
+Tota estació, sensor o camp sense classificació pública explícita és INTERNAL_ONLY. La decisió és autoritativa al backend.
 
 5.2 Superfícies cobertes
-La frontera s'aplica a marcadors, llista, modal, fitxa, cerca, filtres, comptadors, agregats, API pública, cache, logs, errors, sitemap i metadades. Cap d'aquestes superfícies pot revelar existència, ubicació, sensor, valor, estat o error d'una font INTERNAL_ONLY.
+Marcadors, llista, modal, fitxa, cerca, filtres, comptadors, agregats, API pública, cache, logs, errors, sitemap i metadades.
 
 5.3 Fonts
-Font	Estat públic per defecte	Condició
-Fixtures sintètiques	PUBLIC_ALLOWED	Exclusivament dins MAP-A
-Ecowitt d'usuari	PENDENT	Elegible després de DCF-09, perfil de qualitat i classificació explícita
-Camps afectats per DEFECT-01	INTERNAL_ONLY	Fins a validació semàntica
-ACA/hidrologia	INTERNAL_ONLY	Fins a resolució favorable de DCF-10
-Open-Meteo/previsió	INTERNAL_ONLY	Fins a resolució favorable de DCF-10
+Font	Estat públic	Condició
+Fixtures sintètiques	PUBLIC_ALLOWED	Exclusivament MAP-A
+Ecowitt d'usuari	PENDENT	Elegible després de DCF-09
+Camps DEFECT-01	INTERNAL_ONLY	Fins a validació
+ACA/hidrologia	INTERNAL_ONLY	Fins a DCF-10
+Open-Meteo	INTERNAL_ONLY	Fins a DCF-10
 Grafana/i2CAT	INTERNAL_ONLY	Durant tota SPEC-06
-Que una font sigui accessible tècnicament NO implica autorització de republicació.
-
 5.4 Revocació
-La retirada del consentiment o una despublicació administrativa HA DE:
+La retirada del consentiment o despublicació administrativa HA DE:
 
 canviar l'estat autoritatiu a no públic;
 
@@ -263,121 +220,62 @@ invalidar mapa i cerca;
 
 invalidar resum i fitxa;
 
-purgar caches controlades;
+purgar caches sota control de MeteoLord;
 
 retirar l'URL del sitemap;
 
 registrar l'operació en auditoria interna.
 
-L'origin HA DE deixar de servir la dada quan es confirma la transacció autoritativa de revocació.
+Objectiu operatiu: invalidació de totes les caches sota control de MeteoLord en ≤ 60 segons.
 
-Les caches públiques HAN DE disposar d'invalidació explícita per public_station_id.
-
-No s'accepta un TTL llarg com a únic mecanisme de revocació.
-
-Objectiu operatiu: invalidació de totes les caches controlades en ≤ 60 segons.
+Caches no controlades: còpies obtingudes per tercers o navegadors offline no són responsabilitat verificable de MeteoLord. El 404 de l'origin i la invalidació activa són la defensa; la seva propagació a còpies externes no es pot garantir.
 
 5.5 Eliminació de compte
-Quan un usuari completa l'eliminació del seu compte segons SPEC-01, totes les estacions públiques vinculades a aquell compte passen automàticament a REVOKED.
-
-Aquesta transició HA DE produir el mateix procés d'invalidació que qualsevol altra revocació (§5.4). La publicació NO es restaura automàticament.
+L'eliminació de compte (SPEC-01) revoca automàticament totes les estacions públiques associades. No es restaura si es crea un compte nou.
 
 5.6 No enumeració
-Una consulta pública a un public_station_id no visible HA DE comportar-se com un recurs inexistent:
-
-http
-404 Not Found
-La resposta NO POT permetre diferenciar entre: identificador inexistent, estació INTERNAL_ONLY, estació revocada o pendent d'aprovació.
+Consulta pública a un public_station_id no visible → 404 Not Found sense distingir causa.
 
 5.7 Despublicació vs. supressió
-Despublicar significa retirar una dada de les superfícies públiques. No equival a eliminar totes les dades internes.
-
-Quan sigui aplicable un dret o obligació de supressió, s'ha de gestionar conforme al contracte de privacitat i retenció (SPEC-01/SPEC-08).
+Despublicar ≠ eliminar totes les dades internes. La supressió es gestiona via contracte de privacitat (SPEC-01/SPEC-08).
 
 6. Contractes
-6.1 Catàleg i publicació — RESOLT via DCF-06, DCF-11
-Cada entrada del catàleg HA DE definir com a mínim:
+6.1 Catàleg i publicació — RESOLT via DCF-06, DCF-11 (i refinament de SPEC-00)
+Relació amb SPEC-00: SPEC-00 §2.2 i RF-03 diuen que un usuari aprovat publica directament sense segona aprovació administrativa. DCF-06 introdueix un gate de publicació explícit (publication_gate). Aquest document refina SPEC-00 així:
+
+El gate de publicació és un check automàtic al backend que s'avalua quan l'usuari fa opt-in i totes les condicions es compleixen.
+
+El gate inclou: classificació, consentiment (si escau), política de precisió geogràfica, perfil de qualitat, procedència, llicència/base jurídica.
+
+El gate no requereix intervenció humana quan totes les condicions passen.
+
+Un capability PUBLICATION_APPROVER (SPEC-09) intervé només quan el gate automàtic no es pot resoldre (p. ex. llicència ambigua).
+
+Aquesta refinació deixa SPEC-00 funcionalment intacte per a l'usuari final (l'usuari aprovat publica directament) i afegeix un gate tècnic verificable. S'ha de reflectir en una futura revisió de SPEC-00; aquesta SPEC ho documenta com a refinament vàlid mentre SPEC-00 continuï com a candidata.
+
+Cada entrada del catàleg HA DE definir:
 
 text
-public_station_id
-source
-sensor
-field
-publication_class
-classification_version
-classified_at
-classified_by
-provenance
-quality_profile_id
-geo_precision_policy
-geo_publication
-public_geometry
-privacy_radius_m
-geo_policy_version
+public_station_id, source, sensor, field
+publication_class, classification_version, classified_at, classified_by
+provenance, quality_profile_id
+geo_precision_policy, geo_publication, public_geometry, privacy_radius_m, geo_policy_version
 history_profile_id
-consent_required
-licence_or_legal_basis_ref
-duplicate_group_id
-canonical_station_id
-public_station_id HA DE ser estable i opac. NO POT reutilitzar identificadors interns d'usuari, dispositiu, proveïdor, serial, MAC o equivalents.
+consent_required, licence_or_legal_basis_ref
+duplicate_group_id, canonical_station_id
+public_station_id HA DE ser estable i opac. NO POT reutilitzar identificadors interns d'usuari, dispositiu, proveïdor, serial, MAC.
 
-Conjunt públic mínim per a una estació autoritzada:
+Conjunt públic mínim: identificador públic, nom públic, ubicació generalitzada, estat, observed_at, temperatura i humitat (quan publicables), procedència de la font.
 
-identificador públic;
-
-nom públic;
-
-ubicació generalitzada (segons DCF-08);
-
-estat de disponibilitat/qualitat;
-
-observed_at;
-
-temperatura i humitat quan siguin publicables i vàlides;
-
-procedència pública de la font.
-
-Són INTERNAL_ONLY per defecte:
-
-coordenades precises originals;
-
-identificadors d'usuari;
-
-MAC, serial o device ID;
-
-credencials;
-
-tokens i claus API;
-
-URLs internes;
-
-payloads crus;
-
-errors interns;
-
-camps diagnòstics;
-
-metadades no aprovades;
-
-sensors no classificats;
-
-camps no classificats.
-
-«Tots els camps públics» a RF-MAP-06 significa tots els camps amb classificació efectiva PUBLIC_ALLOWED. NO significa tots els camps disponibles a la font original.
-
-Qui aprova, criteris, revocació: els fluxos dependents de rols corresponen a SPEC-01/SPEC-09. SPEC-06 consumeix el resultat.
+INTERNAL_ONLY per defecte: coordenades precises originals, identificadors d'usuari, MAC/serial/device ID, credencials, tokens, URLs internes, payloads crus, errors interns, camps diagnòstics, metadades no aprovades, sensors no classificats, camps no classificats.
 
 6.2 Qualitat de dades — RESOLT via DCF-06
-La qualitat es descriu a §4.1 (eix 3).
+Rellotge: UTC del servidor, sincronitzat via NTP.
 
-Rellotge de referència: UTC del servidor, sincronitzat via NTP. Diferència superior al llindar del PLAN-06 → SOSPITOSA.
+quality_profile_id versionat per font.
 
-quality_profile_id versionat per font: cada font real HA DE disposar d'un perfil versionat.
+Llindars temporals: veure §4.2.
 
-Freshness per defecte:
-
-text
-freshness_limit = max(30 minuts, 3 × expected_update_interval)
 Detecció de sospita:
 
 observed_at > server_now + 5 minuts → SOSPITOSA;
@@ -394,34 +292,20 @@ valor fora del rang declarat al quality_profile;
 
 variació superior al màxim declarat;
 
-error explícit reportat per l'adaptador.
+error explícit de l'adaptador.
 
-Cada camp publicable HA DE declarar al seu perfil:
+Cada camp publicable HA DE declarar al seu perfil: unit, valid_range, expected_update_interval, max_rate_of_change, validation_rules.
 
-text
-unit
-valid_range
-expected_update_interval
-max_rate_of_change
-validation_rules
-Nuls i zeros: null significa desconegut/no disponible. NO es converteix silenciosament en zero, interpolació ni valor anterior. Un valor 0 només és observació real si la semàntica del camp ho confirma.
+Nuls i zeros: null = desconegut/no disponible. NO es converteix en zero. Un valor 0 només és real si el contracte del camp ho confirma.
 
 DEFECT-01: veure §4.4.
 
-Transicions:
-
-SENSE_DADES_RECENTS → DISPONIBLE si arriba dada fresca i vàlida.
-
-EN_REVISIO si acumula 3 SOSPITOSA de les 5 darreres (substituïble per quality_profile).
-
-Sortir d'EN_REVISIO requereix DATA_REVIEWER (SPEC-01).
+Transicions: SENSE_DADES_RECENTS → FRESCA si arriba dada fresca. EN_REVISIO si acumula 3 SOSPITOSA de 5 (substituïble per quality_profile). Sortir requereix DATA_REVIEWER (SPEC-01).
 
 Auditoria interna: timestamp, previous_state, new_state, triggered_rule, quality_profile_id, quality_profile_version. INTERNAL_ONLY.
 
 6.3 Historials i agregació — RESOLT via DCF-04A
-Els historials públics es governen mitjançant un history_profile versionat per camp.
-
-Estructura del perfil (conceptual):
+history_profile versionat per camp:
 
 text
 history_profile_id
@@ -432,6 +316,27 @@ default_period: '24h' | '7d' | '30d'
 allowed_periods: ['24h', '7d', '30d', 'custom']
 max_query_window: 30d
 
+resolution_policy:
+  '24h' -> 'raw' | 'hourly' | 'daily'
+  '7d'  -> 'raw' | 'hourly' | 'daily'
+  '30d' -> 'raw' | 'hourly' | 'daily'
+
+custom_resolution_rules:
+  # Llista ordenada de {max_window_hours, resolution}. La primera regla
+  # el màxim de la qual sigui >= amplada del rang sol·licitat s'aplica.
+  # Si cap regla cobreix el rang → es rebutja amb error clar.
+  - { max_window_hours: 24,  resolution: 'raw' | 'hourly' | 'daily' }
+  - { max_window_hours: 168, resolution: 'raw' | 'hourly' | 'daily' }   # 7d
+  - { max_window_hours: 720, resolution: 'raw' | 'hourly' | 'daily' }   # 30d
+
+`custom_resolution_rules` és normativa i determinista. Cada
+`history_profile` HA DE declarar-la si admet `custom`. Si un perfil no
+declara `custom_resolution_rules`, el període `custom` es rebutja.
+
+La resolució retornada pel backend HA DE ser exactament la declarada
+per la primera regla que cobreixi l'amplada del rang sol·licitat. No
+s'admet interpolació ni "regla de rang" no explícita.
+
 raw_history_allowed: bool
 allowed_resolutions: ['raw', 'hourly', 'daily']
 
@@ -439,7 +344,6 @@ aggregation_method: 'mean' | 'sum' | 'min' | 'max' | 'last' | 'circular' | 'coun
 pre_aggregation_transform: string|null
 
 statistics: ['min', 'max', 'mean'] | ['total'] | ...
-
 missing_data_policy: 'null' | 'partial'
 min_coverage_policy: 0.8
 
@@ -452,9 +356,12 @@ Regla fail-closed:
 text
 history_profile absent/desconegut/inconsistent
 → historial del camp no publicable
-Contracte públic:
+resolution_policy és normativa. El backend HA DE retornar la resolució
+declarada pel perfil per al període sol·licitat. Els períodes no coberts
+es rebutgen amb error clar. El període custom només és vàlid segons
+custom_resolution_rules.
 
-Un historial és publicable només si:
+Contracte públic:
 
 text
 HISTORY_PUBLIC(field) =
@@ -466,118 +373,69 @@ HISTORY_PUBLIC(field) =
     AND quality gates satisfied
     AND field NOT DEFECT_01_AFFECTED
     AND retention_policy_ref valid (per a dades reals)
-Períodes per defecte: 24h. Presets MVP: 24h, 7d, 30d, personalitzat (màxim 30 dies per consulta).
+Períodes MVP: 24h (per defecte), 7d, 30d, personalitzat (màxim 30 dies).
 
 query window != retention period explícitament.
 
 Agregació per camp i semàntica:
 
-Magnitud	Operació típica
-temperatura, humitat, pressió	mean, min, max
-nivell d'aigua, cabal	mean, min, max, last
+Magnitud	Operació
+temperatura, humitat, pressió	mean/min/max
+nivell, cabal	mean/min/max/last
 precipitació incremental	sum
 ratxa de vent	max
-direcció del vent	agregació circular
-comptador acumulatiu	transformació específica
-Dades absents: no interpolació, no zero, no carry-forward. Cada bucket pot expressar n_valid, n_expected, coverage. n_valid == 0 → null.
+direcció del vent	circular
+comptador acumulatiu	counter_diff
+Dades absents: no interpolació, no zero, no carry-forward. n_valid, n_expected, coverage. n_valid == 0 → null.
 
-Backend autoritatiu: l'agregació pública HA DE fer-se al backend. El frontend només pot representar/formatar.
-
-Ordre normatiu d'aplicació:
+Backend autoritatiu. Ordre normatiu:
 
 text
-observacions
-   ↓
-classificació PUBLIC_ALLOWED
-   ↓
-validació de qualitat
-   ↓
-exclusió DEFECT-01
-   ↓
-agregació
-   ↓
-estadístiques
-   ↓
-API pública
-NO:
+observacions → filtre PUBLIC_ALLOWED → qualitat → exclusió DEFECT-01
+→ agregació → estadístiques → API pública
+Un agregat derivat de dades INTERNAL_ONLY no és publicable.
 
-text
-observacions internes
-   ↓
-agregació
-   ↓
-"com que només és una mitjana, publicar-la"
-Un agregat derivat d'informació INTERNAL_ONLY continua essent informació derivada de dades no autoritzades.
-
-Zona horària: intercanvi autoritatiu UTC; presentació per defecte amb zona de l'estació (Europe/Madrid o IANA equivalent); fallback UTC si no hi ha zona pública autoritzada.
-
-Rendiment (funcional): la consulta pública HA DE:
-
-ser temporalment acotada;
-
-aplicar resolució/agregació abans de lliurar datasets excessius;
-
-no delegar al frontend l'agregació autoritativa;
-
-no truncar dades silenciosament;
-
-indicar la resolució retornada;
-
-fallar explícitament si no pot complir el contracte.
+Zona horària: UTC autoritatiu; presentació amb zona de l'estació o UTC.
 
 Casos especials:
 
-Estació nova sense historial: missatge "Encara no hi ha historial disponible"; no inventar zeros ni extrapolar.
+Nova sense historial: missatge informatiu, no zeros ni extrapolació.
 
-Estació inactiva: l'historial anterior continua visible mentre estigui retingut i PUBLIC_ALLOWED; no extrapolar valors posteriors.
+Inactiva: historial anterior visible mentre estigui retingut i PUBLIC_ALLOWED; no extrapolar.
 
-Forats: missing != 0, missing != last-value, missing != interpolated. Gràfica perceptible; taula amb "sense dada"; agregació amb coverage.
+Forats: missing != 0, != last-value, != interpolated. Gràfica perceptible, taula amb "sense dada", coverage explícit.
 
-DEFECT-01 a l'historial:
+DEFECT-01: camps afectats exclosos d'historial, agregats, estadístiques, derivats, cache pública. Corregir el parser avui NO valida l'historial antic.
 
-Mentre un camp estigui DEFECT_01_AFFECTED, es tracta com INTERNAL_ONLY també per a historial, agregacions, estadístiques, gràfiques, taules, cache pública i qualsevol derivat. Corregir el parser avui NO demostra que l'historial anterior sigui fiable. Només un interval històric verificat pot reclassificar-se.
-
-Retenció — DCF-04B PENDENT SPEC-08:
-
-Cada font real HA DE disposar d'un retention_policy_ref aprovat abans de publicar historials. L'absència → fail-closed.
-
-SPEC-08 haurà de definir: retention_policy_id, version, scope, raw_retention, aggregate_retention, archive_policy, deletion_policy, correction_policy, legal_or_licence_constraints.
+Retenció — DCF-04B PENDENT SPEC-08: sense retention_policy_ref, historial real no publicable.
 
 6.4 Cartografia i requests — RESOLT via DCF-07
-El contracte cartogràfic defineix criteris d'admissibilitat, no selecció de motor.
-
-El component seleccionat per PLAN-06 HA DE complir simultàniament:
+Criteris d'admissibilitat (no selecció de motor):
 
 Àmbit	Contracte
-Egress	El navegador NO POT contactar directament proveïdors de tercers
+Egress	El navegador NO POT contactar proveïdors de tercers directament
 Origins	Només orígens controlats per MeteoLord i autoritzats per CSP
-Tiles/estils/fonts	Han de poder servir-se des d'infraestructura controlada o proxy/cache
-Llicència	Ha de permetre l'ús, atribució i mecanisme de distribució
-Secrets	Cap secret pot arribar al navegador
-Privacitat	Sense tracking, fingerprinting ni cookies de tercers
+Tiles/estils/fonts	Des d'infraestructura controlada o proxy/cache
+Llicència	Ha de permetre l'ús, atribució i mecanisme
+Secrets	Cap secret al navegador
+Privacitat	Sense tracking/fingerprinting/cookies de tercers
 CSP	No pot requerir unsafe-eval
 Accessibilitat	Interaccions per teclat; llista textual obligatòria
-Degradació	Error cartogràfic no pot inutilitzar llista, cerca o fitxa
+Degradació	Error cartogràfic no inutilitza llista, cerca o fitxa
 Ubicació	Ha d'admetre ubicacions generalitzades
-Testing	MAP-A executables sense dependència externa
-Observabilitat	Errors públics no poden incloure coordenades privades ni IDs interns
+Testing	MAP-A determinista sense dependència externa
+Observabilitat	Errors públics sense coordenades privades ni IDs interns
 Rendiment	Ha de superar el benchmark de RNF-MAP-01
-Si un proveïdor requereix requests directes des del navegador o impedeix el control/proxy/cache, és NO ELEGIBLE per PLAN-06.
+Proveïdor amb requests directes des del navegador o que impedeixi el control/proxy/cache → NO ELEGIBLE.
 
-La indisponibilitat del mapa NO POT alterar el conjunt d'estacions autoritzades ni desencadenar fallback cap a dades internes.
-
-PLAN-06 HA DE definir un ordre de fallback entre fonts de tiles, totes sota control de MeteoLord.
+Fallback entre fonts de tiles sota control de MeteoLord; sense saltar la restricció d'orígens.
 
 6.5 Àmbit geogràfic i ubicació — RESOLT via DCF-08
-Àmbit geogràfic:
-
-El mapa NO té una frontera política fixa. L'extensió inicial es calcula a partir de les geometries públiques de totes les estacions MAP_VISIBLE que passen els filtres inicials:
+Àmbit: derivat del catàleg públic, sense frontera política fixa.
 
 text
 initial_extent = bounds(public_geometry of filtered MAP_VISIBLE stations)
-Cas zero estacions → missatge informatiu (RF-MAP-13).
-
-El visitant pot navegar fora de l'extensió inicial.
+Sense estacions → missatge informatiu (RF-MAP-13).
 
 Geometria pública:
 
@@ -585,149 +443,66 @@ text
 private_geometry
       ↓ geo_precision_policy
 public_geometry + privacy_radius_m + geo_policy_version
-La generalització és autoritativa al backend. private_geometry NO POT arribar al frontend quan la política és aproximada.
+Generalització autoritativa al backend. Algoritme estable (no punts aleatoris per request).
 
-L'algoritme de generalització HA DE ser estable i NO POT regenerar un punt aleatori nou a cada request.
-
-Política de precisió proposada:
+Política de precisió:
 
 Tipus	Default	Configurable
-MeteoLord pròpia	aproximada 100 m	exacta només amb aprovació explícita
-Ecowitt usuari	aproximada 1 km	1 km / 5 km / 10 km / ocultar
-ACA (després DCF-10)	aproximada 100 m	exacta si contracte ho autoritza
-Grafana/i2CAT	INTERNAL_ONLY	no aplicable
-Nota: 100 m i 1 km són política MeteoLord, no llindars GDPR.
-
-Distinció entre:
-
-source_positional_accuracy_m (exactitud tècnica de la font);
-
-privacy_radius_m (política de privacitat).
-
-No s'han de confondre.
+MeteoLord pròpia	aproximada 100 m	exacta amb aprovació
+Ecowitt usuari	aproximada 1 km	1/5/10 km o ocultar
+ACA (després DCF-10)	100 m	exacta si contracte
+Grafana/i2CAT	INTERNAL_ONLY	—
+100 m i 1 km són política MeteoLord, no llindars GDPR.
 
 Geolocalització del visitant:
 
-text
-default: OFF
-trigger: acció explícita de l'usuari
-browser permission: REQUIRED
-backend transfer: NO
-persistent storage: NO (localStorage, cookies, logs)
-analytics: NO
-purpose: centrar mapa, ordenar proximitat aproximada
-denial: funcionalitat completa disponible
-Clustering i viewport:
+OFF per defecte;
 
-El conjunt lògic NO depèn del viewport:
+acció explícita;
 
-text
-PUBLIC + filtres actius
-La implementació pot carregar/renderitzar per viewport sempre que NO alteri:
+permís del navegador requerit;
 
-autorització;
+no s'envia al backend;
 
-llista;
+no es persisteix;
 
-cerca;
+sense analytics;
 
-comptadors;
+funcionalitat completa si es denega.
 
-semàntica del catàleg.
-
-Regla:
+Viewport:
 
 text
 viewport = optimització/presentació
 viewport != autorització
 viewport != filtre implícit
-Contracte geoespacial:
+Contracte geoespacial: WGS 84 / GeoJSON [longitude, latitude], graus decimals, 1.2345 (no 1,2345).
 
-WGS 84 / GeoJSON;
-
-ordre [longitude, latitude];
-
-unitats graus decimals;
-
-1.2345 a l'API, no 1,2345.
-
-Cerca MVP:
-
-nom públic d'estació;
-
-municipi/localitat pública;
-
-altres noms geogràfics públics.
-
-Fora de l'MVP: adreça postal, geocodificació externa, coordenada arbitrària.
-
-Ordenació: rellevància; distància només si Usa la meva ubicació està actiu.
+Cerca MVP: nom públic, municipi/localitat, altres noms geogràfics públics. Fora: adreça, geocodificació externa, coordenada arbitrària.
 
 6.6 Cache i invalidació — RESOLT via DCF-06
-Veure §3.5 (catalog_version) i §5.4 (revocació).
-
-Regla fonamental: la despublicació (RF-MAP-11) té prioritat sobre la disponibilitat de cache (RF-MAP-15).
+Veure §3.5 i §5.4. La despublicació té prioritat sobre la cache.
 
 6.7 Duplicats i identitat — RESOLT via DCF-11
-Tres conceptes diferents:
+Tres conceptes: SAME_STATION, NEARBY, VISUAL_GROUP.
 
-Concepte	Significat	Conseqüència
-SAME_STATION	Dos registres representen la mateixa estació	Unic canonical_station_id
-NEARBY	Dues estacions properes espacialment	Dues estacions independents
-VISUAL_GROUP	Agrupació visual per densitat	Responsabilitat de DCF-08
-Un duplicat és:
-
-dos o més registres que s'ha confirmat que identifiquen la mateixa estació física/lògica.
-
-NO és suficient:
-
-mateixa coordenada;
-
-mateix edifici;
-
-mateix propietari;
-
-mateix nom;
-
-proximitat espacial;
-
-mateixes variables.
+Un duplicat és dos o més registres que representen la mateixa estació. NO és suficient: mateixa coordenada, edifici, propietari, nom, proximitat o variables.
 
 Cap llindar espacial universal confirma duplicació. La proximitat només genera CANDIDATE.
 
-Evidència per confirmar SAME_STATION:
+Evidència per SAME_STATION: identitat autoritativa (mateixa font + external_station_id immutable), mapping explícit o revisió administrativa (STATION_IDENTITY_REVIEWER, compatible amb SUPERADMIN).
 
-Identitat autoritativa (mateixa font + mateix external_station_id immutable + contracte);
+Regla pública: PUBLIC_REPRESENTATION(group) = canonical_station. Aliases no apareixen com a entitats independents.
 
-Mapping explícit entre fonts aprovat;
+NO es fusionen observacions ni historials. La canònica mostra només les seves dades.
 
-Revisió administrativa documentada (STATION_IDENTITY_REVIEWER, compatible amb SUPERADMIN).
+INTERNAL_ONLY fora de càlculs públics. EN_REVISIO no provoca canvi de canònica.
 
-Regla pública:
-
-text
-PUBLIC_REPRESENTATION(duplicate_group) = canonical_station
-Els aliases no apareixen com a marcadors, files, resultats de cerca, sitemap, comptadors o entitats independents a l'API pública.
-
-NO es fusionen observacions ni historials de fonts diferents. La canònica mostra només les seves dades pròpies.
-
-INTERNAL_ONLY fora de càlculs públics: no influeix en marcadors, comptadors, proximitat, sinònims de cerca o metadades.
-
-EN_REVISIO no provoca canvi de canònica.
-
-Despublicació de la canònica: NO provoca fallback automàtic. La promoció d'un alias requereix:
-
-PUBLIC_ALLOWED independent;
-
-gates de consentiment/llicència;
-
-aprovació de nova canònica.
+Despublicació de la canònica: NO fallback automàtic. Promoció d'alias requereix gates propis i aprovació.
 
 Recanonicalització: incrementa catalog_version, invalida caches, actualitza cerca, sitemap i API.
 
-Auditoria obligatòria: duplicate_group_id, member_station_ids, previous_relation, new_relation, canonical_station_id, decision_basis, actor_or_capability, timestamp, decision_version, reason. INTERNAL_ONLY.
-
-STATION_IDENTITY_REVIEWER: capability de domini. Implementació a SPEC-09.
+Auditoria obligatòria (INTERNAL_ONLY): duplicate_group_id, member_station_ids, previous_relation, new_relation, canonical_station_id, decision_basis, actor, timestamp, decision_version, reason.
 
 7. Requisits funcionals
 ID	Requisit	Traça
@@ -735,93 +510,98 @@ RF-MAP-01	El mapa HA DE mostrar només estacions amb publicacio_estacio == PUBLI
 RF-MAP-02	Cada marcador HA DE comunicar identitat pública, estat presentable i resum autoritzat.	REQ-00 / REQ-06
 RF-MAP-03	Les operacions de mapa HAN DE tenir equivalent de teclat.	REQ-06
 RF-MAP-04	El mapa HA DE mostrar data/hora de la informació presentada.	REQ-06
-RF-MAP-05	El resum (modal) HA DE mostrar el contracte mínim comú (§6.3) i el resum específic del catàleg.	REQ-06
-RF-MAP-06	La fitxa HA DE tenir URL directa i estable, i HA DE mostrar contracte mínim, contracte específic i historial disponible.	REQ-00
+RF-MAP-05	El resum (modal) HA DE mostrar el conjunt públic mínim definit a §6.1 i el resum específic definit pel catàleg per al tipus d'estació.	REQ-06 (correcció QA-06-12)
+RF-MAP-06	La fitxa HA DE tenir URL directa i estable, i HA DE mostrar el conjunt públic mínim (§6.1), el contracte específic per tipus i l'historial disponible.	REQ-00
 RF-MAP-07	La fitxa HA DE respectar la mateixa frontera pública que el mapa.	SPIKE-04
 RF-MAP-08	HA D'existir una llista textual que mostri totes les estacions que passen els filtres actius, independentment del viewport.	REQ-00 / REQ-06
 RF-MAP-09	Filtres i cerca NO PODEN enumerar elements INTERNAL_ONLY.	SPIKE-04
 RF-MAP-10	L'actualització automàtica HA DE poder-se pausar o desactivar.	REQ-06
-RF-MAP-11	La despublicació HA DE retirar l'element de totes les superfícies públiques i invalidar les caches rellevants en ≤ 60 s.	DCF-06
+RF-MAP-11	La despublicació HA DE retirar l'element de totes les superfícies públiques i invalidar les caches sota control de MeteoLord en ≤ 60 s.	DCF-06
 RF-MAP-12	Un camp sense classificació pública NO POT aparèixer públicament.	SPIKE-04 / DCF-06
 RF-MAP-13	Sense estacions públiques, el mapa HA DE mostrar un missatge informatiu, no un mapa buit.	REQ-06
 RF-MAP-14	Durant la càrrega inicial, HA DE mostrar un indicador d'estat.	REQ-06
 RF-MAP-15	Si l'API falla, la llista alternativa HA DE romandre funcional amb dades de cache verificades contra catalog_version o mostrar un error clar.	DCF-06
-RF-MAP-16	El catàleg HA DE definir una política per a estacions duplicades o properes (veure §6.7).	DCF-11
+RF-MAP-16	El catàleg HA DE definir una política per a estacions duplicades o properes (§6.7).	DCF-11
 RF-MAP-17	La interfície HA D'estar disponible en català.	REQ-06
 RF-MAP-18	El sitemap públic HA D'incloure només les URL de fitxes públiques.	REQ-06
 RF-MAP-19	Les fitxes d'estacions INTERNAL_ONLY NO PODEN aparèixer al sitemap.	REQ-06
 RF-MAP-20	El frontend HA DE verificar el catalog_version abans de mostrar dades de cache.	DCF-06
 RF-MAP-21	Si no es pot verificar el catalog_version, el frontend HA DE mostrar avís clar i no mostrar dades que poguessin estar despublicades.	DCF-06
-RF-MAP-22	Una consulta pública a un public_station_id no visible HA DE respondre 404 Not Found sense distingir causa.	DCF-06
+RF-MAP-22	Una consulta a un public_station_id no visible HA DE respondre 404 Not Found sense distingir causa.	DCF-06
 RF-MAP-23	L'API pública HA DE retornar el catalog_version corresponent.	DCF-06
-RF-MAP-24	L'eliminació de compte d'un usuari HA DE revocar automàticament les seves estacions públiques.	DCF-06
-RF-MAP-25	Els camps afectats per DEFECT-01 NO PODEN aparèixer en cap superfície pública fins a validació semàntica.	DCF-06
-RF-MAP-26	El viewport inicial HA DE contenir totes les estacions MAP_VISIBLE que passen els filtres inicials.	DCF-08
-RF-MAP-27	La geometria pública d'una estació aproximada HA DE ser derivada al backend; private_geometry NO POT arribar al frontend públic.	DCF-08
+RF-MAP-24	L'eliminació de compte revoca automàticament les estacions públiques.	DCF-06
+RF-MAP-25	Els camps DEFECT-01 NO PODEN aparèixer en cap superfície pública.	DCF-06
+RF-MAP-26	El viewport inicial HA DE contenir totes les estacions MAP_VISIBLE.	DCF-08
+RF-MAP-27	La geometria pública HA DE ser derivada al backend; private_geometry NO POT arribar al frontend.	DCF-08
 RF-MAP-28	Clusters, comptadors i cerques espacials només PODEN utilitzar estacions MAP_VISIBLE.	DCF-08
-RF-MAP-29	La geolocalització del visitant només POT activar-se mitjançant acció explícita.	DCF-08
-RF-MAP-30	La ubicació del visitant NO POT persistir-se ni enviar-se al backend dins l'MVP.	DCF-08
-RF-MAP-31	Una estació sense public_geometry vàlida NO POT aparèixer al catàleg del mapa públic.	DCF-08
-RF-MAP-32	Qualsevol canvi de precisió pública HA D'incrementar catalog_version i invalidar caches.	DCF-08
-RF-MAP-33	Una ubicació aproximada HA DE comunicar textualment que no representa la posició exacta.	DCF-08
-RF-MAP-34	Una relació de duplicació NO POT confirmar-se exclusivament per proximitat, nom, propietari o coincidència de coordenades.	DCF-11
-RF-MAP-35	Cada grup SAME_STATION confirmat HA DE tenir exactament una canonical_station_id pública.	DCF-11
-RF-MAP-36	Només la canònica POT aparèixer com a entitat independent a mapa, llista, cerca, comptadors, sitemap i API pública.	DCF-11
-RF-MAP-37	La deduplicació NO POT fusionar automàticament observacions, historials ni camps de fonts diferents.	DCF-11
-RF-MAP-38	Els registres INTERNAL_ONLY NO PODEN participar en cap càlcul, comptador o indicador públic de duplicació/proximitat.	DCF-11
+RF-MAP-29	La geolocalització del visitant només POT activar-se explícitament.	DCF-08
+RF-MAP-30	La ubicació del visitant NO POT persistir-se ni enviar-se al backend.	DCF-08
+RF-MAP-31	Una estació sense public_geometry vàlida NO POT aparèixer al mapa públic.	DCF-08
+RF-MAP-32	Canvi de precisió pública HA D'incrementar catalog_version i invalidar caches.	DCF-08
+RF-MAP-33	Una ubicació aproximada HA DE comunicar textualment que no és exacta.	DCF-08
+RF-MAP-34	Una relació de duplicació NO POT confirmar-se exclusivament per proximitat, nom, propietari o coordenades.	DCF-11
+RF-MAP-35	Cada grup SAME_STATION HA DE tenir exactament una canonical_station_id.	DCF-11
+RF-MAP-36	Només la canònica POT aparèixer com a entitat independent.	DCF-11
+RF-MAP-37	La deduplicació NO POT fusionar observacions, historials ni camps de fonts diferents.	DCF-11
+RF-MAP-38	Els registres INTERNAL_ONLY NO PODEN participar en càlculs públics de duplicació.	DCF-11
 RF-MAP-39	Un DUPLICATE_CANDIDATE NO POT ocultar ni modificar una estació pública fins a confirmació.	DCF-11
-RF-MAP-40	La despublicació de la canònica NO POT provocar fallback automàtic a una altra font del grup.	DCF-11
-RF-MAP-41	Qualsevol canvi de relació o canònica HA D'incrementar catalog_version i invalidar les caches rellevants.	DCF-11
-RF-MAP-42	L'historial públic es governa mitjançant un history_profile versionat per camp.	DCF-04A
-RF-MAP-43	L'agregació pública autoritativa HA DE fer-se al backend després d'aplicar classificació, qualitat i exclusió DEFECT-01.	DCF-04A
-RF-MAP-44	Les dades absents NO s'interpolen ni es converteixen en zero a l'historial.	DCF-04A
+RF-MAP-40	La despublicació de la canònica NO POT provocar fallback automàtic.	DCF-11
+RF-MAP-41	Canvis de relació o canònica HAN D'incrementar catalog_version.	DCF-11
+RF-MAP-42	L'historial públic es governa via history_profile versionat per camp.	DCF-04A
+RF-MAP-43	L'agregació pública autoritativa HA DE fer-se al backend després de classificació, qualitat i exclusió DEFECT-01.	DCF-04A
+RF-MAP-44	Les dades absents NO s'interpolen ni es converteixen en zero.	DCF-04A
+RF-MAP-45	El backend HA DE retornar la resolució declarada a resolution_policy per al període sol·licitat; períodes no coberts es rebutgen amb error clar.	DCF-04A (resol QA-06-10)
+RF-MAP-46	Una estació OBSOLETA HA DE romandre visible amb l'indicador "dada obsoleta"; una estació EN_REVISIO HA DE romandre visible amb l'indicador "en revisió".	§4.2 (resol QA-06-09)
+RF-MAP-47	El backend HA DE rebutjar el període `custom` quan el `history_profile` no declari `custom_resolution_rules`, o quan l'amplada del rang no quedi coberta per cap regla.	DCF-04A (resol QA-06-15)
 8. Requisits no funcionals
 ID	Requisit	Traça
-RNF-MAP-01	El rendiment HA DE definir dataset, dispositiu, navegador, cache, mètrica i percentil.	REQ-06
-RNF-MAP-02	La interfície HA DE ser usable amb teclat, focus visible i sense keyboard trap.	REQ-06
-RNF-MAP-03	La conformitat objectiu HA DE ser WCAG 2.2 AA.	REQ-06
-RNF-MAP-04	Mapa i llista HAN DE reflow sense pèrdua d'informació ni funcionalitat.	REQ-06
-RNF-MAP-05	Color, mida o icona no poden ser l'únic canal d'estat.	REQ-06
-RNF-MAP-06	Cap request de navegador pot anar a un origen no autoritzat.	SPIKE-04 / SPEC-10
-RNF-MAP-07	Cap secret, valor intern ni dada INTERNAL_ONLY pot aparèixer en logs o errors públics.	SPIKE-04 / SPEC-10
-RNF-MAP-08	La degradació del mapa HA DE conservar llista, cerca i fitxa pública.	REQ-06
-RNF-MAP-09	SPEC-06 CONSUMEIX el resultat del consentiment i la publicació; NO implementa el flux.	DCF-06
-RNF-MAP-10	La ubicació pública per defecte HA DE ser aproximada, no precisa.	DCF-08
-RNF-MAP-11	El grau d'aproximació HA DE ser configurable pel titular.	DCF-08
-RNF-MAP-12	L'API pública HA DE tenir un límit de peticions per IP per evitar abús.	REQ-06
-RNF-MAP-13	Si s'usa analytics, HA DE ser respectuós amb la privacitat.	REQ-06
-RNF-MAP-14	Abans de MAP-C s'han d'executar tests de càrrega.	REQ-06
-RNF-MAP-15	La cache HA DE respectar el catalog_version i no mostrar dades despublicades.	DCF-06
-RNF-MAP-16	La despublicació HA DE propagar-se a totes les caches controlades en ≤ 60 s.	DCF-06
-RNF-MAP-17	El rellotge del servidor HA D'estar sincronitzat via NTP.	DCF-06
-RNF-MAP-18	La generalització de la ubicació s'expressa en metres, no en decimals de lat/lon.	DCF-08
-RNF-MAP-19	El contracte geoespacial públic HA DE ser WGS 84/GeoJSON [longitude, latitude].	DCF-08
-RNF-MAP-20	La retenció física s'hereta de SPEC-08 mitjançant retention_policy_ref; sense política, historial real no publicable.	DCF-04A
-RNF-MAP-21	La despublicació d'una canònica no pot esquivar-se mitjançant canvi automàtic de font.	DCF-11
+RNF-MAP-01	El rendiment del mapa HA DE complir: (a) temps fins a primera pintura interactiva ≤ 2,5 s en 4G simulada sobre viewport mòbil 375×667 px amb 100 estacions; (b) temps de resposta del resum (modal) ≤ 500 ms p95; (c) temps de resposta de la fitxa ≤ 1 s p95; (d) suport per a 500 estacions amb clustering. El benchmark HA DE fixar dataset, dispositiu, navegador, cache i mètrica.	REQ-06 (resol QA-06-13)
+RNF-MAP-02	Usable amb teclat, focus visible i sense keyboard trap.	REQ-06
+RNF-MAP-03	WCAG 2.2 AA.	REQ-06
+RNF-MAP-04	Mapa i llista HAN DE reflow sense pèrdua.	REQ-06
+RNF-MAP-05	Color, mida o icona no són l'únic canal d'estat.	REQ-06
+RNF-MAP-06	Cap request de navegador a origen no autoritzat.	SPIKE-04 / SPEC-10
+RNF-MAP-07	Cap secret ni dada INTERNAL_ONLY en logs o errors públics.	SPIKE-04 / SPEC-10
+RNF-MAP-08	La degradació conserva llista, cerca i fitxa.	REQ-06
+RNF-MAP-09	SPEC-06 CONSUMEIX consentiment/publicació; no implementa el flux.	DCF-06
+RNF-MAP-10	Ubicació pública per defecte aproximada.	DCF-08
+RNF-MAP-11	Grau d'aproximació configurable pel titular.	DCF-08
+RNF-MAP-12	Rate limiting a l'API pública.	REQ-06
+RNF-MAP-13	Analytics respectuós amb la privacitat si s'usa.	REQ-06
+RNF-MAP-14	Tests de càrrega abans de MAP-C.	REQ-06
+RNF-MAP-15	Cache respecta catalog_version.	DCF-06
+RNF-MAP-16	Despublicació propaga a caches controlades en ≤ 60 s.	DCF-06
+RNF-MAP-17	Rellotge del servidor sincronitzat via NTP.	DCF-06
+RNF-MAP-18	Generalització en metres, no decimals lat/lon.	DCF-08
+RNF-MAP-19	Contracte geoespacial WGS 84/GeoJSON [lon, lat].	DCF-08
+RNF-MAP-20	Retenció física via retention_policy_ref (SPEC-08).	DCF-04A
+RNF-MAP-21	La despublicació d'una canònica no pot esquivar-se via canvi automàtic de font.	DCF-11
+RNF-MAP-22	La cache del navegador s'invalida quan: (a) el client està actiu i amb connectivitat; (b) rep un catalog_version actualitzat; (c) el TTL definit al PLAN-06 expira. Un navegador offline no es pot purgar remotament en 60 s i això no es considera incompliment.	§5.4 (resol QA-06-11)
+RNF-MAP-23	El backend HA DE retornar exactament la resolució declarada per la primera regla de `custom_resolution_rules` que cobreixi l'amplada del rang. No s'admet interpolació ni aproximació.	DCF-04A (resol QA-06-15)
 9. Criteris d'acceptació de MAP-A local
 ID	Criteri
 CA-MAP-01	El catàleg sintètic usa classificació pública explícita a nivell d'estació, sensor i camp.
 CA-MAP-02	Mapa, llista, resum i fitxa mostren el mateix conjunt públic.
-CA-MAP-03	Proves negatives demostren absència d'elements INTERNAL_ONLY a totes les superfícies.
+CA-MAP-03	Proves negatives demostren absència d'elements INTERNAL_ONLY.
 CA-MAP-04	Navegació de teclat, focus, diàleg i llista alternativa passen proves.
 CA-MAP-05	Gràfiques o resums històrics sintètics tenen alternativa textual equivalent.
 CA-MAP-06	No hi ha requests de navegador a origen no autoritzat.
 CA-MAP-07	Proves E2E sintètiques passen sense violacions CSP.
 CA-MAP-08	La interrupció de la capa cartogràfica no filtra dades i conserva llista i fitxa.
 CA-MAP-09	L'estat buit, de càrrega i d'error es mostren correctament.
-CA-MAP-10	Deduplicació (redefinit — DCF-11): amb fixtures sintètiques: (1) dos registres SAME_STATION produeixen una única estació canònica; (2) dues estacions diferents a la mateixa coordenada continuen sent dues estacions; (3) un DUPLICATE_CANDIDATE no suprimeix cap estació; (4) un registre INTERNAL_ONLY no modifica cap resultat públic; (5) no es fusionen dades dels membres del grup; (6) cerca, llista, comptadors, sitemap i API exposen només la canònica; (7) despublicar la canònica no promou cap alias; (8) un canvi de canònica incrementa catalog_version.
+CA-MAP-10	Deduplicació: 8 condicions de §6.7 verificades amb fixtures.
 CA-MAP-11	La interfície és disponible en català.
 CA-MAP-12	L'API pública té rate limiting actiu.
-CA-MAP-13	Una estació despublicada s'elimina de la cache del navegador en ≤ 60 s.
+CA-MAP-13	Una estació despublicada desapareix de: (a) l'API pública (immediat); (b) el sitemap (≤ 60 s); (c) les caches sota control de MeteoLord (≤ 60 s); (d) el navegador actiu amb connectivitat (al següent catalog_version). El comportament del navegador offline no és responsabilitat verificable.
 CA-MAP-14	Si el catalog_version no es pot verificar, no es mostren dades de cache.
-CA-MAP-15	El modal i la fitxa mostren el contracte mínim comú i el contracte específic per tipus.
+CA-MAP-15	El modal i la fitxa mostren el conjunt públic mínim (§6.1) i el contracte específic per tipus.
 CA-MAP-16	La llista alternativa mostra totes les estacions que passen filtres, independentment del viewport.
-CA-MAP-17	Una consulta a un public_station_id no visible retorna 404 sense distingir causa.
-CA-MAP-18	L'API pública retorna el catalog_version corresponent.
-CA-MAP-19	Un camp afectat per DEFECT-01 no apareix a cap superfície pública ni en historials ni agregats.
-CA-MAP-20	Una estació amb sensors de classificació diferent només publica els sensors PUBLIC_ALLOWED.
+CA-MAP-17	Consulta a public_station_id no visible → 404 sense distingir causa.
+CA-MAP-18	L'API pública retorna el catalog_version.
+CA-MAP-19	Camp DEFECT-01 no apareix a cap superfície pública ni historial ni agregat.
+CA-MAP-20	Estació amb sensors de classificació diferent només publica els PUBLIC_ALLOWED.
 CA-MAP-21	El viewport inicial es deriva únicament de geometries públiques.
-CA-MAP-22	Fixtures amb coordenada privada i pública diferents demostren que la privada no apareix a API, frontend, logs ni metadades.
+CA-MAP-22	Fixtures amb coordenada privada i pública diferents: la privada no apareix a API, frontend, logs ni metadades.
 CA-MAP-23	Una estació d'usuari amb precisió 1 km no exposa la seva coordenada original.
 CA-MAP-24	Canviar la precisió incrementa catalog_version i invalida cache.
 CA-MAP-25	Clusters i comptadors no revelen estacions INTERNAL_ONLY.
@@ -829,7 +609,7 @@ CA-MAP-26	Denegar geolocalització no impedeix mapa, llista, cerca o fitxa.
 CA-MAP-27	La geolocalització del visitant no genera requests amb les seves coordenades ni persistència local.
 CA-MAP-28	Una estació sense public_geometry no apareix al mapa ni al catàleg públic.
 CA-MAP-29	La llista de totes les estacions filtrades continua independent del viewport.
-CA-MAP-30	Les ubicacions aproximades s'identifiquen textualment, no només per color, icona o forma.
+CA-MAP-30	Les ubicacions aproximades s'identifiquen textualment.
 CA-MAP-31	Historials governats per history_profile versionat per camp.
 CA-MAP-32	Un camp sense history_profile no exposa historial.
 CA-MAP-33	Agregats calculats al backend, mai al frontend.
@@ -838,49 +618,69 @@ CA-MAP-35	Dades absents no s'interpolen; buckets parcials amb coverage explícit
 CA-MAP-36	DEFECT-01 exclou historial, agregats, estadístiques i derivats.
 CA-MAP-37	Un historial real sense retention_policy_ref no es publica.
 CA-MAP-38	Zona horària: UTC autoritatiu, presentació amb zona de l'estació o UTC.
+CA-MAP-39	El backend retorna la resolució declarada a resolution_policy per al període sol·licitat (24h/7d/30d/personalitzat). Períodes no coberts → error clar.
+CA-MAP-40	Una estació OBSOLETA roman visible amb indicador "dada obsoleta"; una estació EN_REVISIO roman visible amb indicador "en revisió"; una NO_PUBLICABLE no apareix.
+CA-MAP-41	El llindar obsolete_limit es calcula com max(24h, 12 × expected_update_interval) i és verificable amb fixtures sintètiques.
+CA-MAP-42	El rendiment compleix els objectius de RNF-MAP-01: p95 modal ≤ 500 ms, p95 fitxa ≤ 1 s, 100 estacions en viewport mòbil amb TTI ≤ 2,5 s.
+CA-MAP-43	Amb fixtures sintètiques que continguin 500 estacions públiques MAP_VISIBLE, el mapa: (a) es carrega dins del llindar TTI de RNF-MAP-01; (b) agrupa visualment les estacions quan la densitat ho requereix; (c) manté la llista alternativa completa amb les 500 estacions; (d) manté el comptador públic coherent amb el nombre d'estacions `MAP_VISIBLE`; (e) no exposa cap estació `INTERNAL_ONLY` en clusters ni comptadors; (f) el rendiment es verifica amb el benchmark definit a RNF-MAP-01.	RNF-MAP-01 (resol QA-06-17)
+CA-MAP-44	Un `history_profile` sense `custom_resolution_rules` rebutja el període `custom` amb error clar. Un `history_profile` amb regles retorna exactament la resolució de la primera regla que cobreix el rang; rebutja amb error clar si cap regla cobreix el rang.	DCF-04A (resol QA-06-15)
+CA-MAP-45	Una estació `SOSPITOSA` roman visible amb l'indicador "Dada sospitosa"; els camps afectats es mostren amb marca "no fiable"; cap camp afectat s'oculta.	§4.2 (resol QA-06-16)
 MAP-B i MAP-C no s'autoritzen amb aquest document.
 
 10. Riscos
 ID	Risc	Impacte	Mitigació
-R-MAP-01	Exposició de dades INTERNAL_ONLY	Crític	Filtre backend fail-closed i proves negatives
+R-MAP-01	Exposició INTERNAL_ONLY	Crític	Filtre backend fail-closed + proves negatives
 R-MAP-02	Ubicació precisa sense consentiment	Alt	Contracte de precisió
-R-MAP-03	Nuls, zeros o dades sospitoses mal interpretades	Alt	Contracte de qualitat i DEFECT-01
-R-MAP-04	Dependència cartogràfica incompatible amb zero egress	Alt	Política de request i fallback
+R-MAP-03	Nuls/zeros mal interpretats	Alt	Contracte de qualitat i DEFECT-01
+R-MAP-04	Cartografia incompatible amb zero egress	Alt	Política de request i fallback
 R-MAP-05	Divergència mapa/llista	Alt	Contracte compartit
-R-MAP-06	Rendiment no reproduïble	Mitjà	Benchmark complet
-R-MAP-07	Actors o rols no definits	Alt	Excloure'ls de MAP-A
+R-MAP-06	Rendiment no reproduïble	Mitjà	Benchmark normatiu
+R-MAP-07	Actors o rols no definits	Alt	Excloure de MAP-A
 R-MAP-08	Cache mostra dades despublicades	Crític	catalog_version + invalidació ≤ 60 s
-R-MAP-09	Duplicats visibles	Mitjà	Política §6.7
-R-MAP-10	Abús de l'API pública	Mitjà	Rate limiting
-R-MAP-11	Modal/fitxa no s'adapta al tipus d'estació	Alt	Contracte específic
-R-MAP-12	Dependència de DCF no resolta	Crític	Gates
-R-MAP-13	Camp DEFECT-01 publicat per error	Alt	Classificació a nivell de camp
+R-MAP-09	Duplicats visibles	Mitjà	§6.7
+R-MAP-10	Abús API pública	Mitjà	Rate limiting
+R-MAP-11	Modal/fitxa no s'adapta al tipus	Alt	Contracte específic
+R-MAP-12	Dependència DCF no resolta	Crític	Gates
+R-MAP-13	DEFECT-01 publicat per error	Alt	Classificació a nivell de camp
 R-MAP-14	Estació eliminada encara pública	Alt	Protocol automàtic
 R-MAP-15	Agregat derivat d'INTERNAL_ONLY	Crític	Filtrar abans d'agregar
-R-MAP-16	Generalització de privacitat amb mean de direccions de vent	Alt	Agregació circular específica
-R-MAP-17	Suma de precipitació parcial presentada com a total	Alt	coverage explícit
-R-MAP-18	Triangulació per múltiples punts aleatoris	Alt	Geometria pública estable
-R-MAP-19	Proximitat interpretada com a identitat	Alt	Cap llindar universal
+R-MAP-16	mean de direccions de vent	Alt	Agregació circular
+R-MAP-17	Precipitació parcial com a total	Alt	coverage explícit
+R-MAP-18	Triangulació per punts aleatoris	Alt	Geometria pública estable
+R-MAP-19	Proximitat interpretada com identitat	Alt	Cap llindar universal
 R-MAP-20	INTERNAL_ONLY influeix comptadors	Crític	Excloure abans de deduplicar
+R-MAP-21	Contradicció SPEC-00 vs DCF-06 sobre aprovació	Crític	Refinament explícit §6.1
+R-MAP-22	Llindar obsolete_limit no definit → decisió al PLAN	Alt	§4.2 tancat
 11. Traçabilitat
-11.1 Traçabilitat QA-06 → SPEC-06 v0.6
+11.1 QA-06 → SPEC-06 v0.8
 Finding	Severitat	Resolució
-QA-06-01	BLOQUEJANT	§3.1–3.2 (classificació 3 nivells + regla visibilitat)
-QA-06-02	BLOQUEJANT	§4.1–4.2 (quatre eixos ortogonals + estat presentable)
-QA-06-03	BLOQUEJANT	§3.5 (catalog_version) + §5.4 (revocació 8 passos) + §6.6
-QA-06-04	BLOQUEJANT	§6.3 (contracte mínim + específic per tipus)
-QA-06-05	BLOQUEJANT	§12.2 (gates ampliades)
-QA-06-06	IMPORTANT	RF-MAP-08 (definit: totes les filtrades, no viewport)
-QA-06-07	IMPORTANT	RNF-MAP-09 (SPEC-06 consumeix, no implementa)
-11.2 Traçabilitat DCF → SPEC-06 v0.6
-DCF	§ on es resol
-DCF-02	§3.1, §3.2, §3.4, §3.6, §5
-DCF-03	§4.1, §6.2
-DCF-04A	§4.4, §6.3, RF-MAP-42/43/44
-DCF-04B (pendent)	§6.3 (retention_policy_ref delegat a SPEC-08)
+QA-06-01	BLOQUEJANT	§3.1–3.2
+QA-06-02	BLOQUEJANT	§4.1–4.2
+QA-06-03	BLOQUEJANT	§3.5 + §5.4 + §6.6
+QA-06-04	BLOQUEJANT	§6.1 + §6.3
+QA-06-05	BLOQUEJANT	§12.2
+QA-06-06	IMPORTANT	RF-MAP-08
+QA-06-07	IMPORTANT	RNF-MAP-09
+QA-06-08	BLOQUEJANT	§6.1 (refinament explícit SPEC-00 → DCF-06)
+QA-06-09	BLOQUEJANT	§4.2 (llindars i comportament tancats)
+QA-06-10	BLOQUEJANT	§6.3 (resolution_policy obligatori)
+QA-06-11	IMPORTANT	CA-MAP-13 + RNF-MAP-22 reescrits
+QA-06-12	IMPORTANT	RF-MAP-05 referència corregida
+QA-06-13	IMPORTANT	RNF-MAP-01 amb objectius concrets
+QA-06-14	BLOQUEJANT	DCF-06 v1.2 (resolt a nivell DCF) + §6.1
+QA-06-15	BLOQUEJANT	§6.3 `custom_resolution_rules` + RF-MAP-47 + RNF-MAP-23 + CA-MAP-44
+QA-06-16	IMPORTANT	§4.2 semàntica única + CA-MAP-45
+QA-06-17	IMPORTANT	CA-MAP-43
+11.2 DCF → SPEC-06 v0.8
+DCF	§
+DCF-02	§3.1–3.6, §5
+DCF-03	§4.1–4.2, §6.2
+DCF-04A	§4.4, §6.3, RF-MAP-42/43/44/45
+DCF-04B	§6.3 (retention_policy_ref → SPEC-08)
 DCF-07	§6.4
 DCF-08	§3.3, §6.5, RF-MAP-26 a RF-MAP-33
 DCF-09	§5.4, §5.5
+DCF-06 v1.2	§6.1 (gate automàtic i escalat excepcional)
 DCF-11	§3.7, §6.7, RF-MAP-34 a RF-MAP-41, CA-MAP-10
 12. Decisions pendents i gates
 12.1 Decisions pendents
@@ -889,23 +689,24 @@ DCF-02	Classificació de camps, fonts i visibilitat	RESOLT (DCF-06 v1.1)	—
 DCF-03	Qualitat, sospita i revisió	RESOLT (DCF-06 v1.1)	—
 DCF-04A	Contracte públic d'historials	RESOLT (DCF-04 v1.0)	—
 DCF-04B	Retenció física	PENDENT SPEC-08	Historials reals
-DCF-07	Motor cartogràfic (requisits)	RESOLT (DCF-06 v1.1)	—
+DCF-07	Requisits cartogràfics	RESOLT (DCF-06 v1.1)	—
 DCF-08	Àmbit geogràfic i ubicació	RESOLT (DCF-08 v1.0)	—
-DCF-09	Consentiment, aprovació i despublicació	RESOLT (DCF-06 v1.1)	—
+DCF-09	Consentiment, aprovació i despublicació	RESOLT (DCF-06 v1.1 + v1.2)	—
 DCF-10	Llicència i republicació externes	PENDENT	ACA/Open-Meteo públics
 DCF-11	Política de duplicats	RESOLT (DCF-11 v1.0)	—
 DCF-12	Idiomes suportats	PENDENT	Interfície multiidioma
 12.2 Gates per iniciar PLAN-06
-PLAN-06 pot iniciar-se amb MAP-A sintètica. Les DCF pendents (04B, 10, 12) NO bloquegen MAP-A:
+PLAN-06 pot iniciar-se amb MAP-A sintètica. DCF-04B, DCF-10 i DCF-12 NO bloquegen MAP-A:
 
-DCF	Bloqueja PLAN-06/MAP-A?	Bloqueja dades reals?
-DCF-04B	NO	SÍ (historials reals sense retention_policy_ref)
+DCF	Bloqueja MAP-A?	Bloqueja dades reals?
+DCF-04B	NO	SÍ (historials reals)
 DCF-10	NO	SÍ (ACA/Open-Meteo públics)
-DCF-12	NO	NO (idioma base: català)
-Conclusió: PLAN-06 queda desbloquejat per a MAP-A (fixtures sintètiques). Abans de MAP-B/C caldrà resoldre DCF-04B, DCF-10 i els contractes de SPEC-01/SPEC-02.
+DCF-12	NO	NO (base català)
+DCF-06 v1.2 ja reconcilia el gate automàtic de §6.1 amb SPEC-00 v0.5;
+no queda cap acció paral·lela oberta per aquesta contradicció.
 
 13. Pipeline SDD
-QA documental de SPEC-06 v0.6.
+QA documental de SPEC-06 v0.8.
 
 Aprovació explícita d'Oriol.
 
@@ -915,52 +716,54 @@ QA del PLAN-06.
 
 Redactar TASKS-06.
 
-Implementació MAP-A (fixtures sintètiques).
+Implementació MAP-A.
 
 Validació MAP-A.
 
-Resolució de DCF-04B, DCF-10 abans de MAP-B.
+Resolució de DCF-04B, DCF-10 + revisió SPEC-00 abans de MAP-B.
 
-Implementació MAP-B (dades reals públiques).
+Implementació MAP-B.
 
 Portes de Fase C abans de MAP-C.
 
 14. Referències
-SPEC-00 v0.5 — font paraigua pendent.
+SPEC-00 v0.5 — ara disponible; reconciliada amb DCF-06 v1.2.
 
-SPEC-10 v0.3 — fase A local aprovada.
+SPEC-10 v0.3 — fase A aprovada.
 
 SPIKE-04 v1.1 — frontera INTERNAL_ONLY.
 
-DCF-06 v1.1 — resolució de DCF-02, 03, 07, 09.
+DCF-06 v1.1 — DCF-02, 03, 07, 09.
 
-DCF-04 v1.0 — resolució de DCF-04A; DCF-04B delegada a SPEC-08.
+DCF-06 v1.2 — esmena de §5.3 (gate automàtic).
+
+DCF-04 v1.0 — DCF-04A; 04B delegat a SPEC-08.
 
 DCF-08 v1.0 — àmbit geogràfic i ubicació.
 
 DCF-11 v1.0 — política de duplicats.
 
-DEFECT-01 — semàntica de zeros Ecowitt caracteritzada, no corregida.
+DEFECT-01 — caracteritzat, no corregit.
 
-WCAG 2.2 i WAI-ARIA — referència d'accessibilitat.
+WCAG 2.2 i WAI-ARIA.
 
-CF Metadata Conventions 1.13 — semàntica d'agregacions.
+CF Metadata Conventions 1.13.
 
-RFC 3339 — timestamps.
+RFC 3339, RFC 7946, IANA Time Zone Database.
 
-IANA Time Zone Database — zones horàries.
+GDPR (Reglament UE 2016/679).
 
-RFC 7946 — GeoJSON i WGS 84.
+QA-06 v1.0 (v0.3) i QA-06 v2.0 (v0.6).
 
-GDPR (Reglament UE 2016/679) — protecció de dades.
-
-QA-06 v1.0 — QA funcional de SPEC-06 v0.3.
+QA-06 v3.0 — revisió funcional de SPEC-06 v0.7.
 
 15. Historial
 Versió	Data	Canvi
 0.1	2026-09-12	Esborrany reconstruït
 0.2	2026-09-16	Frontera fail-closed, contractes, accessibilitat, qualitat, cartografia
 0.3	2026-09-16	Estats buit/càrrega/error, duplicats, GDPR, modal vs. fitxa, sitemap, rate limiting, idioma, tests càrrega
-0.4	2026-09-16	Resolts 5 bloquejants + 2 importants del QA-06
-0.5	2026-09-16	Incorporació de DCF-06 v1.1 (DCF-02, 03, 07, 09)
-0.6	2026-09-16	Incorporació de DCF-04A, DCF-08 i DCF-11 ratificades. Nous RF-MAP-26 a RF-MAP-44, RNF-MAP-18 a RNF-MAP-21, CA-MAP-21 a CA-MAP-38. CA-MAP-10 redefinit amb 8 condicions de deduplicació. §6.3 historials reescrita (DCF-04A). §6.5 àmbit geogràfic reescrita (DCF-08). §6.7 duplicats reescrita (DCF-11). §4.4 DEFECT-01 com a condició de camp. Gate desbloquejada per a PLAN-06/MAP-A.
+0.4	2026-09-16	Resolts 5 bloquejants + 2 importants del QA-06 v1.0
+0.5	2026-09-16	Incorporació DCF-06 v1.1
+0.6	2026-09-16	Incorporació DCF-04A, DCF-08, DCF-11; CA-MAP-10 redefinit
+0.7	2026-09-16	Resolts 3 bloquejants i 3 importants del QA-06 v2.0: (1) refinament explícit SPEC-00 → DCF-06 a §6.1; (2) §4.2 tanca obsolete_limit i comportament d'OBSOLETA/EN_REVISIO (nous RF-MAP-46, CA-MAP-40/41); (3) resolution_policy obligatori al history_profile (nou RF-MAP-45, CA-MAP-39); (4) CA-MAP-13 i RNF-MAP-22 reescrits per caches controlades; (5) RF-MAP-05 referència corregida; (6) RNF-MAP-01 amb objectius concrets de rendiment (nou CA-MAP-42).
+0.8	2026-09-16	Resolts 2 bloquejants i 2 importants del QA-06 v3.0: (1) `custom_resolution_rules` determinista al `history_profile` (nous RF-MAP-47, RNF-MAP-23, CA-MAP-44); (2) `SOSPITOSA` amb semàntica única "marcar no fiable, no ocultar" (nou CA-MAP-45); (3) CA-MAP-43 per al clustering de 500 estacions (RNF-MAP-01); (4) capçalera alineada amb DCF-06 v1.2.
