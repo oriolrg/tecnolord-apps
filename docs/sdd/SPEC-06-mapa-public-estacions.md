@@ -312,7 +312,8 @@ history_profile_id
 history_enabled: bool
 profile_version: string
 
-default_period: '24h' | '7d' | '30d'
+default_period: '24h'   # Valor per defecte. Els altres períodes
+                        # es seleccionen via allowed_periods.
 allowed_periods: ['24h', '7d', '30d', 'custom']
 max_query_window: 30d
 
@@ -555,7 +556,7 @@ RF-MAP-46	Una estació OBSOLETA HA DE romandre visible amb l'indicador "dada obs
 RF-MAP-47	El backend HA DE rebutjar el període `custom` quan el `history_profile` no declari `custom_resolution_rules`, o quan l'amplada del rang no quedi coberta per cap regla.	DCF-04A (resol QA-06-15)
 8. Requisits no funcionals
 ID	Requisit	Traça
-RNF-MAP-01	El rendiment del mapa HA DE complir: (a) temps fins a primera pintura interactiva ≤ 2,5 s en 4G simulada sobre viewport mòbil 375×667 px amb 100 estacions; (b) temps de resposta del resum (modal) ≤ 500 ms p95; (c) temps de resposta de la fitxa ≤ 1 s p95; (d) suport per a 500 estacions amb clustering. El benchmark HA DE fixar dataset, dispositiu, navegador, cache i mètrica.	REQ-06 (resol QA-06-13)
+RNF-MAP-01	El rendiment del mapa HA DE complir: (a) temps fins a primera pintura interactiva ≤ 2,5 s en 4G simulada sobre viewport mòbil 375×667 px amb 100 estacions; (a') el mateix llindar de TTI s'aplica també amb 500 estacions (veure CA-MAP-43); (b) temps de resposta del resum (modal) ≤ 500 ms p95; (c) temps de resposta de la fitxa ≤ 1 s p95; (d) suport per a 500 estacions amb clustering. El benchmark HA DE fixar dataset, dispositiu, navegador, cache i mètrica.	REQ-06 (resol QA-06-13)
 RNF-MAP-02	Usable amb teclat, focus visible i sense keyboard trap.	REQ-06
 RNF-MAP-03	WCAG 2.2 AA.	REQ-06
 RNF-MAP-04	Mapa i llista HAN DE reflow sense pèrdua.	REQ-06
