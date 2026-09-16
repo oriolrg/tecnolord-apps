@@ -1,7 +1,7 @@
 # DCF-06 v1.1 — Resolució dels DCF bloquejants de SPEC-06
 
 **Versió:** 1.1
-**Estat:** CANDIDATA A RATIFICACIÓ
+**Estat:** RESOLT
 **Data:** 2026-09-16
 **SPEC afectada:** SPEC-06
 **Abast:** DCF-02, DCF-03, DCF-07 i DCF-09
@@ -465,6 +465,22 @@ Addicionalment, s'explicita que la classificació és independent per sensor/cam
 Text proposat per a l'acta o registre de decisió:
 
 Es ratifica DCF-06 v1.1 com a resolució normativa de DCF-02, DCF-03, DCF-07 i DCF-09. Les quatre decisions passen a estat RESOLT i poden incorporar-se a SPEC-06 v0.5. Aquesta ratificació permet iniciar PLAN-06 després del QA i aprovació de SPEC-06 v0.5, sense autoritzar fonts o dades reals que continuïn condicionades per altres DCF, SPEC-01 o contractes de privacitat/llicència.
+
+
+## 10. Acte de ratificació
+
+El 2026-09-16, Oriol ratifica DCF-06 v1.1 com a resolució normativa
+de DCF-02, DCF-03, DCF-07 i DCF-09.
+
+Les quatre decisions passen a estat RESOLT i queden incorporades a
+SPEC-06 v0.5.
+
+Aquesta ratificació NO autoritza:
+- fonts o dades reals que continuïn condicionades per altres DCF;
+- identitat, sessions o rols (SPEC-01);
+- contractes de privacitat o llicència pendents.
+
+MAP-A continua limitat a fixtures sintètiques.
 
 9. Historial
 Versió	Data	Canvi
