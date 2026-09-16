@@ -7,7 +7,7 @@
 **SPEC base de fase:** SPEC-10 v0.3 — fase A aprovada
 **Descoberta relacionada:** SPIKE-04 v1.1 — Grafana/i2CAT, viable amb condicions
 **Resolució DCF:** DCF-06 v1.1 — DCF-02, DCF-03, DCF-07, DCF-09 resoltes
-**QA prèvia:** QA-06 v1.0 (funcional sobre v0.3) — resolt a v0.4 i v0.5
+**QA prèvia:** QA-06 v1.0 (funcional sobre v0.3) — resolt a v0.5
 **Naturalesa:** reconstrucció refinada; no autoritza PLAN-06 ni implementació.
 
 ## 0. Autoritat, fonts i límits
@@ -750,5 +750,5 @@ Versió	Data	Canvi
 0.1	2026-09-12	Esborrany reconstruït a partir de fragments
 0.2	2026-09-16	Refinament: frontera fail-closed, bloquejos de contracte, accessibilitat, qualitat i cartografia
 0.3	2026-09-16	Afegits: estats buit/càrrega/error, duplicats d'estacions, GDPR, modal vs. fitxa, sitemap, rate limiting, idioma, tests de càrrega
-0.4	2026-09-16	Resolts 5 bloquejants + 2 importants del QA-06: model a dos nivells, eixos d'estat, cache, contracte mínim modal/fitxa, gates, llista equivalent, GDPR
-0.5	2026-09-16	Incorporades resolucions de DCF-06 v1.1: classificació a tres nivells (estació/sensor/camp), catalog_version, DEFECT-01 com a condició de camp, revocació amb 8 passos, eliminació de compte, no enumeració 404, nous RF (22-25), nous RNF (17), nous CA (17-20). Afegida traçabilitat explícita QA-06 → SPEC-06 v0.5 (§11).
+| 0.4 | 2026-09-16 | Esborrany intern no versionat. Resolts 5 bloquejants + 2 importants del QA-06: ... |
+| 0.5 | 2026-09-16 | Versió versionada a Git. Incorporades resolucions de DCF-06 v1.1: ... |
