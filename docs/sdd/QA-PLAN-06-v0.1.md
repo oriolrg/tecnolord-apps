@@ -1,7 +1,7 @@
 # QA-PLAN-06 v0.1 — Revisió documental de PLAN-06 v0.1
 
 **Versió:** 0.1
-**Estat:** COMPLETAT
+**Estat:** TANCAT
 **Data:** 2026-09-17
 **Document revisat:** PLAN-06 v0.1
 **Naturalesa:** QA documental de planificació
@@ -32,8 +32,22 @@ No hi ha bloquejants dins de l'abast declarat de v0.1. El pas a PLAN-06 v0.2
 depèn de definir i revisar DLT-MAP-06..11; aquests punts no es poden considerar
 resolts per inferència.
 
-## 4. Historial
+## 4. Acte de tancament
+
+La QA queda tancada sobre el commit `3b6a0d8`.
+
+- `clusterRadius=50` i `clusterMaxZoom=14` són configuració inicial
+  seleccionada del PLAN, no decisions de SPEC-06.
+- P06-A-19 els ha de validar amb el dataset normatiu de 500 estacions,
+  d'acord amb RNF-MAP-01 i CA-MAP-43.
+- No hi ha cap prova de rendiment aprovada en aquesta QA.
+- Si P06-A-19 falla, s'han de revisar els paràmetres abans de reobrir
+  decisions cartogràfiques superiors.
+- El tancament només autoritza el refinament documental de PLAN-06 v0.2;
+  TASKS-06 i implementació continuen bloquejats.
+
+## 5. Historial
 
 | Versió | Data | Canvi |
 |---|---|---|
-| 0.1 | 2026-09-17 | Primera QA documental de PLAN-06 v0.1. |
+| 0.1 | 2026-09-17 | Primera QA documental de PLAN-06 v0.1; tancada per continuar el refinament v0.2. |
