@@ -7,7 +7,14 @@
 const PUBLIC_ALLOWED = 'PUBLIC_ALLOWED';
 const HIDDEN = 'HIDDEN';
 const FEATURE_COLLECTION = 'FeatureCollection';
-const FILTER_KEYS = new Set(['search', 'public_station_ids', 'catalog_version']);
+const FILTER_KEYS = new Set([
+  'search',
+  'q',
+  'bbox',
+  'sensor',
+  'public_station_ids',
+  'catalog_version',
+]);
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -33,6 +40,19 @@ function isValidPublicGeometry(geometry) {
     && latitude <= 90;
 }
 
+function isValidBBox(value) {
+  if (!Array.isArray(value) || value.length !== 4 || value.some((coordinate) => !Number.isFinite(coordinate))) {
+    return false;
+  }
+  const [minLongitude, minLatitude, maxLongitude, maxLatitude] = value;
+  return minLongitude >= -180
+    && maxLongitude <= 180
+    && minLatitude >= -90
+    && maxLatitude <= 90
+    && minLongitude <= maxLongitude
+    && minLatitude <= maxLatitude;
+}
+
 function cloneGeometry(geometry) {
   return {
     type: 'Point',
@@ -41,7 +61,16 @@ function cloneGeometry(geometry) {
 }
 
 function normalizeFilters(filters) {
-  if (filters === undefined) return { valid: true, search: null, ids: null, catalogVersion: null };
+  if (filters === undefined) {
+    return {
+      valid: true,
+      search: null,
+      bbox: null,
+      sensor: null,
+      ids: null,
+      catalogVersion: null,
+    };
+  }
   if (!isRecord(filters)) return { valid: false };
   if (Object.keys(filters).some((key) => !FILTER_KEYS.has(key))) return { valid: false };
 
@@ -49,6 +78,26 @@ function normalizeFilters(filters) {
   if (Object.hasOwn(filters, 'search')) {
     if (typeof filters.search !== 'string') return { valid: false };
     search = filters.search.trim().toLocaleLowerCase('ca');
+  }
+  if (Object.hasOwn(filters, 'q')) {
+    if (typeof filters.q !== 'string') return { valid: false };
+    const query = filters.q.trim().toLocaleLowerCase('ca');
+    // A contradictory pair is ambiguous, so it fails closed rather than
+    // silently preferring one query parameter over the other.
+    if (search !== null && search !== query) return { valid: false };
+    search = query;
+  }
+
+  let bbox = null;
+  if (Object.hasOwn(filters, 'bbox')) {
+    if (!isValidBBox(filters.bbox)) return { valid: false };
+    bbox = [...filters.bbox];
+  }
+
+  let sensor = null;
+  if (Object.hasOwn(filters, 'sensor')) {
+    if (!isNonEmptyString(filters.sensor)) return { valid: false };
+    sensor = filters.sensor;
   }
 
   let ids = null;
@@ -64,7 +113,14 @@ function normalizeFilters(filters) {
     catalogVersion = filters.catalog_version;
   }
 
-  return { valid: true, search, ids, catalogVersion };
+  return {
+    valid: true,
+    search,
+    bbox,
+    sensor,
+    ids,
+    catalogVersion,
+  };
 }
 
 function hasRequiredPublicStationShape(station) {
@@ -131,10 +187,26 @@ function toPublicStation(station) {
   };
 }
 
+function stationInBBox(station, bbox) {
+  if (bbox === null) return true;
+  const [minLongitude, minLatitude, maxLongitude, maxLatitude] = bbox;
+  const [longitude, latitude] = station.public_geometry.coordinates;
+  return longitude >= minLongitude
+    && longitude <= maxLongitude
+    && latitude >= minLatitude
+    && latitude <= maxLatitude;
+}
+
+function stationHasPublicSensor(station, sensorId) {
+  if (sensorId === null) return true;
+  return sanitizeSensors(station.sensors).some((sensor) => sensor.sensor_id === sensorId);
+}
+
 function isFilterMatch(station, filters) {
-  if (filters.ids && !filters.ids.has(station.public_station_id)) return false;
-  if (filters.catalogVersion && station.catalog_version !== filters.catalogVersion) return false;
+  if (!stationInBBox(station, filters.bbox)) return false;
   if (filters.search && !station.public_name.toLocaleLowerCase('ca').includes(filters.search)) return false;
+  if (!stationHasPublicSensor(station, filters.sensor)) return false;
+  if (filters.ids && !filters.ids.has(station.public_station_id)) return false;
   return true;
 }
 
@@ -172,8 +244,14 @@ function publicCanonicalStations(stations, filters = {}) {
   });
 
   // 3. MAP_VISIBLE: public geometry must be valid, non-hidden and non-revoked.
-  // 4. Active filters: only applied after public visibility is established.
-  return canonical.filter((station) => isMapVisible(station) && isFilterMatch(station, normalizedFilters));
+  const visible = canonical.filter(isMapVisible);
+
+  // 4. Active filters are applied only to the already public collection.
+  // catalog_version is a collection guard, not a per-record discovery filter.
+  const versions = new Set(visible.map((station) => station.catalog_version));
+  const catalogVersion = versions.size === 1 ? [...versions][0] : null;
+  if (normalizedFilters.catalogVersion !== null && normalizedFilters.catalogVersion !== catalogVersion) return [];
+  return visible.filter((station) => isFilterMatch(station, normalizedFilters));
 }
 
 function toFeature(station) {
