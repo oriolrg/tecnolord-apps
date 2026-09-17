@@ -1,9 +1,9 @@
-# QA-TASKS-06 v0.1 — Revisió documental de TASKS-06 v0.2.1
+# QA-TASKS-06 v0.2 — Revisió documental de TASKS-06 v0.2.2
 
-**Versió:** 0.1
+**Versió:** 0.2
 **Estat:** TANCAT
 **Data:** 2026-09-17
-**Document revisat:** TASKS-06 v0.2.1
+**Document revisat:** TASKS-06 v0.2.2
 **SPEC base:** SPEC-06 v0.8
 **PLAN base:** PLAN-06 v0.2 (aprovat)
 **QA prèvia:** QA-06 v4.0, QA-PLAN-06 v0.2
@@ -13,7 +13,7 @@
 
 **FAVORABLE PER A APROVACIÓ EXPLÍCITA I, DESPRÉS, PER INICIAR MAP-A SINTÈTICA.**
 
-TASKS-06 v0.2.1 tanca les tres observacions menors de la primera passada i
+TASKS-06 v0.2.2 tanca les observacions de la primera i segona passada i
 no introdueix cap decisió que correspongui al PLAN-06 o a SPEC-06. L'aprovació
 explícita continua sent un pas separat: aquest QA no autoritza per si sol la
 implementació, ni MAP-B, ni MAP-C, ni dades reals.
@@ -35,18 +35,19 @@ implementació, ni MAP-B, ni MAP-C, ni dades reals.
 | QT06-11 | PASS | `clusterRadius=50` i `clusterMaxZoom=14` romanen explícitament com a configuració inicial pendent de P06-A-19; cap tasca declara el benchmark superat. |
 | QT06-12 | PASS | T06-06 prova MAP-A amb `retention_policy_ref=null` i amb referència fictícia. |
 | QT06-13 | PASS | T06-04 manté l'ordre classificació → deduplicació → MAP_VISIBLE → filtres → GeoJSON. |
-| QT06-14 | PASS | T06-01 reutilitza la gate de Fase A, guards de cleanup i configuració fail-closed existents. |
+| QT06-14 | PASS | T06-01 verifica la baseline de Fase A per descendència del commit `0bf9a141` i restricció del diff a `docs/sdd/`, sense exigir cap mode `checkpoint` inexistent ni re-executar la gate. |
 | QT06-15 | PASS | T06-02 no introdueix cap decisió tecnològica no fixada al PLAN-06 v0.2. |
 | QT06-16 | PASS | Cap tasca introdueix un llindar numèric no fixat al PLAN-06 o a SPEC-06. |
 | QT06-17 | PASS | T06-13 tanca MAP-A amb informe de traçabilitat i QA d'implementació abans de MAP-B/MAP-C. |
 
-## 3. Tancament de les observacions de la primera passada
+## 3. Tancament de les observacions prèvies
 
-| Finding | Resultat | Resolució a v0.2.1 |
+| Finding | Resultat | Resolució a v0.2.2 |
 |---|---|---|
 | QT06-N01 | PASS | T06-12 separa «Fixar» (paràmetres, abans de mesurar) i «Registrar» (mètriques). Alineat amb RNF-MAP-01. |
-| QT06-N02 | PASS | T06-13 referencia explícitament `QA-TASKS-06-v0.2.1-implementacio.md`. |
+| QT06-N02 | PASS | T06-13 referencia explícitament `QA-TASKS-06-v0.2.2-implementacio.md`. |
 | QT06-N03 | PASS | T06-02 fixa el contracte de versions: instal·lació per `npm ci`, versions exactes al lockfile i al manifest de preflight, digests SHA-512 registrats, prohibit `latest` o CDN. |
+| QT06-N05 | PASS | T06-01 reformulat: la baseline de Fase A es verifica per descendència de `0bf9a141` i restricció del diff a `docs/sdd/`. No s'exigeix cap mode `checkpoint` del wrapper de Fase A, que efectivament no existeix. La instrucció per a Codex queda alineada amb el wrapper real. |
 
 ## 4. Observacions residuals (no bloquejants)
 
@@ -56,16 +57,25 @@ implementació, ni MAP-B, ni MAP-C, ni dades reals.
 
 No hi ha bloquejants ni defectes majors.
 
-## 5. Condicions abans d'iniciar MAP-A
+## 5. Lliçó apresa
 
-1. Versionar TASKS-06 v0.2.1 al repositori.
-2. Obtenir l'aprovació explícita d'Oriol per a TASKS-06 v0.2.1.
-3. Verificar que la gate de Fase A continua verda sobre el commit d'inici de MAP-A.
+La primera instrucció a Codex exigia un mode `checkpoint` del wrapper de Fase A
+que només existia al `PLAN-10 v0.5` (encara CANDIDAT A QA), no al codi real
+implementat sota TASKS-10 v0.1. La correcció a TASKS-06 v0.2.2 elimina la
+dependència d'un mode inexistent i fa la verificació de baseline determinista
+i reproduïble.
+
+## 6. Condicions abans d'iniciar MAP-A
+
+1. Versionar TASKS-06 v0.2.2 al repositori.
+2. Obtenir l'aprovació explícita d'Oriol per a TASKS-06 v0.2.2.
+3. Verificar que el HEAD actual és `0bf9a141` o un descendent amb canvis només a `docs/sdd/`.
 4. Mantenir P06-A-19 com a validació posterior: cap tasca ni implementació pot presentar els paràmetres inicials de clustering com a rendiment provat.
 5. Mantenir fora d'abast: dades reals, Grafana/i2CAT, ACA/Open-Meteo públics, MAP-B, MAP-C i desplegament.
 
-## 6. Historial
+## 7. Historial
 
 | Versió | Data | Canvi |
 |---|---|---|
-| 0.1 | 2026-09-17 | QA de TASKS-06 v0.2.1: tancada favorablement amb una observació menor. Autoritza aprovació explícita i inici de MAP-A sintètica, no dades reals ni MAP-B/MAP-C. |
+| 0.1 | 2026-09-17 | QA de TASKS-06 v0.2.1: tancada favorablement amb una observació menor. |
+| 0.2 | 2026-09-17 | QA de TASKS-06 v0.2.2: correcció de T06-01 (baseline per descendència de `0bf9a141`). Tanca QT06-N05. |

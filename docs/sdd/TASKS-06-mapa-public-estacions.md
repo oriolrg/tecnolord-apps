@@ -1,11 +1,11 @@
-# TASKS-06 v0.2.1 — Mapa públic d'estacions, MAP-A sintètica
+# TASKS-06 v0.2.2 — Mapa públic d'estacions, MAP-A sintètica
 
-**Versió:** 0.2.1
+**Versió:** 0.2.2
 **Estat:** CANDIDAT A QA DOCUMENTAL
 **Data:** 2026-09-17
 **SPEC base:** SPEC-06 v0.8
 **PLAN base:** PLAN-06 v0.2, aprovat
-**QA prèvia:** QA-06 v4.0, QA-PLAN-06 v0.2 i QA-TASKS-06 v0.1
+**QA prèvia:** QA-06 v4.0, QA-PLAN-06 v0.2 i QA-TASKS-06 v0.2
 **Abast:** implementació MAP-A només amb fixtures sintètiques i recursos same-origin.
 **No autoritza:** dades reals, Grafana/i2CAT, ACA/Open-Meteo públics, MAP-B, MAP-C ni desplegament.
 
@@ -46,13 +46,25 @@
 ## 3. Detall de tasques
 
 ### T06-01 — Preflight i evidència
+Registrar commit, run-id, estat Git, versions d'eines i baseline de Fase A.
+Crear evidència sota artifacts/phase-a/<commit>/<run-id>/map-a/.
 
-Registrar commit, run-id, estat Git, versions d'eines i configuració local
-validada. Crear evidència sota
-`artifacts/phase-a/<commit>/<run-id>/map-a/`.
+La baseline de Fase A es considera verificada si i només si:
 
-**Acceptació:** arbre net abans d'iniciar; cap secret, dada real ni recurs
-extern en l'evidència.
+el HEAD actual és exactament 0bf9a1411d6b4455f12c18b3cb9e77e86d2dc132, o
+
+el HEAD actual és un descendent d'aquest commit, i la diferència
+0bf9a141..HEAD toca només fitxers sota docs/sdd/, i no toca
+backend/, site/, scripts/, config/, compose.meteolord-local.yml,
+Caddyfile.meteolord-local, ni cap fitxer de codi o configuració.
+
+Si el HEAD és anterior, divergent, o la diferència inclou canvis fora de
+docs/sdd/, aturar amb BLOCKED. No re-executar la gate sencera de Fase A.
+
+Acceptació: arbre net abans d'iniciar; cap secret, dada real ni recurs
+extern en l'evidència; baseline de Fase A verificada segons la regla
+anterior; preflight/baseline.json amb commit, run-id, HEAD, i el
+resultat de la comprovació.
 
 ### T06-02 — Actius cartogràfics controlats
 
@@ -222,7 +234,7 @@ fer passar el benchmark.
 
 Generar informe de traçabilitat i evidència sanejada sota
 `artifacts/phase-a/<commit>/<run-id>/map-a/`. Redactar l'artefacte
-`QA-TASKS-06-v0.2.1-implementacio.md` (o el nom equivalent aprovat per la
+`QA-TASKS-06-v0.2.2-implementacio.md` (o el nom equivalent aprovat per la
 cadena SDD) amb:
 
 - verificació de cada acceptació de T06-01..T06-12;
@@ -272,3 +284,4 @@ traçats; l'artefacte QA de la implementació queda versionat i referenciat.
 | 0.1 | 2026-09-17 | Primera seqüència d'implementació MAP-A sintètica, derivada de PLAN-06 v0.2. |
 | 0.2 | 2026-09-17 | Correcció dels findings QT06-01..03: rate limiting, sitemap, contracte complet d'historial/qualitat, matriu catalog_version, extent, accessibilitat, egress i traçabilitat. |
 | 0.2.1 | 2026-09-17 | Aplicats QT06-N01 i QT06-N02 del QA-TASKS-06 v0.1: T06-12 fixa i registra els paràmetres del benchmark; T06-13 referencia l'artefacte QA de la implementació. T06-02 concreta el contracte de versions cartogràfiques fixades per lockfile. |
+| 0.2.2 | 2026-09-17 | T06-01 verifica la baseline per descendència documental de 0bf9a141, sense reexecutar la gate de Fase A ni dependre d'un mode checkpoint inexistent. |
