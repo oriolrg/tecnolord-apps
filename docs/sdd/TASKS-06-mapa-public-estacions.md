@@ -1,11 +1,11 @@
-# TASKS-06 v0.1 — Mapa públic d'estacions, MAP-A sintètica
+# TASKS-06 v0.2.1 — Mapa públic d'estacions, MAP-A sintètica
 
-**Versió:** 0.1
+**Versió:** 0.2.1
 **Estat:** CANDIDAT A QA DOCUMENTAL
 **Data:** 2026-09-17
 **SPEC base:** SPEC-06 v0.8
 **PLAN base:** PLAN-06 v0.2, aprovat
-**QA prèvia:** QA-06 v4.0 i QA-PLAN-06 v0.2
+**QA prèvia:** QA-06 v4.0, QA-PLAN-06 v0.2 i QA-TASKS-06 v0.1
 **Abast:** implementació MAP-A només amb fixtures sintètiques i recursos same-origin.
 **No autoritza:** dades reals, Grafana/i2CAT, ACA/Open-Meteo públics, MAP-B, MAP-C ni desplegament.
 
@@ -56,12 +56,31 @@ extern en l'evidència.
 
 ### T06-02 — Actius cartogràfics controlats
 
-Afegir el motor cartogràfic, worker, CSS, style, PMTiles sintètic i qualsevol
-sprite o font estrictament necessaris al build bloquejat. Servir-los des de
-`/meteo/map-assets/` i verificar Range requests per al PMTiles.
+Afegir al lockfile de `backend/package.json` les dependències cartogràfiques
+següents:
 
-**Acceptació:** cap CDN; CSP compatible amb worker same-origin; basemap,
-style i worker funcionen sense xarxa exterior.
+- `maplibre-gl` — darrera versió estable disponible compatible amb el
+  contracte DCF-07 (sense `unsafe-eval`).
+- `pmtiles` — darrera versió estable del paquet oficial que exposa
+  `Protocol` per a MapLibre.
+
+Instal·lar-les exclusivament amb `npm ci` des del lockfile versionat.
+**Prohibit:** `latest`, ranges oberts, `npm install` interactiu, tarball
+arbitrari o càrrega des de CDN.
+
+Servir motor, worker, CSS, style, PMTiles sintètic i qualsevol sprite o font
+estrictament necessaris al build bloquejat des de `/meteo/map-assets/`.
+Verificar Range requests per al PMTiles. Registrar al manifest del preflight
+(T06-01):
+
+- versió exacta instal·lada de `maplibre-gl`;
+- versió exacta instal·lada de `pmtiles`;
+- digest SHA-512 del tarball de cada dependència;
+- hash del lockfile `backend/package-lock.json`.
+
+**Acceptació:** cap CDN; les versions queden fixades al lockfile i al
+manifest de preflight; cap `latest` ni range obert; CSP compatible amb
+worker same-origin; basemap, style i worker funcionen sense xarxa exterior.
 
 ### T06-03 — Fixtures i model canònic
 
@@ -87,23 +106,39 @@ clusters ni errors.
 ### T06-05 — API pública
 
 Implementar contractes per catàleg GeoJSON, llista filtrada, resum, fitxa per
-`public_station_id` i resposta de `catalog_version`. Una estació
-`INTERNAL_ONLY` o inexistent retorna el mateix 404 públic.
+`public_station_id`, sitemap públic, rate limiting actiu i resposta de
+`catalog_version`. Una estació `INTERNAL_ONLY` o inexistent retorna el
+mateix 404 públic.
 
 **Acceptació:** mapa, llista, resum i fitxa representen el mateix conjunt
 públic; els filtres no observen camps interns; els comptadors coincideixen amb
-`MAP_VISIBLE`.
+`MAP_VISIBLE`; el rate limiting és actiu a tota API pública; el sitemap
+només enumera fitxes públiques vigents.
 
 ### T06-06 — Historial, qualitat i retenció
 
 Aplicar `history_profile`, `resolution_policy` i
-`custom_resolution_rules` deterministes. Els camps sospitosos es mantenen
-visibles amb marca «no fiable»; no s'oculten. Cap historial real es publica
-sense `retention_policy_ref`.
+`custom_resolution_rules` deterministes. El perfil absent o inconsistent no
+publica historial. Aplicar `raw_history_allowed`,
+`allowed_resolutions`, `min_coverage_policy`, `timezone_policy` i les
+operacions `sum`, `circular`, `max` i `counter_diff` segons el perfil.
+Cada bucket publica `n_valid`, `n_expected` i `coverage`.
 
-**Acceptació:** `default_period` és `24h`; custom sense regla o fora de
-rang falla clarament; absències no es converteixen en zero; DEFECT-01 no
-alimenta historial, agregats, estadístiques ni derivats.
+Aplicar qualitat i frescor: `SOSPITOSA` manté el camp visible amb marca «no
+fiable»; `OBSOLETA` i `EN_REVISIO` romanen visibles amb l'indicador
+normatiu; `obsolete_limit` és `max(24h, 12 × expected_update_interval)`.
+Cap historial real es publica sense `retention_policy_ref`.
+
+**Acceptació:** `default_period` és `24h`; la primera
+`custom_resolution_rule` que cobreix el rang retorna exactament la seva
+resolució i custom sense regla o fora de rang falla clarament;
+`raw_history_allowed=false` no exposa raw; precipitació, vent, ratxa i
+comptadors utilitzen respectivament `sum`, `circular`, `max` i
+`counter_diff`; cobertura insuficient és parcial o `null` segons perfil;
+`n_valid=0` retorna `null`, no zero; absències no s'interpolen ni es fan
+carry-forward; DEFECT-01 no alimenta historial, agregats, estadístiques ni
+derivats. Provar MAP-A amb `retention_policy_ref=null` (historial no
+exposat) i amb referència fictícia (historial sintètic elegible).
 
 ### T06-07 — Frontend funcional sense mapa
 
@@ -112,8 +147,8 @@ estats de càrrega/buit/error, resum i fitxa. La interfície mostra només el
 conjunt retornat pel backend.
 
 **Acceptació:** llista independent del viewport; català; estats textuals
-per qualitat/frescor; navegació per URL directa; cap analítica ni enllaç
-extern en local.
+per qualitat/frescor; una ubicació aproximada comunica textualment que no és
+exacta; navegació per URL directa; cap analítica ni enllaç extern en local.
 
 ### T06-08 — Mapa i clustering
 
@@ -125,7 +160,9 @@ spiderfy.
 
 **Acceptació:** clusters només de dades `MAP_VISIBLE`; cap `INTERNAL_ONLY`
 influencia `point_count`, bounds, posició o comptadors. Els paràmetres són
-registrats com a inicials i pendents de P06-A-19.
+registrats com a inicials i pendents de P06-A-19. L'extent inicial es deriva
+únicament de totes les geometries públiques `MAP_VISIBLE` que passen els
+filtres actius.
 
 ### T06-09 — Accessibilitat, CSP i degradació
 
@@ -134,46 +171,72 @@ diàlegs, alternatives textuals de gràfiques i contrast. Si falla renderer,
 worker, style o PMTiles, conservar llista, cerca, filtres i fitxa sense
 fallback extern.
 
-**Acceptació:** proves automatitzades d'accessibilitat i E2E no detecten
-violacions bloquejants; la CSP no permet scripts externs ni unsafe-inline a
-script-src.
+**Acceptació:** a més dels tests automàtics, les proves E2E/manuals acrediten
+WCAG 2.2 AA aplicable: teclat, ordre i visibilitat del focus, absència de
+keyboard trap, reflow, contrast, i que color/mida/icona no és l'únic canal
+d'estat. La CSP no permet scripts externs ni unsafe-inline a script-src.
 
-### T06-10 — Cache i despublicació simulada
+### T06-10 — Cache, catalog_version, sitemap i despublicació simulada
 
 Fer que `catalog_version` invalidi caches controlades i representacions
-locals. Simular despublicació, canvi de geometria, classificació, perfil i
-canònica.
+locals. Incrementar-lo per publicació/despublicació, classificació
+d'estació/sensor/camp, `public_geometry`, `privacy_radius_m`,
+`geo_publication`, `history_profile_id`, `duplicate_group_id`,
+`canonical_station_id` i qualsevol política que alteri la visibilitat.
+Simular aquests esdeveniments i la retirada de la URL del sitemap.
 
 **Acceptació:** API pública desapareix immediatament; caches controlades es
-purgan en ≤60 s; el client rebutja cache amb versió anterior o no verificable.
+purgan en ≤60 s; el client rebutja cache amb versió anterior o no verificable;
+el sitemap deixa d'enumerar la URL despublicada en ≤60 s.
 
 ### T06-11 — Proves funcionals i de seguretat
 
 Ampliar proves unitàries, HTTP i E2E amb dades sintètiques. Cobrir
-classificació, deduplicació, geolocalització pública, qualitat, history
-profiles, cache, degradació, accessibilitat, CSP i zero egress.
+classificació, deduplicació, geolocalització pública, extent inicial,
+qualitat, history profiles, rate limiting, sitemap, cache, degradació,
+accessibilitat, CSP i zero egress.
 
-**Acceptació:** requests del navegador només same-origin; consoles sense
-violacions CSP; proves negatives demostren absència d'INTERNAL_ONLY i secrets.
+**Acceptació:** prova HTTP de rate limiting actiu; sitemap sense
+`INTERNAL_ONLY` i sense URL despublicada; consoles sense violacions CSP;
+proves negatives demostren absència d'`INTERNAL_ONLY` i secrets. Executar o
+reutilitzar la comprovació d'egress de la gate de Fase A i rebutjar qualsevol
+request fora dels orígens locals que aquella gate autoritza per a cada
+context.
 
 ### T06-12 — Benchmark P06-A-19
 
-Executar el protocol amb 100 i 500 estacions en viewport 375×667 i 4G
-simulada. Registrar dispositiu, navegador, cache, xarxa, TTI, temps fins a
-clusters, latència, long tasks, errors i percentils.
+**Fixar abans de mesurar** (no ajustables després) els paràmetres del
+benchmark: dispositiu, navegador, cache, xarxa simulada, dataset (100 i 500
+estacions), viewport 375×667 i protocol de percentils. Un cop fixats,
+**registrar** les mètriques: TTI, temps fins a clusters, latència, long
+tasks, errors i percentils.
 
-**Acceptació:** RNF-MAP-01 i CA-MAP-43 només es marquen PASS si l'evidència
-mesurada ho acredita. Si falla, revisar `clusterRadius`,
-`clusterMaxZoom`, estil o càrrega; no reescriure SPEC-06 per ajustar.
+**Acceptació:** els paràmetres del benchmark queden fixats al manifest del
+preflight (T06-01) abans d'executar cap mesura. RNF-MAP-01 i CA-MAP-43
+només es marquen PASS si l'evidència mesurada ho acredita. Si falla,
+revisar `clusterRadius`, `clusterMaxZoom`, estil o càrrega; no reescriure
+SPEC-06 per ajustar. No s'accepten ajustos retroactius dels paràmetres per
+fer passar el benchmark.
 
 ### T06-13 — Tancament MAP-A
 
-Generar informe de traçabilitat i evidència sanejada. Fer QA de la
-implementació abans de qualsevol decisió sobre MAP-B/MAP-C.
+Generar informe de traçabilitat i evidència sanejada sota
+`artifacts/phase-a/<commit>/<run-id>/map-a/`. Redactar l'artefacte
+`QA-TASKS-06-v0.2.1-implementacio.md` (o el nom equivalent aprovat per la
+cadena SDD) amb:
+
+- verificació de cada acceptació de T06-01..T06-12;
+- resultats de les proves de T06-11;
+- resultat del benchmark P06-A-19 de T06-12;
+- traça a RF-MAP-01..47, RNF-MAP-01..23, CA-MAP-01..45 i G06-01..G06-11;
+- declaració explícita de PASS/FAIL per cada gate.
+
+Aquest QA de la implementació és el gate obligatori abans de qualsevol
+decisió sobre MAP-B/MAP-C.
 
 **Acceptació:** cap control omès es presenta com a PASS; resultats de
 benchmark, egress, CSP, accessibilitat i exclusió d'INTERNAL_ONLY queden
-traçats.
+traçats; l'artefacte QA de la implementació queda versionat i referenciat.
 
 ## 4. Gates
 
@@ -188,19 +251,24 @@ traçats.
 | G06-07 | E2E sense egress ni violacions CSP |
 | G06-08 | P06-A-19 mesurat, no assumit |
 | G06-09 | Informe i QA d'implementació favorables |
+| G06-10 | Rate limiting actiu a l'API pública |
+| G06-11 | Sitemap només públic i revocació propagada |
 
 ## 5. Traçabilitat
 
-- SPEC-06 v0.8: RF-MAP-42..47, RNF-MAP-01..23 i CA-MAP-01..45 aplicables.
+- SPEC-06 v0.8: RF-MAP-01..47, RNF-MAP-01..23 i CA-MAP-01..45 aplicables.
 - PLAN-06 v0.2: DLT-MAP-01..11, en especial DLT-MAP-06..11.
-- DCF-06 v1.2: gate automàtic de publicació.
+- DCF-06 v1.1 + v1.2: classificació, catalog_version, revocació, cache i
+  gate automàtic de publicació.
 - DCF-04 v1.0: history profile, agregació i retenció.
 - DCF-08 v1.0: geometria pública i `MAP_VISIBLE`.
 - DCF-11 v1.0: deduplicació i canònica.
-- QA-06 v4.0 i QA-PLAN-06 v0.2: habilitació documental.
+- QA-06 v4.0, QA-PLAN-06 v0.2 i QA-TASKS-06 v0.1: habilitació documental.
 
 ## 6. Historial
 
 | Versió | Data | Canvi |
 |---|---|---|
 | 0.1 | 2026-09-17 | Primera seqüència d'implementació MAP-A sintètica, derivada de PLAN-06 v0.2. |
+| 0.2 | 2026-09-17 | Correcció dels findings QT06-01..03: rate limiting, sitemap, contracte complet d'historial/qualitat, matriu catalog_version, extent, accessibilitat, egress i traçabilitat. |
+| 0.2.1 | 2026-09-17 | Aplicats QT06-N01 i QT06-N02 del QA-TASKS-06 v0.1: T06-12 fixa i registra els paràmetres del benchmark; T06-13 referencia l'artefacte QA de la implementació. T06-02 concreta el contracte de versions cartogràfiques fixades per lockfile. |
