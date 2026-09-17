@@ -1,0 +1,58 @@
+{
+  "synthetic": true,
+  "schema_version": "1",
+  "generated_at_utc": "2026-01-01T00:00:00Z",
+  "files": [
+    {
+      "path": "stations-basic.json",
+      "sha256": "762f5540323cdc0e9513fb051d237d42e5f86a1beb1ae1a30c8deb8b892f1a22",
+      "bytes": 6099
+    },
+    {
+      "path": "stations-internal.json",
+      "sha256": "f4e2d80a173140c5a702d0c9dd46d97632c1c9491c8ddedad7997dad9d915605",
+      "bytes": 1173
+    },
+    {
+      "path": "stations-defect01.json",
+      "sha256": "ad1f4215c973bb1ad04f7ec9ceda3a8a466f9d37ff0a502a7ba5abc19b0b7324",
+      "bytes": 1524
+    },
+    {
+      "path": "stations-duplicate.json",
+      "sha256": "35055e5c2eb5b1a14994655833b628ccc3bed0df9a3f10ad340ab2859b8c3227",
+      "bytes": 3079
+    },
+    {
+      "path": "stations-nearby.json",
+      "sha256": "f833e896dcb8e44eba225454029a4392df082b3f90a0bf104a121189c470f05d",
+      "bytes": 3051
+    },
+    {
+      "path": "stations-nogeo.json",
+      "sha256": "79313f159095c79bc9a7c5059d052e5f627fc3cb2a2d637d7eb025d0e5bdc2e3",
+      "bytes": 1432
+    },
+    {
+      "path": "stations-500.json",
+      "sha256": "41adb43681a40178a74682dfb2acb7dfa2f9f5b8bb2f98295f4b80fd21e68df5",
+      "bytes": 758523
+    },
+    {
+      "path": "history-profile-24h-raw.json",
+      "sha256": "39e8c27e32b487d9064ff2982288610f7bf070c06677e51673814cb1db03bec5",
+      "bytes": 715
+    },
+    {
+      "path": "history-profile-custom-uncovered.json",
+      "sha256": "8f5dd879d704ddb0f48b9d79c9ec8d6640315497ac7aa3faf3770f757e010023",
+      "bytes": 664
+    },
+    {
+      "path": "quality-ok-sospitosa.json",
+      "sha256": "c0c553fe1c539837200478d0dbf2bfaec06845ffa8f6539dc0ac913cbd02d0b6",
+      "bytes": 359
+    }
+  ],
+  "notes": "Fixture set for MAP-A. No real data."
+}

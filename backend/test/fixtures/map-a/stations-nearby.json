@@ -1,0 +1,104 @@
+[
+  {
+    "public_station_id": "syn-201",
+    "canonical_station_id": "syn-201",
+    "duplicate_group_id": null,
+    "publication_class": "PUBLIC_ALLOWED",
+    "publication_revoked": false,
+    "public_name": "Synthetic Station syn-201",
+    "public_geometry": {
+      "type": "Point",
+      "coordinates": [
+        -166.25,
+        -52.25
+      ]
+    },
+    "privacy_radius_m": 100,
+    "geo_publication": "APPROXIMATED",
+    "geo_policy_version": "v1",
+    "sensors": [
+      {
+        "sensor_id": "sensor-syn-201",
+        "publication_class": "PUBLIC_ALLOWED",
+        "fields": [
+          {
+            "field_id": "temperature",
+            "unit": "synthetic-celsius",
+            "publication_class": "PUBLIC_ALLOWED",
+            "history_profile_id": "history-24h-raw",
+            "quality_profile_id": "quality-synthetic-v1",
+            "defect_01_affected": false,
+            "current_value": 12.5
+          },
+          {
+            "field_id": "humidity",
+            "unit": "synthetic-percent",
+            "publication_class": "PUBLIC_ALLOWED",
+            "history_profile_id": "history-24h-raw",
+            "quality_profile_id": "quality-synthetic-v1",
+            "defect_01_affected": false,
+            "current_value": 45
+          }
+        ]
+      }
+    ],
+    "observed_at": "2026-01-01T00:00:00Z",
+    "provenance": {
+      "source": "synthetic",
+      "licence_or_legal_basis_ref": "synthetic-internal"
+    },
+    "consent_required": false,
+    "catalog_version": "map-a-synthetic-v1"
+  },
+  {
+    "public_station_id": "syn-202",
+    "canonical_station_id": "syn-202",
+    "duplicate_group_id": null,
+    "publication_class": "PUBLIC_ALLOWED",
+    "publication_revoked": false,
+    "public_name": "Synthetic Station syn-202",
+    "public_geometry": {
+      "type": "Point",
+      "coordinates": [
+        -166.25,
+        -52.25
+      ]
+    },
+    "privacy_radius_m": 100,
+    "geo_publication": "APPROXIMATED",
+    "geo_policy_version": "v1",
+    "sensors": [
+      {
+        "sensor_id": "sensor-syn-202",
+        "publication_class": "PUBLIC_ALLOWED",
+        "fields": [
+          {
+            "field_id": "temperature",
+            "unit": "synthetic-celsius",
+            "publication_class": "PUBLIC_ALLOWED",
+            "history_profile_id": "history-24h-raw",
+            "quality_profile_id": "quality-synthetic-v1",
+            "defect_01_affected": false,
+            "current_value": 12.5
+          },
+          {
+            "field_id": "humidity",
+            "unit": "synthetic-percent",
+            "publication_class": "PUBLIC_ALLOWED",
+            "history_profile_id": "history-24h-raw",
+            "quality_profile_id": "quality-synthetic-v1",
+            "defect_01_affected": false,
+            "current_value": 45
+          }
+        ]
+      }
+    ],
+    "observed_at": "2026-01-01T00:00:00Z",
+    "provenance": {
+      "source": "synthetic",
+      "licence_or_legal_basis_ref": "synthetic-internal"
+    },
+    "consent_required": false,
+    "catalog_version": "map-a-synthetic-v1"
+  }
+]

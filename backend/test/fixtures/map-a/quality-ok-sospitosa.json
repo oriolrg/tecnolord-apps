@@ -1,0 +1,17 @@
+{
+  "quality_profile_id": "quality-synthetic-v1",
+  "profile_version": "v1",
+  "unit": "synthetic-percent",
+  "valid_range": [
+    0,
+    100
+  ],
+  "expected_update_interval_s": 300,
+  "max_rate_of_change": 25,
+  "freshness_limit_s": 1800,
+  "obsolete_limit_s": 86400,
+  "validation_rules": [
+    "range:0..100",
+    "mark_suspicious_on_outside_range"
+  ]
+}

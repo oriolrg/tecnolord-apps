@@ -1,0 +1,36 @@
+{
+  "history_profile_id": "history-24h-raw",
+  "profile_version": "v1",
+  "history_enabled": true,
+  "default_period": "24h",
+  "allowed_periods": [
+    "24h",
+    "7d",
+    "30d"
+  ],
+  "max_query_window": "30d",
+  "resolution_policy": {
+    "24h": "raw",
+    "7d": "hourly",
+    "30d": "daily"
+  },
+  "custom_resolution_rules": [],
+  "raw_history_allowed": true,
+  "allowed_resolutions": [
+    "raw",
+    "hourly",
+    "daily"
+  ],
+  "aggregation_method": "mean",
+  "pre_aggregation_transform": null,
+  "statistics": [
+    "min",
+    "max",
+    "mean"
+  ],
+  "missing_data_policy": "partial",
+  "min_coverage_policy": 0.8,
+  "timezone_policy": "UTC",
+  "retention_policy_ref": null,
+  "max_points_policy": 1440
+}
