@@ -16,8 +16,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
+    "maplibre-gl": "6.10.0",
     "morgan": "^1.10.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "pmtiles": "4.5.0"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"
