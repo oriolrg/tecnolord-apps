@@ -1,6 +1,6 @@
 # Tasques executables
 
-Estat 2026-09-21: **UE-T01–13 FETES** amb [QA-UE-T01](QA-UE-T01.md), [QA-UE-T02](QA-UE-T02.md), [QA-UE-T03](QA-UE-T03.md), [QA-UE-T04](QA-UE-T04.md), [QA-UE-T05](QA-UE-T05.md), [QA-UE-T06](QA-UE-T06.md), [QA-UE-T07](QA-UE-T07.md), [QA-UE-T08](QA-UE-T08.md), [QA-UE-T09](QA-UE-T09.md), [QA-UE-T10](QA-UE-T10.md), [QA-UE-T11](QA-UE-T11.md), [QA-UE-T12](QA-UE-T12.md) i [QA-UE-T13](QA-UE-T13.md); UE-T14–18 NO INICIADES. La fase completa continua en curs. Contractes: [SPEC](SPEC.md), [PLAN](PLAN.md); bloquejos: [DECISIONS](DECISIONS.md).
+Estat 2026-09-21: **UE-T01–14 FETES** amb [QA-UE-T01](QA-UE-T01.md), [QA-UE-T02](QA-UE-T02.md), [QA-UE-T03](QA-UE-T03.md), [QA-UE-T04](QA-UE-T04.md), [QA-UE-T05](QA-UE-T05.md), [QA-UE-T06](QA-UE-T06.md), [QA-UE-T07](QA-UE-T07.md), [QA-UE-T08](QA-UE-T08.md), [QA-UE-T09](QA-UE-T09.md), [QA-UE-T10](QA-UE-T10.md), [QA-UE-T11](QA-UE-T11.md), [QA-UE-T12](QA-UE-T12.md), [QA-UE-T13](QA-UE-T13.md) i [QA-UE-T14](QA-UE-T14.md); UE-T15–18 NO INICIADES. La fase completa continua en curs. Contractes: [SPEC](SPEC.md), [PLAN](PLAN.md); bloquejos: [DECISIONS](DECISIONS.md).
 
 ## Convencions de proves i finalització
 
@@ -178,7 +178,7 @@ L’ordre és topològic, però una tasca bloquejada no impedeix executar altres
 - **Resultat observable:** Admin consulta sensor verificat intern amb unitats i temps; API pública no el retorna.
 - **Acceptació:** UE-CA07, UE-CA09, UE-CA10; Fixtures múltiples frames/sèries, IDs desconeguts, nulls, longitud inconsistent, errors/auth; pluja desactivada si no validada; negació pública.
 - **Proves i execució:** sufix `ue-grafana`; unit/http + integració + E2E, amb les ordres anteriors i els escenaris d’acceptació d’aquesta fitxa.
-- **Finalització:** regla comuna «Fet», amb evidència dels criteris indicats; estat actual NO INICIADA.
+- **Finalització:** FETA el 2026-09-21 dins el límit condicional de UE-T12: consulta backend fixada, normalització defensiva, UI interna només admin i exclusió pública completa; activació real, persistència, pluja i republicació continuen deshabilitades. Regressió 247/247, 0 SKIP. [Evidència](QA-UE-T14.md).
 - **Reversió:** Desactivar adaptador i revocar secret; catàleg intern preservat.
 
 ## UE-T15 — Substituir només estimacions pels sis punts requerits
