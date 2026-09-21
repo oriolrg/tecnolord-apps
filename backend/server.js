@@ -6,6 +6,7 @@
 // ──────────────────────────────────────────────────────────
 
 const express = require('express');
+const { mapAssets } = require('./middleware/mapAssets');
 const cors = require('cors');
 const path = require('path');
 const { createPool } = require('./db/pool');
@@ -22,6 +23,26 @@ const { makeMesuresRouter } = require('./routes/mesures');
 const { makeHidroRouter } = require('./routes/hidro');
 const { makePreviRouter } = require('./routes/previ');
 const { createTaskRunner, makeTasksRouter } = require('./routes/tasks');
+const { makeMapPublicRouter } = require('./routes/mapPublic');
+const { makeIdentityRouter } = require('./routes/identity');
+const { makeStationsRouter } = require('./routes/stations');
+const { makeStationMapRouter } = require('./routes/stationMap');
+const { makePreferencesRouter } = require('./routes/preferences');
+const { makePublicViewRouter } = require('./routes/publicView');
+const { makeAdminCatalogRouter } = require('./routes/adminCatalog');
+const { makeImportsRouter } = require('./routes/imports');
+const { makeGrafanaRouter } = require('./routes/grafana');
+const { makeIdentityService } = require('./services/identityService');
+const { makeStationCatalogService } = require('./services/stationCatalogService');
+const { makeConnectorRegistryService } = require('./services/connectorRegistryService');
+const { makeSnapshotService } = require('./services/snapshotService');
+const { makeStationLocationService } = require('./services/stationLocationService');
+const { makeUserPreferenceService } = require('./services/userPreferenceService');
+const { makePublicViewService } = require('./services/publicViewService');
+const { makeAdminCatalogService } = require('./services/adminCatalogService');
+const { makeImportService } = require('./services/importService');
+const { makeGrafanaAdapterService } = require('./services/grafanaAdapterService');
+const { makeLocalMailOutbox } = require('./services/localMailOutbox');
 
 const { makePreviService } = require('./services/previService');
 const { makeAcaService } = require('./services/acaService');
@@ -29,7 +50,7 @@ const { makeEcowittService } = require('./services/ecowittService');
 
 const FRONTEND_DIR = path.resolve(__dirname, '../site');
 const REAL_CLOCK = Object.freeze({ now: () => new Date() });
-const LOCAL_FRONTEND_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+const LOCAL_FRONTEND_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
 
 function runtimeMode(environment) {
   return environment.METEOLORD_ENV
@@ -169,6 +190,12 @@ function createApp({
   environment = process.env,
   accessLogStream,
   correlationIdFactory,
+  mapPublicStations,
+  mapPublicRateLimit,
+  mapPublicHistoryProfiles,
+  mapPublicObservations,
+  identityMailAdapter,
+  connectorKeyring,
 } = {}) {
   if (accessLogStream !== undefined
       && (!accessLogStream || typeof accessLogStream.write !== 'function')) {
@@ -183,6 +210,13 @@ function createApp({
   const runtime = createRuntime({ pool, httpClient, clock, logger: appLogger, environment });
   const app = express();
   const mode = runtimeMode(environment);
+  if (identityMailAdapter !== undefined
+      && (!['local', 'test'].includes(mode) || typeof identityMailAdapter !== 'function')) {
+    throw new TypeError('Injected identity mail adapter is allowed only in local/test');
+  }
+  if (connectorKeyring !== undefined && !['local', 'test'].includes(mode)) {
+    throw new TypeError('Injected connector keyring is allowed only in local/test');
+  }
   app.locals.meteolordRuntime = runtime;
   app.locals.logger = appLogger;
 
@@ -210,24 +244,105 @@ function createApp({
   app.use(cors());
   app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*+json'] }));
 
+  const identityNow = () => {
+    const value = typeof runtime.clock === 'function' ? runtime.clock() : runtime.clock.now();
+    return new Date(value).getTime();
+  };
+  const identityService = makeIdentityService({
+    pool: runtime.pool,
+    now: identityNow,
+    mailAdapter: identityMailAdapter || (mode === 'local'
+      ? makeLocalMailOutbox(environment.METEOLORD_LOCAL_MAIL_OUTBOX)
+      : undefined),
+  });
+  const stationCatalog = makeStationCatalogService({ pool: runtime.pool });
+  const connectorRegistry = makeConnectorRegistryService({
+    pool: runtime.pool,
+    keyring: connectorKeyring || environment.METEOLORD_CONNECTOR_KEYS,
+  });
+  const snapshotService = typeof runtime.pool.connect === 'function'
+    ? makeSnapshotService({
+      pool: runtime.pool,
+      connectorRegistry,
+      fetch: runtime.transport,
+      clock: runtime.clock,
+    })
+    : null;
+  runtime.snapshotService = snapshotService;
+  const stationLocations = makeStationLocationService({ pool: runtime.pool, clock: runtime.clock });
+  runtime.stationLocations = stationLocations;
+  const preferences = typeof runtime.pool.connect === 'function'
+    ? makeUserPreferenceService({ pool: runtime.pool })
+    : null;
+  runtime.preferences = preferences;
+  const publicView = makePublicViewService({ pool: runtime.pool });
+  runtime.publicView = publicView;
+  const adminCatalog = typeof runtime.pool.connect === 'function'
+    ? makeAdminCatalogService({ pool: runtime.pool, clock: runtime.clock })
+    : null;
+  runtime.adminCatalog = adminCatalog;
+  const imports = typeof runtime.pool.connect === 'function'
+    ? makeImportService({ pool: runtime.pool, clock: runtime.clock })
+    : null;
+  runtime.imports = imports;
+  const grafana = makeGrafanaAdapterService({
+    pool: runtime.pool, fetch: runtime.transport, clock: runtime.clock,
+    enabled: environment.METEOLORD_GRAFANA_INTERNAL_ENABLED === 'true',
+  });
+  runtime.grafana = grafana;
+
   // ──────────────────────────────────────────────────────────
   // Routers
   app.use(pingRouter);
+  app.use(makeIdentityRouter({
+    mode,
+    now: identityNow,
+    identityService,
+  }));
+  if (preferences) app.use(makePreferencesRouter({ identityService, preferences, mode }));
+  app.use(makePublicViewRouter({ identityService, publicView, mode }));
+  if (adminCatalog) app.use(makeAdminCatalogRouter({ identityService, adminCatalog, mode }));
+  if (imports) app.use(makeImportsRouter({ identityService, imports, mode }));
+  app.use(makeGrafanaRouter({ identityService, grafana }));
+  app.use(makeStationsRouter({
+    pool: runtime.pool, identityService, stationCatalog, connectorRegistry, snapshotService, stationLocations, mode,
+  }));
   app.use(makeHealthRouter({ pool: runtime.pool, logger: runtime.logger }));
-  app.use(makeMesuresRouter({ pool: runtime.pool, logger: runtime.logger }));
+  app.use(makeMesuresRouter({
+    pool: runtime.pool,
+    logger: runtime.logger,
+    identityService,
+    stationCatalog,
+  }));
   app.use(makeHidroRouter({ pool: runtime.pool, logger: runtime.logger }));
   app.use(makePreviRouter({ previService: runtime.previService, logger: runtime.logger }));
 
   app.use(makeTasksRouter({
     checkApiKey,
     taskRunner: runtime.taskRunner,
+    snapshotService,
   }));
+
+  // MAP-A is available only from the local/test composition and consumes the
+  // fixture-backed, fail-closed public catalog adapter.
+  if (mapPublicStations !== undefined && ['local', 'test'].includes(mode)) {
+    app.use(makeMapPublicRouter({
+      stations: mapPublicStations,
+      environment,
+      rateLimit: mapPublicRateLimit,
+      historyProfiles: mapPublicHistoryProfiles,
+      observations: mapPublicObservations,
+    }));
+  } else {
+    app.use(makeStationMapRouter({ identityService, stationLocations, rateLimit: mapPublicRateLimit }));
+  }
 
   // Frontend local: les rutes API es registren abans dels estàtics.
   app.get('/meteo/runtime-config.js', (_req, res) => {
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.sendFile(path.join(FRONTEND_DIR, 'runtime-config.js'));
   });
+  app.use(mapAssets);
   app.use('/meteo', express.static(FRONTEND_DIR));
   app.get('/meteo', (_req, res) => res.redirect(302, '/meteo/'));
   app.get('/meteo/*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));

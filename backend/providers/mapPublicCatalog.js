@@ -4,6 +4,14 @@
 // persistence, or frontend dependency: it is the fail-closed boundary between
 // canonical fixture records and the future public surfaces.
 
+const { assessField } = require('./mapQuality');
+const { generalizeGeometry } = require('./mapGeometry');
+const DEMO_NOW = Date.parse('2026-01-01T00:05:00Z');
+const QUALITY_PROFILES = {
+  temperature: { unit: 'synthetic-celsius', valid_range: [-60, 60], expected_update_interval_s: 300, max_rate_of_change: 25 },
+  humidity: { unit: 'synthetic-percent', valid_range: [0, 100], expected_update_interval_s: 300, max_rate_of_change: 25 },
+};
+
 const PUBLIC_ALLOWED = 'PUBLIC_ALLOWED';
 const HIDDEN = 'HIDDEN';
 const FEATURE_COLLECTION = 'FeatureCollection';
@@ -144,7 +152,11 @@ function hasRequiredPublicStationShape(station) {
 }
 
 function isMapVisible(station) {
-  return station.geo_publication !== HIDDEN && isValidPublicGeometry(station.public_geometry);
+  const geometry = generalizeGeometry(station);
+  return ['APPROXIMATED', 'EXACT'].includes(station.geo_publication)
+    && station.quality !== 'NO_PUBLICABLE' && isValidPublicGeometry(geometry)
+    && (!Object.hasOwn(station, 'private_geometry') || (isValidPublicGeometry(station.public_geometry)
+      && station.public_geometry.coordinates.every((value, index) => Math.abs(value - geometry.coordinates[index]) < 1e-9)));
 }
 
 function isSafePublicField(field) {
@@ -152,11 +164,13 @@ function isSafePublicField(field) {
     && isNonEmptyString(field.field_id)
     && isNonEmptyString(field.unit)
     && isPublicClass(field.publication_class)
+    && field.quality_profile_id === 'quality-synthetic-v1'
+    && Object.hasOwn(QUALITY_PROFILES, field.field_id)
     && field.defect_01_affected === false
     && (field.current_value === null || Number.isFinite(field.current_value));
 }
 
-function sanitizeSensors(sensors) {
+function sanitizeSensors(sensors, observedAt, now = DEMO_NOW) {
   const result = [];
   for (const sensor of sensors) {
     if (!isRecord(sensor) || !isNonEmptyString(sensor.sensor_id)
@@ -164,21 +178,21 @@ function sanitizeSensors(sensors) {
     const fields = sensor.fields.filter(isSafePublicField).map((field) => ({
       field_id: field.field_id,
       unit: field.unit,
-      current_value: field.current_value,
+      ...assessField(field, field.quality_profile_id === 'quality-synthetic-v1' ? QUALITY_PROFILES[field.field_id] : null, observedAt, now),
     }));
     if (fields.length > 0) result.push({ sensor_id: sensor.sensor_id, fields });
   }
   return result;
 }
 
-function toPublicStation(station) {
+function toPublicStation(station, now = DEMO_NOW) {
   return {
     public_station_id: station.public_station_id,
     public_name: station.public_name,
-    public_geometry: cloneGeometry(station.public_geometry),
+    public_geometry: generalizeGeometry(station),
     geo_publication: station.geo_publication,
-    sensors: sanitizeSensors(station.sensors),
-    observed_at: station.observed_at,
+    sensors: sanitizeSensors(station.sensors, station.observed_at, now),
+    observed_at: Number.isFinite(Date.parse(station.observed_at)) ? station.observed_at : null,
     provenance: {
       source: station.provenance.source,
       licence_or_legal_basis_ref: station.provenance.licence_or_legal_basis_ref,
@@ -190,7 +204,7 @@ function toPublicStation(station) {
 function stationInBBox(station, bbox) {
   if (bbox === null) return true;
   const [minLongitude, minLatitude, maxLongitude, maxLatitude] = bbox;
-  const [longitude, latitude] = station.public_geometry.coordinates;
+  const [longitude, latitude] = generalizeGeometry(station).coordinates;
   return longitude >= minLongitude
     && longitude <= maxLongitude
     && latitude >= minLatitude
@@ -254,8 +268,8 @@ function publicCanonicalStations(stations, filters = {}) {
   return visible.filter((station) => isFilterMatch(station, normalizedFilters));
 }
 
-function toFeature(station) {
-  const publicStation = toPublicStation(station);
+function toFeature(station, now) {
+  const publicStation = toPublicStation(station, now);
   return {
     type: 'Feature',
     id: publicStation.public_station_id,
@@ -274,10 +288,10 @@ function toFeature(station) {
 
 // 5. Public GeoJSON is always constructed from the already classified,
 // canonical, visible, and filtered station set.
-function getPublicGeoJSON(stations, filters = {}) {
+function getPublicGeoJSON(stations, filters = {}, now = DEMO_NOW) {
   return {
     type: FEATURE_COLLECTION,
-    features: publicCanonicalStations(stations, filters).map(toFeature),
+    features: publicCanonicalStations(stations, filters).map((station) => toFeature(station, now)),
   };
 }
 
@@ -286,11 +300,11 @@ function getPublicList(stations, filters = {}) {
   return { features, count: features.length };
 }
 
-function getPublicStation(stations, publicStationId) {
+function getPublicStation(stations, publicStationId, now = DEMO_NOW) {
   if (!isNonEmptyString(publicStationId)) return null;
   const station = publicCanonicalStations(stations)
     .find((candidate) => candidate.public_station_id === publicStationId);
-  return station ? toPublicStation(station) : null;
+  return station ? toPublicStation(station, now) : null;
 }
 
 function getCatalogVersion(stations) {
@@ -299,6 +313,8 @@ function getCatalogVersion(stations) {
 }
 
 module.exports = {
+  DEMO_NOW,
+  publicCanonicalStations,
   getCatalogVersion,
   getPublicGeoJSON,
   getPublicList,

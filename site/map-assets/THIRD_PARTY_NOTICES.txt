@@ -1,0 +1,3 @@
+MapLibre GL JS 6.10.0 — BSD-3-Clause. See LICENSE.maplibre-gl.txt.
+pmtiles 4.5.0 — BSD-3-Clause. License and notices: https://github.com/protomaps/PMTiles/blob/main/LICENSE
+Both packages are installed at exact versions from backend/package-lock.json.

@@ -20,6 +20,9 @@
 !test/
 !test/e2e/
 !test/e2e/**/*.js
+!test/fixtures/
+!test/fixtures/map-a/
+!test/fixtures/map-a/*.json
 !playwright.config.js
 
 # Data, secrets, backups, and dumps always stay outside the context.

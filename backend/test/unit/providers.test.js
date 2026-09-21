@@ -343,9 +343,7 @@ for (const providerName of EXPECTED_PROVIDERS) {
 }
 
 for (const scenarioName of EXPECTED_SCENARIOS) {
-  const label = scenarioName === 'zero'
-    ? 'zero (DEFECT-01 remains characterized)'
-    : scenarioName;
+  const label = scenarioName === 'zero' ? 'zero (DEFECT-01 fixed)' : scenarioName;
 
   test(`Ecowitt service preserves ${label}`, async () => {
     await withEnvironment(
@@ -375,9 +373,9 @@ for (const scenarioName of EXPECTED_SCENARIOS) {
         } else if (scenarioName === 'zero') {
           assert.equal(result.skipped, false);
           assert.equal(calls.length, 1);
-          assert.equal(calls[0].params[2], null, 'DEFECT-01: temperature zero becomes null');
-          assert.equal(calls[0].params[8], null, 'DEFECT-01: rain-rate zero becomes null');
-          assert.equal(calls[0].params[15], null, 'DEFECT-01: wind zero becomes null');
+          assert.equal(calls[0].params[2], 0, 'temperature zero must remain zero');
+          assert.equal(calls[0].params[8], 0, 'rain-rate zero must remain zero');
+          assert.equal(calls[0].params[15], 0, 'wind zero must remain zero');
           assert.equal(calls[0].params[5], 0, 'integer humidity zero remains zero');
           assert.equal(calls[0].params[17], 0, 'integer direction zero remains zero');
         } else if (scenarioName === 'invalid_timestamp') {

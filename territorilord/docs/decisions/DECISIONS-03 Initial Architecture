@@ -1,0 +1,789 @@
+# TerritoriLord — Decisions 03: Initial Architecture
+
+**Estat:** decisions arquitectòniques inicials v0.1
+**Data:** 2026-09-18
+**Complementa:** `DECISIONS-00.md`, `DECISIONS-01.md` i `DECISIONS-02.md`
+
+---
+
+# 1. Client inicial
+
+## D-169 — PWA first
+
+**Estat:** FIXAT
+
+TerritoriLord començarà amb:
+
+```text
+PWA / Web
+```
+
+per accelerar:
+
+* desenvolupament;
+* proves;
+* iteració;
+* primer vertical slice.
+
+L'arquitectura haurà de permetre evolucionar posteriorment cap a:
+
+```text
+Android / iOS natiu
+```
+
+especialment per millorar:
+
+* enregistrament en background;
+* GPS;
+* notificacions;
+* integració amb dispositiu;
+* experiència outdoor.
+
+La PWA inicial no s'ha de convertir en una dependència arquitectònica irreversible.
+
+---
+
+# 2. Funcionament offline
+
+## D-170 — Activity Recorder offline-first
+
+**Estat:** FIXAT
+
+Una Activity ha de poder continuar enregistrant-se sense connexió a Internet.
+
+La pèrdua de cobertura no pot implicar:
+
+* perdre el track;
+* aturar l'Activity;
+* invalidar automàticament la sessió.
+
+Principi:
+
+```text
+GPS recording
+≠
+Internet connectivity
+```
+
+---
+
+# 3. Arquitectura frontend/backend
+
+## D-171 — Client separat + API pròpia
+
+**Estat:** FIXAT
+
+S'utilitzarà una arquitectura amb:
+
+```text
+client
+↓
+API backend
+↓
+persistència
+```
+
+No es farà dependre el domini principal d'un backend exclusivament integrat dins del frontend.
+
+Això permetrà reutilitzar l'API futura des de:
+
+* PWA;
+* app Android;
+* app iOS;
+* administració;
+* altres clients.
+
+---
+
+# 4. Base de dades geoespacial
+
+## D-172 — PostgreSQL + PostGIS + H3
+
+**Estat:** FIXAT PROVISIONALMENT
+
+La primera arquitectura geoespacial utilitzarà:
+
+```text
+PostgreSQL
++
+PostGIS
++
+H3
+```
+
+Responsabilitats conceptuals:
+
+### PostGIS
+
+Per:
+
+* Point;
+* LineString;
+* Polygon;
+* distàncies;
+* interseccions;
+* tracks;
+* geometries;
+* operacions espacials.
+
+### H3
+
+Per:
+
+* ExplorationCell;
+* TerritoryCell;
+* veïnatges;
+* agregació territorial;
+* Fog;
+* diferents resolucions.
+
+Aquesta decisió es validarà durant les fases geoespacials.
+
+---
+
+# 5. Autoritat del servidor
+
+## D-173 — Server authoritative
+
+**Estat:** FIXAT
+
+El client pot calcular:
+
+* previews;
+* estimacions;
+* feedback visual;
+* Power aproximada.
+
+Però el backend és l'autoritat final per:
+
+* ActivityValidation;
+* Power definitiva;
+* TerritoryOwnership;
+* FlagAttack;
+* FlagDefense;
+* captures;
+* conquestes;
+* recompenses.
+
+Principi:
+
+```text
+CLIENT
+→ estimació
+
+SERVER
+→ veritat del joc
+```
+
+---
+
+# 6. Motor de mapes
+
+## D-174 — MapLibre
+
+**Estat:** FIXAT PROVISIONALMENT
+
+El primer motor de mapa serà:
+
+```text
+MapLibre
+```
+
+L'objectiu és disposar de:
+
+* estilització;
+* capes territorials;
+* Fog;
+* H3;
+* tracks;
+* POI;
+* banderes;
+* possible evolució futura a client natiu.
+
+Es podrà reconsiderar si els prototips mostren limitacions importants.
+
+---
+
+# 7. Identitat pública
+
+## D-175 — Username públic
+
+**Estat:** FIXAT
+
+La identitat pública principal serà:
+
+```text
+username
+```
+
+El nom civil:
+
+* no serà obligatori públicament;
+* podrà ser opcional;
+* es mantindrà separat de la identitat competitiva.
+
+No s'exposaran:
+
+* email;
+* dades personals innecessàries.
+
+---
+
+# 8. Autenticació inicial
+
+## D-176 — Email inicial + OAuth posterior
+
+**Estat:** FIXAT
+
+Primera versió:
+
+```text
+email
++
+verificació email
++
+credencial
+```
+
+L'arquitectura d'identitat haurà de permetre afegir posteriorment:
+
+* Google;
+* Apple;
+* altres proveïdors OAuth/OIDC.
+
+El domini no ha d'assumir:
+
+```text
+User == password account
+```
+
+---
+
+# 9. Track original
+
+## D-177 — Conservació inicial de mostres GPS
+
+**Estat:** FIXAT PROVISIONALMENT
+
+Inicialment es conservaran les mostres GPS originals necessàries per:
+
+* validació;
+* recalcul;
+* auditoria;
+* anti-cheat;
+* depuració;
+* millora de regles.
+
+Exemple conceptual:
+
+```text
+timestamp
+latitude
+longitude
+accuracy
+altitude
+speed
+heading
+```
+
+quan estiguin disponibles.
+
+---
+
+# 10. Dades derivades
+
+## D-178
+
+**Estat:** FIXAT
+
+Es mantindran separats:
+
+```text
+RAW TRACK
+```
+
+i:
+
+```text
+DERIVED RESULTS
+```
+
+Exemples derivats:
+
+* distance;
+* elevation gain;
+* circularity;
+* ActivityPower;
+* TerritoryCells;
+* validation result.
+
+Els resultats rellevants podran quedar associats a:
+
+```text
+rules_version
+```
+
+---
+
+# 11. Retenció del track
+
+## D-179 — Estratègia pendent de dades reals
+
+**Estat:** PENDENT DELIBERADAMENT
+
+No es fixa encara que totes les mostres GPS s'hagin de conservar indefinidament.
+
+Caldrà mesurar:
+
+* bytes per Activity;
+* Activities per usuari;
+* cost mensual;
+* utilitat anti-cheat real;
+* necessitat d'auditoria;
+* possibilitat de compressió;
+* simplificació;
+* arxiu.
+
+Possibles estratègies futures:
+
+```text
+raw recent
++
+compressed historical
+```
+
+o:
+
+```text
+raw N mesos
++
+geometry/history posterior
+```
+
+No s'ha d'optimitzar prematurament.
+
+---
+
+# 12. Sincronització
+
+## D-180 — Local-first + sync oportunista
+
+**Estat:** FIXAT
+
+Durant una Activity:
+
+```text
+GPS
+↓
+persistència local
+↓
+sincronització per blocs quan sigui possible
+```
+
+Quan no hi ha xarxa:
+
+```text
+continua localment
+```
+
+Quan torna la xarxa:
+
+```text
+reprèn sincronització
+```
+
+---
+
+# 13. Idempotència
+
+## D-181
+
+**Estat:** FIXAT
+
+La sincronització haurà de suportar reintents sense duplicar dades.
+
+Conceptualment:
+
+```text
+Activity
++
+chunk sequence / unique identifier
+```
+
+ha de permetre enviar el mateix bloc diverses vegades de manera segura.
+
+---
+
+# 14. Finalització
+
+## D-182
+
+**Estat:** FIXAT
+
+Finalitzar una Activity ha de generar una sincronització final quan sigui possible.
+
+Si no hi ha Internet:
+
+```text
+COMPLETED_LOCAL
+```
+
+o estat equivalent.
+
+Quan recuperi cobertura:
+
+```text
+SYNC
+↓
+SERVER VALIDATION
+↓
+FINAL RESULT
+```
+
+---
+
+# 15. Mapes offline
+
+## D-183 — Posterior al primer MVP
+
+**Estat:** FIXAT
+
+Es diferencien dues capacitats:
+
+### Obligatòria inicial
+
+```text
+Activity Recorder offline
+```
+
+### Posterior
+
+```text
+cartografia offline completa
+```
+
+No s'ha de bloquejar el primer MVP esperant implementar descàrrega completa de mapes.
+
+---
+
+# 16. Atac PvP i connectivitat
+
+## D-184 — Connexió obligatòria en iniciar l'atac
+
+**Estat:** FIXAT INICIALMENT
+
+La Activity pot transcórrer sense Internet.
+
+Però en el moment:
+
+```text
+ATACAR FLAG
+```
+
+caldrà connexió amb el backend.
+
+---
+
+# 17. Motiu
+
+El servidor ha de poder comprovar en aquell moment:
+
+* existència de la Flag;
+* propietari;
+* estat actual;
+* atacabilitat;
+* locks;
+* permisos;
+* Activity activa;
+* FlagTarget correcte;
+* coordenada;
+* accuracy.
+
+---
+
+# 18. Bloqueig d'atac
+
+Una vegada validada la presència:
+
+```text
+ATTACK IN PROGRESS
+```
+
+el backend podrà bloquejar temporalment accions incompatibles sobre aquella Flag.
+
+Això implementa la decisió anterior segons la qual el propietari no pot retirar-la quan l'atac ja està en curs.
+
+---
+
+# 19. Notificació
+
+La connexió també permet:
+
+```text
+ATTACK CONFIRMED
+↓
+notificació al propietari
+```
+
+sense revelar la posició en temps real de l'atacant.
+
+---
+
+# 20. Limitació coneguda
+
+Aquesta decisió implica:
+
+> sense cobertura a la ubicació de la Flag no es podrà iniciar l'atac PvP.
+
+Això es considera acceptable per a la primera versió.
+
+S'haurà d'avaluar especialment durant proves de:
+
+* muntanya;
+* zones remotes;
+* cobertura deficient.
+
+---
+
+# 21. Possible revisió futura
+
+Si aquesta limitació perjudica massa el joc, es podrà estudiar un protocol d'atac offline segur.
+
+Aquesta complexitat no entra al primer MVP.
+
+---
+
+# 22. Monorepo
+
+## D-185
+
+**Estat:** FIXAT
+
+S'utilitzarà inicialment un monorepo.
+
+Estructura conceptual:
+
+```text
+territorilord/
+├── apps/
+│   ├── web/
+│   └── api/
+│
+├── packages/
+│   ├── domain/
+│   ├── geo/
+│   └── contracts/
+│
+├── docs/
+├── tests/
+└── ...
+```
+
+La disposició exacta es definirà a la SPEC.
+
+---
+
+# 23. packages/domain
+
+Responsabilitat conceptual:
+
+* regles compartibles;
+* models de domini purs;
+* invariants;
+* tipus;
+* lògica que no depengui de framework.
+
+No ha de convertir-se en un contenidor de tota la lògica de l'aplicació.
+
+---
+
+# 24. packages/geo
+
+Responsabilitat conceptual:
+
+* H3;
+* geometria;
+* conversions;
+* distàncies;
+* circularitat;
+* utilitats espacials compartibles.
+
+---
+
+# 25. packages/contracts
+
+Responsabilitat conceptual:
+
+* esquemes API;
+* DTO;
+* validacions de contracte;
+* tipus compartits client/server.
+
+---
+
+# 26. QR patrocinat amb validació geogràfica
+
+## D-186
+
+**Estat:** FIXAT
+
+Un QR patrocinat no concedeix per si mateix una recompensa.
+
+El servidor comprovarà simultàniament:
+
+```text
+QR vàlid
++
+campanya activa
++
+usuari vàlid
++
+ubicació actual
++
+radi permès
++
+regles de reutilització
+```
+
+---
+
+# 27. Sponsored Location
+
+Cada recompensa patrocinada podrà definir:
+
+```text
+latitude
+longitude
+claim_radius
+```
+
+o geometria equivalent.
+
+El `claim_radius` serà definit segons el tipus d'ubicació i precisió esperable.
+
+---
+
+# 28. Turisme
+
+Exemple:
+
+```text
+Campanya:
+"Descobreix 8 indrets del municipi"
+```
+
+L'usuari:
+
+```text
+veu una pista
+↓
+arriba al lloc
+↓
+descobreix POI
+↓
+escaneja QR
+↓
+servidor valida ubicació
+↓
+rep bonus
+```
+
+---
+
+# 29. Comerç local
+
+El mateix sistema podrà utilitzar-se:
+
+```text
+establiment participant
+↓
+SponsoredPOI
+↓
+QR físic
+↓
+validació GPS
+↓
+recompensa
+```
+
+Això deixa oberta una futura línia comercial sense modificar el motor territorial.
+
+---
+
+# 30. Activity no obligatòria per claim turístic
+
+**Estat:** PROVISIONAL RECOMANAT
+
+No s'exigirà conceptualment que tot `SponsoredClaim` tingui una Activity esportiva activa.
+
+Això permet:
+
+* comerços;
+* museus;
+* equipaments;
+* centres d'interpretació.
+
+Es podrà diferenciar entre:
+
+```text
+VISIT_CLAIM
+```
+
+i:
+
+```text
+ACTIVITY_CLAIM
+```
+
+si una campanya concreta sí que requereix activitat esportiva.
+
+---
+
+# 31. Estat de l'arquitectura
+
+Amb aquestes decisions ja està definit suficientment:
+
+* tipus de client inicial;
+* offline;
+* API;
+* geoespacial;
+* mapa;
+* autenticació;
+* tracks;
+* sync;
+* autoritat;
+* repositori;
+* PvP online;
+* extensibilitat turística.
+
+Es pot començar la `SPEC-00`.
+
+---
+
+# 32. Decisions que NO s'han de forçar a la SPEC-00
+
+Continuen intencionadament obertes:
+
+* resolució H3 Exploration;
+* resolució H3 Territory;
+* `75 %` definitiu;
+* CircularityRadius;
+* Flag interaction radius;
+* Power;
+* Defense;
+* TerritoryBudget;
+* decadència;
+* Fog intervals;
+* Flag limits;
+* cooldowns;
+* Level final;
+* Seasons;
+* clans.
+
+La Fase 0 no necessita inventar aquests valors.
+
+---
+
+# 33. Principi final
+
+> L'arquitectura inicial ha de suportar el joc que ja hem definit, però no ha d'intentar resoldre ara les mecàniques que només podem calibrar sortint al carrer i jugant.

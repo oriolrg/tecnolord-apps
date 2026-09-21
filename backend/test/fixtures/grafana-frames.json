@@ -1,0 +1,54 @@
+{
+  "results": {
+    "A": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": {
+            "refId": "A",
+            "fields": [
+              { "name": "Time", "type": "time" },
+              { "name": "Temperatura exterior", "type": "number", "labels": { "tag4": "Meteo-901-9000001" }, "config": {} }
+            ]
+          },
+          "data": {
+            "values": [
+              [1790240400000, 1790240700000, 1790241000000, 1790241300000],
+              [99, 0, null, 12.5]
+            ]
+          }
+        },
+        {
+          "schema": {
+            "refId": "A",
+            "fields": [
+              { "name": "Sèrie secundària", "type": "number", "labels": { "tag4": "Meteo-901-9000001" }, "config": { "unit": "celsius" } },
+              { "name": "Time", "type": "time" }
+            ]
+          },
+          "data": {
+            "values": [
+              [13.25],
+              [1790241600000]
+            ]
+          }
+        },
+        {
+          "schema": {
+            "refId": "A",
+            "fields": [
+              { "name": "Time", "type": "time" },
+              { "name": "Truncada", "type": "number", "labels": { "tag4": "Meteo-901-9000001" }, "config": { "unit": "celsius" } }
+            ]
+          },
+          "data": {
+            "values": [
+              [1790241300000, 1790241600000],
+              [14]
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

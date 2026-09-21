@@ -69,6 +69,7 @@ function makeTasksRouter({
   pullACAAndSave,
   pullPreviAndSave,
   logger,
+  snapshotService,
 }) {
   const router = express.Router();
   const runTask = taskRunner || createTaskRunner({
@@ -103,6 +104,17 @@ function makeTasksRouter({
       return res.status(201).json(await runTask('previ', req.requestContext));
     } catch {
       return res.status(500).json({ ok: false, error: 'pull previ failed' });
+    }
+  });
+
+  router.post(['/tasks/refresh-stations', '/api/tasks/refresh-stations'], checkApiKey, async (_req, res) => {
+    if (!snapshotService?.refreshReadyStations) {
+      return res.status(503).json({ ok: false, error: 'snapshot worker unavailable' });
+    }
+    try {
+      return res.status(200).json({ ok: true, ...(await snapshotService.refreshReadyStations()) });
+    } catch {
+      return res.status(500).json({ ok: false, error: 'snapshot refresh failed' });
     }
   });
 

@@ -237,15 +237,15 @@ La consulta externa s'executa de forma programada. En la fase actual, la sortida
 - [x] Absència de dependència del DOM confirmada.
 - [x] Autorització d'ús intern i prova local comunicada per l'usuari en nom d'Albert.
 - [x] Republicació identificada explícitament com a no autoritzada en aquesta fase.
-- [ ] Entorn local reproduïble i aïllat preparat.
-- [ ] PoC executat des del backend local MeteoLord.
-- [ ] Proves negatives d'absència de dades Grafana a totes les superfícies públiques.
+- [x] Entorn local reproduïble i aïllat preparat.
+- [x] PoC executat des del backend local MeteoLord el 2026-09-21.
+- [x] Proves negatives d'absència de dades Grafana a les superfícies públiques locals.
 - [ ] Abast escrit de consulta automatitzada i persistència fora de la prova local.
 - [ ] PoC executat des del servidor MeteoLord després de superar la porta local.
 - [ ] Autorització explícita de republicació; necessària només per passar a `PUBLIC_ALLOWED`.
 - [ ] Límits/freqüència acordats.
 - [ ] Unitats completes confirmades.
-- [ ] Tests de contracte implementats.
+- [x] Comprovació sanejada del contracte de frames implementada per al spike local.
 
 ## 12. Fonts
 
@@ -253,3 +253,7 @@ La consulta externa s'executa de forma programada. En la fase actual, la sortida
 - [Dashboard Vall de Lord — Meteo-007-3100206](https://grafana.commonscloud.coop/d/i2cat-public-jul27/vall-de-lord?orgId=11&from=now-24h&to=now&timezone=browser&var-sensor=Meteo-007-3100206)
 - [Grafana Labs — Data source HTTP API](https://grafana.com/docs/grafana/latest/developer-resources/api-reference/http-api/api-legacy/data_source/)
 - [Grafana Labs — Configure anonymous access](https://grafana.com/docs/grafana/latest/setup-grafana/configure-access/configure-authentication/anonymous-auth/)
+
+## 13. Revalidació UE-T12 — 2026-09-21
+
+Resultat **CONDICIONAL**. El dashboard i `/api/ds/query` responen `200` anònimament per les dues sèries conegudes en una finestra de 15 minuts. Els frames conserven camps temps/número i valors finits, però no declaren la unitat. No s'ha persistit ni publicat cap valor. Vegeu [QA-UE-T12](fase-usuaris-estacions/QA-UE-T12.md) i l'[extracte sanejat](fase-usuaris-estacions/evidence/UE-T12-grafana-sanitized-2026-09-21.json).

@@ -1,0 +1,49 @@
+{
+  "source_namespace": "GRAFANA",
+  "rows": [
+    {
+      "inventory_code": "SYN001",
+      "name": "Estació sintètica central",
+      "description": "Fixture inventada per a proves",
+      "external_id": "Meteo-901-9000001",
+      "mapping_status": "VERIFIED",
+      "longitude": 1.5501,
+      "latitude": 42.1301,
+      "accuracy_m": 25,
+      "evidence_ref": "fixture-synthetic-v1"
+    },
+    {
+      "inventory_code": "SYN002",
+      "name": "Estació sintètica central",
+      "description": "Mateix nom i coordenades, identitat diferent",
+      "external_id": "Meteo-902-9000002",
+      "mapping_status": "VERIFIED",
+      "longitude": 1.5501,
+      "latitude": 42.1301,
+      "accuracy_m": 25,
+      "evidence_ref": "fixture-synthetic-v1"
+    },
+    {
+      "inventory_code": "SYNBAD",
+      "name": "Estació incompleta",
+      "description": null,
+      "external_id": "Meteo-903-",
+      "mapping_status": "UNVERIFIED",
+      "longitude": null,
+      "latitude": null,
+      "accuracy_m": null,
+      "evidence_ref": "fixture-synthetic-v1"
+    },
+    {
+      "inventory_code": "TEST01",
+      "name": "Estació de prova",
+      "description": null,
+      "external_id": "Meteo-999-9999999",
+      "mapping_status": "VERIFIED",
+      "longitude": 1.6,
+      "latitude": 42.2,
+      "accuracy_m": 10,
+      "evidence_ref": "fixture-synthetic-v1"
+    }
+  ]
+}

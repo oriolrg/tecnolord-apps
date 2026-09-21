@@ -1,0 +1,60 @@
+{
+  "checked_at": "2026-09-21T16:09:28.835Z",
+  "constraints": {
+    "sensors": 2,
+    "window_minutes": 15,
+    "timeout_ms": 15000,
+    "max_response_bytes": 1048576
+  },
+  "dashboard": {
+    "reachable": true,
+    "http_status": 200
+  },
+  "datasource": {
+    "endpoint": "/api/ds/query",
+    "uid": "SWLXFBHvz",
+    "anonymous_access": true,
+    "http_status": 200
+  },
+  "queries": [
+    {
+      "sensor_id": "Meteo-001-3100044",
+      "inventory_candidate": "MLW28",
+      "result_status": 200,
+      "frame_count": 1,
+      "frames": [{
+        "ref_id": "A",
+        "fields": [
+          { "role": "time", "type": "time", "unit": null, "label_keys": [] },
+          { "role": "value", "type": "number", "unit": null,
+            "label_keys": ["__name__", "instance", "job", "tag1", "tag2", "tag3", "tag4"] }
+        ],
+        "point_pairs": 2,
+        "finite_values": 2,
+        "null_values": 0,
+        "timestamps_in_requested_window": 1,
+        "timestamps_ordered": true
+      }]
+    },
+    {
+      "sensor_id": "Meteo-007-3100206",
+      "inventory_candidate": "MLW04",
+      "result_status": 200,
+      "frame_count": 1,
+      "frames": [{
+        "ref_id": "B",
+        "fields": [
+          { "role": "time", "type": "time", "unit": null, "label_keys": [] },
+          { "role": "value", "type": "number", "unit": null,
+            "label_keys": ["__name__", "instance", "job", "tag1", "tag2", "tag3", "tag4"] }
+        ],
+        "point_pairs": 1,
+        "finite_values": 1,
+        "null_values": 0,
+        "timestamps_in_requested_window": 1,
+        "timestamps_ordered": true
+      }]
+    }
+  ],
+  "outcome": "CONDICIONAL"
+}

@@ -1,0 +1,50 @@
+{
+  "version": 8,
+  "name": "MeteoLord \u00b7 territori sint\u00e8tic",
+  "sources": {
+    "synthetic": {
+      "type": "vector",
+      "url": "pmtiles:///meteo/map-assets/map-a-synthetic.pmtiles",
+      "attribution": "Territori i dades sint\u00e8tics \u00b7 MeteoLord"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7eef0"
+      }
+    },
+    {
+      "id": "land",
+      "type": "fill",
+      "source": "synthetic",
+      "source-layer": "synthetic_land",
+      "paint": {
+        "fill-color": "#e6edda"
+      }
+    },
+    {
+      "id": "reference",
+      "type": "line",
+      "source": "synthetic",
+      "source-layer": "synthetic_reference",
+      "paint": {
+        "line-color": "#c3d0b9",
+        "line-width": 1,
+        "line-opacity": 0.65
+      }
+    },
+    {
+      "id": "water",
+      "type": "line",
+      "source": "synthetic",
+      "source-layer": "synthetic_water",
+      "paint": {
+        "line-color": "#9dc5d0",
+        "line-width": 4
+      }
+    }
+  ]
+}

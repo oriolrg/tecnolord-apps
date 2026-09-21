@@ -1,4 +1,4 @@
-export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {}) {
+export function renderTecnolordHeader({ title, subtitle, icon, actionLabel, actionHref } = {}) {
   const safeTitle = title || "Tecnolord";
   const safeSubtitle = subtitle || "";
   const safeAction = actionLabel || "Inicia sessió";
@@ -28,9 +28,9 @@ export function renderTecnolordHeader({ title, subtitle, icon, actionLabel } = {
         </a>
 
         <div class="tl-right">
-          <button class="btn secondary" type="button" aria-label="${escapeAttr(safeAction)}">
-            ${escapeHtml(safeAction)}
-          </button>
+          ${actionHref
+    ? `<a class="btn secondary" href="${escapeAttr(actionHref)}" aria-label="${escapeAttr(safeAction)}">${escapeHtml(safeAction)}</a>`
+    : `<button class="btn secondary" type="button" aria-label="${escapeAttr(safeAction)}">${escapeHtml(safeAction)}</button>`}
         </div>
       </div>
     </header>

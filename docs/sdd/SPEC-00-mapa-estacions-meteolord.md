@@ -8,6 +8,8 @@
 
 ---
 
+> **Actualització de planificació — 2026-09-18:** la petició actual es desenvolupa al [paquet usuaris i estacions](fase-usuaris-estacions/REQ.md). Aquest paquet identifica els canvis respecte del límit antic d’una estació, els permisos administratius i les preferències, i contrasta l’estat real de local/tests/migracions. La present versió es conserva com a antecedent; el paquet nou és candidat, no autoritza implementació ni publicació de Grafana.
+
 ## 1. Objectiu
 
 Ampliar MeteoLord amb un apartat públic que mostri sobre un mapa les estacions meteorològiques de la zona i la seva temperatura més recent.

@@ -55,7 +55,6 @@ export function resolveRuntimeConfig(runtimeConfig) {
     if (runtimeConfig.MAP_TILE_URL !== "") fail("MAP_TILE_URL must be empty in local");
     if (runtimeConfig.ANALYTICS_ENABLED !== false) fail("analytics must be disabled in local");
     if (runtimeConfig.EXTERNAL_LINKS_ENABLED !== false) fail("external links must be disabled in local");
-    if (runtimeConfig.SYNTHETIC_DATA !== true) fail("synthetic data must be enabled in local");
   } else if (runtimeConfig.SYNTHETIC_DATA !== false) {
     fail("synthetic data must be disabled in production");
   }

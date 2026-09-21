@@ -1,0 +1,509 @@
+# TerritoriLord — Decision 001: Tourism Discovery Access
+
+**Estat:** decisió funcional inicial
+**Data:** 2026-09-18
+**Projecte:** TerritoriLord
+
+# 1. Objectiu
+
+TerritoriLord ha de deixar preparada una futura línia de monetització vinculada al turisme territorial.
+
+Administracions, organismes turístics, destinacions o altres entitats podran utilitzar TerritoriLord com una eina per incentivar:
+
+* descoberta del territori;
+* activitat física;
+* visita de POI;
+* coneixement de patrimoni;
+* descoberta de camins;
+* dispersió de visitants;
+* reptes territorials.
+
+La monetització pot consistir, entre altres opcions, a facilitar al visitant un accés parcial o temporal al contingut amagat pel Fog of War.
+
+---
+
+# 2. Concepte provisional
+
+Nom conceptual:
+
+```text
+TOURISM_DISCOVERY_ACCESS
+```
+
+Possibles presentacions futures:
+
+```text
+Discovery Pass
+Visitor Pass
+Destination Pass
+Tourism Campaign
+Discovery Zone
+```
+
+El nom comercial queda pendent.
+
+---
+
+# 3. Problema que resol
+
+Un turista que arriba per primera vegada a una zona té principalment:
+
+```text
+UNKNOWN TERRITORY
+```
+
+Això és positiu per a l'exploració, però pot dificultar que una destinació utilitzi TerritoriLord per dirigir-lo cap a:
+
+* patrimoni;
+* rutes;
+* miradors;
+* comerç local;
+* espais naturals;
+* equipaments;
+* punts singulars.
+
+El sistema turístic permet introduir pistes addicionals sense eliminar completament la descoberta física.
+
+---
+
+# 4. Principi
+
+> L'accés turístic pot revelar oportunitats de descoberta, però no ha de comprar avantatge competitiu directe.
+
+---
+
+# 5. Obertura parcial del Fog
+
+Una campanya turística podrà obrir parcialment el Fog d'una zona.
+
+No implica necessàriament revelar tot el mapa.
+
+Es poden habilitar:
+
+* àrees concretes;
+* corredors;
+* rutes;
+* POI;
+* cims;
+* punts de descoberta;
+* zones d'interès.
+
+---
+
+# 6. Exemple
+
+Un turista arriba a una vall completament desconeguda.
+
+Sense campanya:
+
+```text
+██████████████████
+████  ?   🚩? ████
+██████████████████
+```
+
+Amb Tourism Discovery Access:
+
+```text
+██████████████████
+██  🏔 ?          ██
+██      ·····     ██
+██  💧 ?     ★ ?  ██
+██████████████████
+```
+
+El sistema mostra objectius potencials.
+
+Continua sent necessari anar físicament fins als punts per descobrir-los completament.
+
+---
+
+# 7. Informació que es pot revelar
+
+Una campanya pot revelar anticipadament:
+
+* existència d'un POI;
+* categoria general;
+* zona aproximada;
+* ruta suggerida;
+* àrea interessant;
+* repte turístic;
+* col·lecció territorial.
+
+---
+
+# 8. Informació PvP protegida
+
+Per evitar pay-to-win, l'accés turístic no hauria de revelar automàticament:
+
+* Defense exacta d'una Flag;
+* informació tàctica actual;
+* ubicació exacta d'una Flag rival encara no descoberta;
+* estat precís de fronteres rivals;
+* informació competitiva que un jugador normal hauria d'obtenir físicament.
+
+---
+
+# 9. Banderes dins una zona turística
+
+Una campanya pot indicar:
+
+```text
+🚩 Presència territorial
+```
+
+per motivar l'exploració.
+
+Però continua aplicant-se:
+
+```text
+detectar
+↓
+explorar físicament
+↓
+descobrir
+↓
+obtenir informació
+↓
+possible atac posterior
+```
+
+La campanya no substitueix aquest flux.
+
+---
+
+# 10. POI turístics
+
+Aquest sistema encaixa especialment amb POI.
+
+Una destinació podria definir:
+
+* monuments;
+* miradors;
+* fonts;
+* centres històrics;
+* espais naturals;
+* equipaments;
+* establiments participants;
+* punts interpretatius.
+
+El jugador continua havent de visitar-los físicament.
+
+---
+
+# 11. Zones patrocinades
+
+Es podrà definir conceptualment una:
+
+```text
+SponsoredDiscoveryZone
+```
+
+amb:
+
+* geometria;
+* data d'inici;
+* data final;
+* contingut;
+* tipus d'obertura;
+* patrocinador;
+* regles.
+
+---
+
+# 12. Campanyes
+
+Una:
+
+```text
+TourismCampaign
+```
+
+pot contenir diverses zones, POI i reptes.
+
+Exemple:
+
+```text
+Descobreix la Vall X
+
+5 POI
+2 miradors
+1 cim
+1 ruta circular
+```
+
+---
+
+# 13. Temporalitat
+
+L'accés pot ser:
+
+* permanent;
+* temporal;
+* estacional;
+* associat a una visita;
+* associat a un esdeveniment.
+
+---
+
+# 14. Model B2B
+
+Una via comercial especialment interessant és:
+
+```text
+destinació / administració / organisme turístic
+                    ↓
+                 paga
+                    ↓
+TerritoriLord crea una experiència de descoberta
+                    ↓
+visitants hi participen
+```
+
+En aquest model el turista no necessita necessàriament pagar.
+
+Això redueix el conflicte amb el principi no-pay-to-win.
+
+---
+
+# 15. Model B2C
+
+També es deixa oberta la possibilitat d'un:
+
+```text
+Visitor Pass
+```
+
+adquirit pel jugador.
+
+Si s'implementa, els avantatges han de continuar sent principalment:
+
+* descoberta;
+* orientació turística;
+* contingut;
+* informació cultural.
+
+No pot concedir força territorial directament.
+
+---
+
+# 16. Accés parcial
+
+No és necessari desbloquejar una comarca sencera.
+
+Una campanya pot revelar únicament:
+
+```text
+zona A
+ruta B
+POI C
+```
+
+Això permet productes turístics de diferents dimensions.
+
+---
+
+# 17. Gamificació turística
+
+En el futur es podrien oferir:
+
+* col·leccions;
+* rutes;
+* reptes;
+* insígnies;
+* circuits;
+* descoberta de patrimoni;
+* recompenses no competitives.
+
+---
+
+# 18. Integració amb el joc general
+
+Les activitats realitzades en una TourismCampaign continuen sent Activities normals.
+
+Per tant poden aportar:
+
+* km;
+* exploració;
+* historial;
+* cims;
+* POI;
+* XP.
+
+Els efectes PvP continuen sotmesos a les regles normals.
+
+---
+
+# 19. Persistència
+
+Quan el turista explora físicament una zona facilitada per una campanya:
+
+> la descoberta passa a formar part del seu historial permanent.
+
+El pass no desapareix retroactivament del seu historial.
+
+---
+
+# 20. Quan finalitza la campanya
+
+En acabar una campanya:
+
+* desapareixen les revelacions promocionals;
+* es conserva allò realment descobert físicament;
+* el Fog continua funcionant amb les regles normals.
+
+---
+
+# 21. Analítica futura
+
+Una entitat turística podria disposar d'analítica agregada sobre:
+
+* POI visitats;
+* activitats;
+* zones explorades;
+* participació;
+* rutes completades.
+
+Sempre sota les regles de privacitat.
+
+No s'han d'exposar tracks individuals o ubicacions personals sense base adequada.
+
+---
+
+# 22. Monetització possible
+
+Pot permetre comercialitzar:
+
+```text
+TourismCampaign
+SponsoredDiscoveryZone
+SponsoredPOICollection
+VisitorPass
+DestinationChallenges
+Analytics
+```
+
+No cal implementar aquests productes al MVP.
+
+---
+
+# 23. Arquitectura futura
+
+El model de domini haurà de permetre afegir posteriorment entitats conceptuals com:
+
+```text
+TourismCampaign
+DiscoveryAccess
+SponsoredDiscoveryZone
+CampaignPOI
+CampaignChallenge
+CampaignEntitlement
+```
+
+sense modificar les entitats bàsiques:
+
+```text
+Activity
+Exploration
+Flag
+POI
+Territory
+```
+
+---
+
+# 24. Feature flags
+
+La funcionalitat turística ha de poder existir inicialment desactivada.
+
+Es recomana preveure:
+
+```text
+TOURISM_CAMPAIGNS_ENABLED
+DISCOVERY_ACCESS_ENABLED
+```
+
+o un mecanisme equivalent.
+
+No cal implementar funcionalitat buida abans de necessitar-la.
+
+---
+
+# 25. No sobrearquitecturar l'MVP
+
+Deixar la porta oberta significa:
+
+* no adoptar decisions que ho impossibilitin;
+* mantenir extensible el model d'exploració;
+* separar Fog de propietat territorial;
+* separar permisos de descoberta de descoberta física.
+
+No significa construir ara tot el sistema turístic.
+
+---
+
+# 26. Distinció important
+
+Cal diferenciar:
+
+```text
+DISCOVERY ACCESS
+```
+
+de:
+
+```text
+PHYSICAL DISCOVERY
+```
+
+El primer permet veure pistes o contingut.
+
+El segon només s'obté quan l'usuari visita físicament el territori.
+
+Aquesta distinció és essencial per implementar monetització turística sense trencar la mecànica principal.
+
+---
+
+# 27. Relació conceptual
+
+```text
+Fog State
+    +
+Discovery Access
+    +
+Physical Exploration
+    =
+què pot veure el jugador
+```
+
+Per tant, el Fog no s'ha de modelar en el futur únicament com:
+
+```text
+discovered = true / false
+```
+
+---
+
+# 28. Decisió
+
+Es fixa que TerritoriLord haurà de poder incorporar en el futur mecanismes comercials de Discovery Access vinculats al turisme.
+
+La implementació concreta i el model comercial continuen PENDENTS.
+
+---
+
+# 29. Restricció
+
+La monetització turística no pot:
+
+* comprar AttackPower;
+* comprar Defense;
+* capturar territori;
+* saltar la validació física d'una Flag;
+* obtenir una Flag automàticament.
+
+---
+
+# 30. Principi final
+
+> El turisme pot pagar per convertir el territori desconegut en una invitació a explorar-lo, però el jugador continua havent d'anar físicament al lloc per convertir aquella invitació en descoberta real.

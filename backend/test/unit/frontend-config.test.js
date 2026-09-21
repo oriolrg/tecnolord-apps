@@ -84,7 +84,6 @@ test('frontend rejects incomplete, external and unsafe local runtime values', as
     { ...VALID_LOCAL, ANALYTICS_ENABLED: true },
     { ...VALID_LOCAL, EXTERNAL_LINKS_ENABLED: true },
     { ...VALID_LOCAL, MAP_TILE_URL: 'https://tiles.invalid/{z}/{x}/{y}' },
-    { ...VALID_LOCAL, SYNTHETIC_DATA: false },
     { ...VALID_LOCAL, UNAPPROVED_KEY: true },
     Object.fromEntries(Object.entries(VALID_LOCAL).filter(([key]) => key !== 'API_BASE')),
   ];
@@ -95,6 +94,15 @@ test('frontend rejects incomplete, external and unsafe local runtime values', as
       /Invalid MeteoLord runtime configuration/
     );
   }
+});
+
+test('frontend accepts a local preview with live data and disabled external UI links', async () => {
+  const module = await importSource(CONFIG_SOURCE, {
+    windowValue: { __METEOLORD_CONFIG: { ...VALID_LOCAL, SYNTHETIC_DATA: false } },
+  });
+  assert.equal(module.CONFIG.environment, 'local');
+  assert.equal(module.CONFIG.syntheticData, false);
+  assert.equal(module.CONFIG.meteoEndpoint, '/api/v1/mesures/darreres');
 });
 
 test('production runtime keeps characterized analytics and external links enabled', async () => {

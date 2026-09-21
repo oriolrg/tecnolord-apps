@@ -31,6 +31,12 @@ function kmhToMs(v) {
   return Number.isFinite(n) ? n / 3.6 : null;
 }
 
+function numberOrNull(value) {
+  if (value == null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function envGet(prefix, key, fallback = undefined) {
   const v = process.env[`${prefix}_${key}`];
   return (v === undefined || v === '') ? fallback : v;
@@ -56,6 +62,30 @@ function ecowittURL(prefix = 'ECW') {
     pressure_unitid: envGet(prefix, 'PRESSURE_UNITID', process.env.ECW_PRESSURE_UNITID || '3'),
   });
   return `https://api.ecowitt.net/api/v3/device/real_time?${params.toString()}`;
+}
+
+function ecowittURLForConnector(configuration, secrets) {
+  const expected = {
+    endpoint: 'ECOWITT_V3_REAL_TIME', temp_unitid: '1', wind_speed_unitid: '8',
+    rainfall_unitid: '12', pressure_unitid: '3',
+  };
+  if (!configuration || Object.entries(expected).some(([key, value]) => configuration[key] !== value)) {
+    throw new TypeError('Invalid Ecowitt connector configuration');
+  }
+  if (!secrets || !secrets.application_key || !secrets.api_key || !secrets.mac) {
+    throw new TypeError('Incomplete Ecowitt connector secrets');
+  }
+  const params = new URLSearchParams({
+    application_key: secrets.application_key,
+    api_key: secrets.api_key,
+    mac: secrets.mac,
+    call_back: 'all',
+    temp_unitid: configuration.temp_unitid,
+    wind_speed_unitid: configuration.wind_speed_unitid,
+    rainfall_unitid: configuration.rainfall_unitid,
+    pressure_unitid: configuration.pressure_unitid,
+  });
+  return `https://api.ecowitt.net/api/v3/device/real_time?${params}`;
 }
 
 function isEcowittEmpty(data) {
@@ -91,9 +121,49 @@ async function fetchWithTimeout(url, ms, fetchImpl) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetchImpl(url, { signal: ctrl.signal });
+    return await fetchImpl(url, { signal: ctrl.signal, redirect: 'error' });
   } finally {
     clearTimeout(t);
+  }
+}
+
+async function readBoundedJson(response, maxBytes) {
+  const declaredLength = Number(response.headers?.get?.('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    const error = new Error('response_too_large');
+    error.code = 'RESPONSE_TOO_LARGE';
+    throw error;
+  }
+  if (typeof response.text !== 'function') return response.json();
+  const text = await response.text();
+  if (Buffer.byteLength(text, 'utf8') > maxBytes) {
+    const error = new Error('response_too_large');
+    error.code = 'RESPONSE_TOO_LARGE';
+    throw error;
+  }
+  try { return JSON.parse(text); } catch {
+    const error = new Error('invalid_json');
+    error.code = 'INVALID_JSON';
+    throw error;
+  }
+}
+
+async function fetchEcowittConnector(credentials, fetchImpl, timeoutMs = 10000, maxBytes = 2 * 1024 * 1024) {
+  const url = ecowittURLForConnector(credentials?.configuration, credentials?.secrets);
+  try {
+    const response = await fetchWithTimeout(url, timeoutMs, fetchImpl);
+    if (!response.ok) return { ok: false, reason: `http_${response.status}`, http: response.status, payload: null };
+    const payload = await readBoundedJson(response, maxBytes);
+    if (payload?.code !== 0) return { ok: false, reason: `ecowitt_code_${payload?.code}`, http: response.status, payload: null };
+    if (isEcowittEmpty(payload?.data)) return { ok: false, reason: 'empty_data', http: response.status, payload: null };
+    return { ok: true, reason: 'ok', http: response.status, payload };
+  } catch (error) {
+    const reason = error?.name === 'AbortError'
+      ? 'timeout'
+      : error?.code === 'RESPONSE_TOO_LARGE'
+        ? 'response_too_large'
+        : error?.code === 'INVALID_JSON' ? 'invalid_json' : 'fetch_error';
+    return { ok: false, reason, http: null, payload: null };
   }
 }
 
@@ -202,28 +272,28 @@ function makeEcowittService({
     const params = [
       estacioId, instant,
 
-      +d?.outdoor?.temperature?.value || null,
-      +d?.outdoor?.feels_like?.value || null,
-      +d?.outdoor?.dew_point?.value || null,
+      numberOrNull(d?.outdoor?.temperature?.value),
+      numberOrNull(d?.outdoor?.feels_like?.value),
+      numberOrNull(d?.outdoor?.dew_point?.value),
       d?.outdoor?.humidity?.value != null ? parseInt(d.outdoor.humidity.value, 10) : null,
 
-      +d?.solar_and_uvi?.solar?.value || null,
+      numberOrNull(d?.solar_and_uvi?.solar?.value),
       d?.solar_and_uvi?.uvi?.value != null ? parseInt(d.solar_and_uvi.uvi.value, 10) : null,
 
-      +d?.rainfall?.['rain_rate']?.value || null,
-      +d?.rainfall?.daily?.value || null,
-      +d?.rainfall?.event?.value || null,
-      +d?.rainfall?.['1_hour']?.value || null,
-      +d?.rainfall?.weekly?.value || null,
-      +d?.rainfall?.monthly?.value || null,
-      +d?.rainfall?.yearly?.value || null,
+      numberOrNull(d?.rainfall?.['rain_rate']?.value),
+      numberOrNull(d?.rainfall?.daily?.value),
+      numberOrNull(d?.rainfall?.event?.value),
+      numberOrNull(d?.rainfall?.['1_hour']?.value),
+      numberOrNull(d?.rainfall?.weekly?.value),
+      numberOrNull(d?.rainfall?.monthly?.value),
+      numberOrNull(d?.rainfall?.yearly?.value),
 
-      kmhToMs(+d?.wind?.wind_speed?.value || null),
-      kmhToMs(+d?.wind?.wind_gust?.value || null),
+      kmhToMs(numberOrNull(d?.wind?.wind_speed?.value)),
+      kmhToMs(numberOrNull(d?.wind?.wind_gust?.value)),
       d?.wind?.wind_direction?.value != null ? parseInt(d.wind.wind_direction.value, 10) : null,
 
-      +d?.pressure?.relative?.value || null,
-      +d?.pressure?.absolute?.value || null,
+      numberOrNull(d?.pressure?.relative?.value),
+      numberOrNull(d?.pressure?.absolute?.value),
 
       d?.battery?.sensor_array?.value != null
         ? (parseInt(d.battery.sensor_array.value, 10) ? 100 : 0)
@@ -263,4 +333,10 @@ function makeEcowittService({
   return { pullEcowittAndSave };
 }
 
-module.exports = { makeEcowittService };
+module.exports = {
+  ecowittURLForConnector,
+  fetchEcowittConnector,
+  kmhToMs,
+  makeEcowittService,
+  numberOrNull,
+};

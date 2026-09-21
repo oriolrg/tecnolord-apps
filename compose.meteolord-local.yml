@@ -20,8 +20,8 @@ services:
       - meteolord_core
 
   backend:
-    # Immutable local image ID built as meteolord-local:test in T05.
-    image: sha256:7fbefad459780d6abeb6e9d285eb0d6d57a01f9f9c97a55291d937c9c01897b5
+    # Immutable local MAP-A image; synthetic fixtures are bundled in the image.
+    image: sha256:6eba5f1e1e8ccf7653aa3c21b614fa4dc55e1b2750d35ba1b0a1357c5fd34155
     pull_policy: never
     platform: linux/amd64
     env_file:

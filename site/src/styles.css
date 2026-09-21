@@ -692,6 +692,66 @@ th{
   opacity: .60;       /* més clar que el títol */
   font-size: 0.95rem; /* una mica més petit */
 }
+.meteo-station-picker{
+  display:grid;
+  grid-template-columns:auto minmax(220px, 420px);
+  align-items:center;
+  gap:6px 12px;
+  margin:0 0 16px;
+}
+.meteo-station-picker label{ font-weight:800; }
+.meteo-station-picker select{
+  width:100%;
+  min-height:44px;
+  padding:9px 38px 9px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  color:var(--text);
+  background:var(--card);
+  font:inherit;
+}
+.meteo-station-picker select:focus-visible{ outline:3px solid rgba(59,130,246,.35); outline-offset:2px; }
+.meteo-station-picker span{
+  grid-column:2;
+  color:var(--muted);
+  font-size:.8rem;
+}
+.meteo-station-actions{
+  grid-column:2;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.meteo-station-actions button,
+.meteo-back-global{
+  min-height:40px;
+  padding:8px 12px;
+  border:1px solid transparent;
+  border-radius:10px;
+  background:#2563eb;
+  color:#fff;
+  font:inherit;
+  font-weight:750;
+  cursor:pointer;
+}
+.meteo-station-actions button.secondary,
+.meteo-back-global.secondary{
+  border-color:var(--line);
+  background:var(--card);
+  color:var(--text);
+}
+.meteo-station-actions button:disabled{ opacity:.5; cursor:not-allowed; }
+.meteo-station-actions button:focus-visible,
+.meteo-back-global:focus-visible{ outline:3px solid rgba(59,130,246,.35); outline-offset:2px; }
+.meteo-preference-status:empty{ display:none; }
+.meteo-back-global{ grid-column:2; justify-self:start; }
+@media (max-width: 520px){
+  .meteo-station-picker{ grid-template-columns:1fr; }
+  .meteo-station-picker span,
+  .meteo-station-actions,
+  .meteo-back-global{ grid-column:1; }
+  .meteo-station-actions button{ width:100%; }
+}
 .card--wind .wind-block{
   display:flex;
   justify-content:center;

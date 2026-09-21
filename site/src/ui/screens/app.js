@@ -20,12 +20,14 @@ function trackScreen(screenId) {
 
 function readUrlParams(store) {
   const url = new URL(location.href);
-  const estFromUrl = url.searchParams.get("estacio") || url.searchParams.get("station_id");
+  const estFromUrl = url.searchParams.get("estacio");
+  const stationIdFromUrl = url.searchParams.get("station_id");
   const limFromUrl = url.searchParams.get("limit");
   const codiFromUrl = url.searchParams.get("codi_hidro") || url.searchParams.get("codi");
 
   const patch = {};
   if (estFromUrl) patch.estacio = estFromUrl;
+  if (stationIdFromUrl) patch.stationId = stationIdFromUrl;
 
   if (limFromUrl) {
     const lim = clamp(parseInt(limFromUrl, 10) || CONFIG.defaultLimit, 1, CONFIG.maxLimit);
@@ -44,8 +46,10 @@ function buildUI(root) {
       subtitle: CONFIG.appSubtitle,
       icon: CONFIG.appIcon,
       actionLabel: "Inicia sessió",
+      actionHref: "/meteo/compte/",
     })}
 
+    ${CONFIG.environment === 'local' ? '<p style="text-align:center"><a href="/meteo/mapa/">Explora el mapa de temperatures →</a></p>' : ''}
     <div id="screen-meteo" class="screen active">
       <!-- Contingut de Meteo -->
     </div>

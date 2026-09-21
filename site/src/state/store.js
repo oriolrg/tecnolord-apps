@@ -8,6 +8,7 @@ const STORAGE_KEY = "tecnolord-store-v1";
 const DEFAULT_STATE = {
   // Meteo
   estacio: "",           // codi estació meteo (opcional)
+  stationId: "",         // selecció temporal; mai es persisteix entre comptes
   limit: 200,            // límit general de registres (pantalles)
   auto: true,            // auto-refresh
 
@@ -33,11 +34,16 @@ function safeParse(json) {
 export function createStore() {
   const saved = safeParse(localStorage.getItem(STORAGE_KEY) || "null");
   let state = { ...DEFAULT_STATE, ...(saved && typeof saved === "object" ? saved : {}) };
+  // Les versions antigues desaven stationId i podien barrejar seleccions entre comptes.
+  state.stationId = "";
 
   const listeners = new Set();
 
   function persist() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+    try {
+      const { stationId: _temporaryStationId, ...persistentState } = state;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persistentState));
+    } catch {}
   }
 
   function get() {

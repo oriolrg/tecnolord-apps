@@ -4,7 +4,16 @@ import { $ } from "../dom.js";
 import { card } from "../components/card.js";
 import { num, fmt1, clamp, windAbbr16, windFromCa, fmtTime } from "../format.js";
 import { windNameCa } from "../format.js";
-import { fetchMeteo } from "../../services/meteoService.js";
+import {
+  clearDefaultStation,
+  fetchMeteoPayload,
+  fetchMeteoSession,
+  fetchPublicView,
+  fetchStationCatalog,
+  fetchStationCurrent,
+  fetchStationPreference,
+  setDefaultStation,
+} from "../../services/meteoService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 
 function buildMeteoUI(root) {
@@ -59,6 +68,20 @@ function buildMeteoUI(root) {
         <p id="meteo-summary"></p>
       </div>
 
+      <div class="meteo-station-picker">
+        <label for="meteo-station">Estació</label>
+        <select id="meteo-station" aria-describedby="meteo-station-help">
+          <option value="">Estació pública principal</option>
+        </select>
+        <div class="meteo-station-actions">
+          <button id="meteo-default-set" type="button" hidden>Estableix com a predeterminada</button>
+          <button id="meteo-default-clear" type="button" class="secondary" hidden>Utilitza la vista pública per defecte</button>
+        </div>
+        <span id="meteo-station-help">La selecció del selector o de l’URL és temporal.</span>
+        <span id="meteo-preference-status" class="meteo-preference-status" role="status" aria-live="polite"></span>
+        <button id="meteo-back-global" type="button" class="secondary meteo-back-global" hidden>Torna a la vista pública</button>
+      </div>
+
       <div class="grid" id="meteo-cards"></div>
 
       ${externalResources}
@@ -70,25 +93,42 @@ function buildMeteoUI(root) {
     err: $("#meteo-err", root),
     summary: $("#meteo-summary", root),
     cards: $("#meteo-cards", root),
+    station: $("#meteo-station", root),
+    setDefault: $("#meteo-default-set", root),
+    clearDefault: $("#meteo-default-clear", root),
+    preferenceStatus: $("#meteo-preference-status", root),
+    backGlobal: $("#meteo-back-global", root),
   };
 }
 
-async function refreshMeteo(ui, store) {
+async function refreshMeteo(ui, store, publicView) {
   if (ui.err) ui.err.textContent = "";
+  if (ui.backGlobal) ui.backGlobal.hidden = true;
 
   const s = store.get();
   const estacio = (s.estacio || "").trim();
+  const selectedStationId = (s.stationId || "").trim();
+  const stationId = selectedStationId || publicView?.station?.id || "";
   const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
 
   try {
-    const meteoRows = await fetchMeteo({ estacio, limit });
+    const stationPayload = stationId ? await fetchStationCurrent(stationId) : null;
+    const globalPayload = stationId ? null : await fetchMeteoPayload({ estacio, limit });
+    const meteoRows = stationPayload?.items || globalPayload?.items || [];
     if (ui.cards) ui.cards.innerHTML = "";
 
     // Tracking: refresh OK (sense dades)
-    trackEvent(CONFIG, "meteo_refresh_ok", { limit, has_station: !!estacio });
+    trackEvent(CONFIG, "meteo_refresh_ok", { limit, has_station: !!(stationId || estacio) });
+
+    if (stationPayload?.station && ui.summary) ui.summary.textContent = stationPayload.station.name;
+    if (stationPayload?.source?.error && ui.err) {
+      ui.err.textContent = "La font no respon; es mostra l’última lectura disponible.";
+    }
 
     if (!meteoRows.length) {
-      if (ui.summary) ui.summary.textContent = "Meteo: Sense registres.";
+      if (ui.summary) ui.summary.textContent = globalPayload?.status === "no_public_station"
+        ? "Cap estació pública configurada."
+        : "Meteo: Sense registres.";
       if (ui.last) ui.last.textContent = "Sense dades";
       return;
     }
@@ -131,7 +171,12 @@ async function refreshMeteo(ui, store) {
       ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
       `${Math.round(ageSec / 3600)} h`;
 
-    if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}`;
+    const freshness = stationPayload?.source?.freshness;
+    const freshnessLabel = freshness === "STALE" ? " · dades antigues" : freshness === "OBSOLETE" ? " · dades obsoletes" : "";
+    if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}${freshnessLabel}`;
+    if (ui.summary && CONFIG.environment === 'local' && !CONFIG.syntheticData) {
+      ui.summary.textContent = 'Observacions reals de MeteoLord · tecnolord.cat';
+    }
     /*if (ui.summary) {
       ui.summary.textContent = estacio
         ? `Meteo · Estació: ${estacio} · ${meteoRows.length} registres`
@@ -302,7 +347,13 @@ async function refreshMeteo(ui, store) {
     const cvHum = attachChart(cHum, "chart-hum");
 
     // Append final en l’ordre desitjat
-    if (ui.cards) ui.cards.append(cWind, cTemp, cRain, cPress, cHum, cUv);
+    if (ui.cards) {
+      const allCards = { wind: cWind, temperature: cTemp, rain: cRain, pressure: cPress, humidity: cHum, uv: cUv };
+      const cardIds = selectedStationId
+        ? Object.keys(allCards)
+        : (publicView?.card_ids || Object.keys(allCards));
+      ui.cards.append(...cardIds.map((id) => allCards[id]).filter(Boolean));
+    }
 
     // --- Charts (només dades del dia en curs) ---
     const t0 = r0.instant ?? r0.at;
@@ -356,7 +407,10 @@ async function refreshMeteo(ui, store) {
     }
 
   } catch (e) {
-    if (ui.err) ui.err.textContent = "Error: " + (e.message || e);
+    if (ui.err) ui.err.textContent = e?.status === 404 && selectedStationId
+      ? "Aquesta estació no està disponible o no hi tens accés."
+      : "No s’han pogut carregar les dades meteorològiques.";
+    if (ui.backGlobal && e?.status === 404 && selectedStationId) ui.backGlobal.hidden = false;
     trackEvent(CONFIG, "meteo_refresh_error", { msg: String(e && (e.message || e)) });
   }
 }
@@ -396,14 +450,139 @@ export function initMeteoScreen(root, store) {
   // Tracking: screen view
   trackEvent(CONFIG, "screen_view", { screen: "meteo" });
 
+  let disposed = false;
   let timer = null;
-  if (store.get().auto) {
-    timer = setInterval(() => refreshMeteo(ui, store), CONFIG.autoRefreshMs);
+  let stations = [];
+  let session = null;
+  let preference = { default_station: null, revision: 0, invalidated: false };
+  let publicView = { station: null, card_ids: ['wind', 'temperature', 'rain', 'pressure', 'humidity', 'uv'], revision: 0 };
+  const selectedFromUrl = new URL(location.href).searchParams.has("station_id");
+
+  function renderStationOptions() {
+    if (!ui.station) return;
+    ui.station.replaceChildren();
+    const globalOption = document.createElement("option");
+    globalOption.value = "";
+    globalOption.textContent = publicView.station
+      ? `Vista pública · ${publicView.station.name}`
+      : "Estació pública principal";
+    ui.station.append(globalOption);
+    const selected = store.get().stationId || "";
+    for (const station of stations) {
+      const option = document.createElement("option");
+      option.value = station.id;
+      option.textContent = `${station.name}${station.visibility === "PRIVATE" ? " · privada" : ""}`;
+      ui.station.append(option);
+    }
+    if (selected && !stations.some((station) => station.id === selected)) {
+      const unavailable = document.createElement("option");
+      unavailable.value = selected;
+      unavailable.textContent = "Estació seleccionada no disponible";
+      ui.station.append(unavailable);
+    }
+    ui.station.value = selected;
   }
 
-  refreshMeteo(ui, store);
+  function updatePreferenceControls() {
+    const selected = stations.find((station) => station.id === store.get().stationId);
+    const canDefault = !!session && !!selected?.owned && selected.lifecycle === "ACTIVE";
+    if (ui.setDefault) {
+      ui.setDefault.hidden = !session;
+      ui.setDefault.disabled = !canDefault
+        || preference.default_station?.id === selected?.id;
+    }
+    if (ui.clearDefault) {
+      ui.clearDefault.hidden = !session || !preference.default_station;
+    }
+  }
+
+  async function bootstrap() {
+    // La vista pública existent no depèn de les capacitats opcionals de compte.
+    // Això manté la càrrega immediata durant una actualització gradual del backend.
+    refreshMeteo(ui, store, publicView);
+    try {
+      [session, publicView] = await Promise.all([
+        fetchMeteoSession().catch(() => null), fetchPublicView().catch(() => publicView),
+      ]);
+      stations = await fetchStationCatalog(!!session).catch(() => []);
+      if (session) preference = await fetchStationPreference();
+      if (disposed) return;
+      if (!selectedFromUrl && !store.get().stationId && preference.default_station) {
+        store.set({ stationId: preference.default_station.id });
+      }
+      if (preference.invalidated && ui.preferenceStatus) {
+        ui.preferenceStatus.textContent = "La teva estació predeterminada ja no està disponible. Es mostra la vista pública.";
+      }
+      renderStationOptions();
+      updatePreferenceControls();
+      await refreshMeteo(ui, store, publicView);
+    } catch {
+      // La vista pública ja s'ha carregat; les opcions personals són progressives.
+      renderStationOptions();
+    }
+  }
+
+  const onStationChange = () => {
+    store.set({ stationId: ui.station.value });
+    const url = new URL(location.href);
+    if (ui.station.value) url.searchParams.set("station_id", ui.station.value);
+    else url.searchParams.delete("station_id");
+    history.replaceState(null, "", url);
+    updatePreferenceControls();
+    refreshMeteo(ui, store, publicView);
+  };
+  ui.station?.addEventListener("change", onStationChange);
+
+  const onSetDefault = async () => {
+    const stationId = store.get().stationId;
+    if (!session || !stationId) return;
+    ui.setDefault.disabled = true;
+    if (ui.preferenceStatus) ui.preferenceStatus.textContent = "Desant la preferència…";
+    try {
+      preference = await setDefaultStation(stationId, preference.revision, session.csrf_token);
+      if (ui.preferenceStatus) ui.preferenceStatus.textContent = "Estació predeterminada desada per al teu compte.";
+    } catch (error) {
+      if (ui.preferenceStatus) ui.preferenceStatus.textContent = error?.status === 409
+        ? "La preferència ha canviat en un altre dispositiu. Recarrega la pàgina."
+        : "No s’ha pogut desar aquesta preferència.";
+    }
+    updatePreferenceControls();
+  };
+  const onClearDefault = async () => {
+    if (!session) return;
+    ui.clearDefault.disabled = true;
+    try {
+      preference = await clearDefaultStation(preference.revision, session.csrf_token);
+      if (ui.preferenceStatus) ui.preferenceStatus.textContent = "La vista pública serà la predeterminada.";
+    } catch (error) {
+      if (ui.preferenceStatus) ui.preferenceStatus.textContent = error?.status === 409
+        ? "La preferència ha canviat en un altre dispositiu. Recarrega la pàgina."
+        : "No s’ha pogut actualitzar la preferència.";
+    }
+    updatePreferenceControls();
+  };
+  const onBackGlobal = () => {
+    store.set({ stationId: "" });
+    const url = new URL(location.href);
+    url.searchParams.delete("station_id");
+    history.replaceState(null, "", url);
+    renderStationOptions();
+    updatePreferenceControls();
+    refreshMeteo(ui, store, publicView);
+  };
+  ui.setDefault?.addEventListener("click", onSetDefault);
+  ui.clearDefault?.addEventListener("click", onClearDefault);
+  ui.backGlobal?.addEventListener("click", onBackGlobal);
+
+  bootstrap();
+  if (store.get().auto) timer = setInterval(() => refreshMeteo(ui, store, publicView), CONFIG.autoRefreshMs);
 
   return () => {
+    disposed = true;
+    ui.station?.removeEventListener("change", onStationChange);
+    ui.setDefault?.removeEventListener("click", onSetDefault);
+    ui.clearDefault?.removeEventListener("click", onClearDefault);
+    ui.backGlobal?.removeEventListener("click", onBackGlobal);
     if (timer) clearInterval(timer);
   };
 }

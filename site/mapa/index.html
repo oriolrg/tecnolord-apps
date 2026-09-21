@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8fd">
+  <meta name="description" content="Mapa de temperatures MeteoLord. Demostració local amb estacions i territori sintètics.">
+  <title>Mapa de temperatures · MeteoLord</title>
+  <link rel="icon" href="/meteo/assets/icons/favicon.svg">
+  <link rel="stylesheet" href="/meteo/map-assets/maplibre-gl.css">
+  <link rel="stylesheet" href="/meteo/src/map.css">
+</head>
+<body>
+  <a class="skip" href="#station-list">Salta a la llista d’estacions</a>
+  <header class="masthead"><a class="brand" href="/meteo/"><span class="brand-icon" aria-hidden="true"><img src="/meteo/assets/icons/favicon-96x96.png" width="44" height="44" alt=""></span><span>MeteoLord<small>Tecnolord apps</small></span></a><a class="back" href="/meteo/">Torna a Meteo</a></header>
+  <main id="map-app">
+    <div class="intro"><div><h1>Mapa de temperatures</h1><p>Consulta les dades de cada estació d’un cop d’ull.</p></div><div class="demo-meta"><span class="demo-tag">Dades sintètiques</span><span>Territori inventat · 1 gen. 2026, 00:05 UTC</span></div></div>
+    <div class="overview" aria-label="Resum del mapa">
+      <div class="overview-main"><div class="overview-stat"><span>Estacions</span><strong id="summary-count">—</strong></div><div class="overview-stat"><span>Temperatures actuals</span><strong id="summary-range">—</strong></div><p id="status" role="status" aria-live="polite">Carregant estacions…</p></div>
+      <div class="refresh-controls"><label><input id="auto-refresh" type="checkbox" checked> Actualització automàtica</label><button id="refresh" class="text-button" type="button">Actualitza ara</button></div>
+    </div>
+    <div class="workspace">
+      <section class="map-panel" aria-label="Mapa de temperatures">
+        <div class="map-heading"><div><p class="section-kicker">VISTA GENERAL</p><h2>Temperatures de les estacions</h2></div><button id="fit-map" class="text-button" type="button">Mostra totes</button></div>
+        <form id="filters" class="toolbar" role="search" aria-label="Cerca d’estacions">
+          <div class="primary-filters"><div class="search-field"><label for="search">Cerca una estació</label><input id="search" name="q" type="search" placeholder="Nom de l’estació…" maxlength="120"></div><button type="submit" class="primary">Cerca</button></div>
+          <button id="filter-toggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="more-filters">Més filtres <span aria-hidden="true">⌄</span></button>
+          <div id="more-filters" class="secondary-filters"><div><label for="field-filter">Mesura disponible</label><select id="field-filter" name="sensor"><option value="">Totes les mesures</option><option value="temperature">Temperatura</option><option value="humidity">Humitat</option></select></div><div><label for="freshness-filter">Antiguitat</label><select id="freshness-filter" name="freshness"><option value="">Tots els estats</option><option value="FRESCA">Dades recents</option><option value="SENSE_DADES_RECENTS">Sense dades recents</option><option value="OBSOLETA">Dada obsoleta</option></select></div><button type="reset" class="secondary">Neteja filtres</button></div>
+        </form>
+        <div id="map" role="region" aria-label="Mapa interactiu. També pots consultar totes les estacions a la llista."></div>
+        <p id="map-status" class="map-status" role="status">Preparant el mapa…</p>
+        <div class="legend"><span><i class="cold"></i>Menys de 10 °C</span><span><i class="mild"></i>10–25 °C</span><span><i class="warm"></i>Més de 25 °C</span><span>— Sense valor actual</span></div>
+        <p class="map-caption">Ubicacions aproximades, no exactes. Els grups indiquen el nombre d’estacions.</p>
+      </section>
+      <section class="list-panel" aria-labelledby="list-heading"><div class="list-heading"><div><p class="section-kicker">EXPLORA LA XARXA</p><h2 id="list-heading">Estacions</h2></div><span id="station-count" class="count">0</span></div><p class="list-note">Llista completa, independent de la zona visible del mapa.</p><ul id="station-list" tabindex="-1"></ul></section>
+    </div>
+    <section id="detail" class="detail" hidden aria-labelledby="detail-title"></section>
+    <footer>MeteoLord <span>·</span> Consulta local de la xarxa sintètica <span>·</span> Hores en UTC</footer>
+  </main>
+  <dialog id="station-dialog" aria-labelledby="dialog-title"><button id="close-dialog" class="close" type="button" aria-label="Tanca el resum">×</button><div id="dialog-content"></div></dialog>
+  <script src="/meteo/runtime-config.js"></script>
+  <script src="/meteo/map-assets/pmtiles.js"></script>
+  <script type="module" src="/meteo/src/map.js"></script>
+</body>
+</html>
