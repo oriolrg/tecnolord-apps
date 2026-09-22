@@ -20,7 +20,7 @@ function liveSources(url) {
     ok: true, json: async () => ({ ok: true, items: [{ instant: '2026-09-18T05:30:00Z', temp_c: 11.2, humitat_pct: 74 }] }),
   };
   return { ok: true, json: async () => [
-    16, 17, 18, 19, 10,
+    16, 17, 18, 19, 10, 11,
   ].map((temperature) => ({ current: { time: '2026-09-18T05:30', temperature_2m: temperature, relative_humidity_2m: 60 } })) };
 }
 
@@ -29,7 +29,7 @@ test('real map keeps observations distinct from model values and shares one cata
     const response = await fetch(`${base}/api/v1/map/stations`);
     assert.equal(response.status, 200);
     const collection = await response.json();
-    assert.equal(collection.features.length, 6);
+    assert.equal(collection.features.length, 7);
     assert.match(collection.features[0].properties.provenance.source, /observació/);
     assert.match(collection.features[1].properties.provenance.source, /model, no observació/);
     assert.deepEqual(collection.features[0].geometry.coordinates, [1.59, 42.14]);
@@ -38,9 +38,12 @@ test('real map keeps observations distinct from model values and shares one cata
     assert.equal(summaryResponse.headers.get('x-catalog-version'), version);
     const summary = await summaryResponse.json();
     assert.deepEqual(summary.sources, ['MeteoLord', 'Open-Meteo']);
-    assert.equal(summary.count, 6);
+    assert.equal(summary.count, 7);
     assert.equal(summary.temperature_min, 10);
-    assert.equal((await fetch(`${base}/api/v1/map/stations/model-barcelona`)).status, 200);
+    assert.equal((await fetch(`${base}/api/v1/map/stations/model-andorra`)).status, 200);
+    assert.deepEqual(collection.features.slice(1).map((feature) => feature.properties.public_name),
+      ['Manresa', 'Solsona', 'Berga', 'Vic', 'La Seu d’Urgell', 'Andorra']);
+    assert.equal(collection.features.at(-1).properties.reference_label, 'Andorra la Vella');
     assert.equal((await fetch(`${base}/api/v1/map/stations?freshness=INVALID`)).status, 400);
   });
 });

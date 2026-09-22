@@ -27,7 +27,7 @@ function filtered(collection, query) {
   };
 }
 
-function makeStationMapRouter({ identityService, stationLocations, rateLimit } = {}) {
+function makeStationMapRouter({ identityService, stationLocations, estimations, rateLimit } = {}) {
   if (!identityService || !stationLocations) throw new TypeError('Persistent map dependencies are required');
   const router = express.Router();
   const safe = (handler) => (req, res) => Promise.resolve(handler(req, res)).catch(() => {
@@ -38,7 +38,9 @@ function makeStationMapRouter({ identityService, stationLocations, rateLimit } =
   async function current(req) { return identityService.current(readSessionToken(req)); }
   async function publicSnapshot(req, res) {
     const source = await stationLocations.publicCollection();
-    const collection = filtered(source, req.query);
+    const estimated = estimations?.mapFeatures ? await estimations.mapFeatures().catch(() => []) : [];
+    const combined = { type: 'FeatureCollection', features: [...source.features, ...estimated] };
+    const collection = filtered(combined, req.query);
     if (!collection) { res.status(400).json({ error: 'invalid_filter' }); return null; }
     const version = source.features[0]?.properties.catalog_version || await stationLocations.catalogVersion();
     res.setHeader('Cache-Control', 'no-store, max-age=0');
@@ -77,10 +79,13 @@ function makeStationMapRouter({ identityService, stationLocations, rateLimit } =
   }));
   router.get('/api/v1/map/stations/:id', safe(async (req, res) => {
     const station = await stationLocations.publicStation(req.params.id);
+    const estimation = !station && estimations?.current ? await estimations.current(req.params.id) : null;
     const version = station?.catalog_version || await stationLocations.catalogVersion();
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.setHeader('X-Catalog-Version', version);
-    if (!station) return res.status(404).json({ error: 'not_found' });
+    if (!station && !estimation) return res.status(404).json({ error: 'not_found' });
+    if (estimation) return res.json((await estimations.mapFeatures())
+      .find((feature) => feature.properties.public_station_id === req.params.id)?.properties);
     return res.json(station);
   }));
   router.get('/api/v1/map/sitemap', safe(async (req, res) => {

@@ -123,7 +123,7 @@ function renderMarkers() {
     const button = node('button', cluster ? String(props.point_count) : stations.length > 1 ? `${stations.length} estacions` : formatted(value), 'map-marker');
     button.type = 'button';
     button.classList.add(cluster ? 'cluster' : station.access_scope ? 'private' : !Number.isFinite(value?.current_value) ? 'missing' : value.current_value < 10 ? 'cold' : value.current_value > 25 ? 'warm' : 'mild');
-    button.setAttribute('aria-label', cluster ? `Amplia el grup de ${props.point_count} estacions` : stations.length > 1 ? `Tria entre ${stations.length} estacions coincidents` : `${station.public_name}: ${formatted(value)}. ${stationStatus(station)}`);
+    button.setAttribute('aria-label', cluster ? `Amplia el grup de ${props.point_count} estacions` : stations.length > 1 ? `Tria entre ${stations.length} estacions coincidents` : `${station.public_name}${station.resource_kind === 'ESTIMATION' ? ', Estimació' : ''}: ${formatted(value)}. ${stationStatus(station)}`);
     button.onclick = async () => {
       if (!cluster) return stations.length > 1 ? showCoincident(stations) : showSummary(station.public_station_id);
       try {
@@ -181,15 +181,18 @@ async function initMap() {
 function stationContent(station, titleId) {
   const fragment = document.createDocumentFragment();
   const title = node('h2', station.public_name); title.id = titleId; fragment.append(title);
+  if (station.resource_kind === 'ESTIMATION') fragment.append(node('p', 'Estimació', 'status-tag'));
   fragment.append(node('p', stationStatus(station), 'status-tag'));
-  fragment.append(node('p', station.access_scope ? 'Vista privada: coordenada exacta visible només amb la teva sessió.' : 'Ubicació aproximada, no exacta.'));
+  fragment.append(node('p', station.resource_kind === 'ESTIMATION'
+    ? `Punt de referència: ${station.reference_label}. No és una observació d’estació.`
+    : station.access_scope ? 'Vista privada: coordenada exacta visible només amb la teva sessió.' : 'Ubicació aproximada, no exacta.'));
   const grid = node('dl', undefined, 'data-grid');
   for (const field of fields(station)) {
     const item = node('div'); item.append(node('dt', fieldLabels[field.field_id] || field.field_id), node('dd', formatted(field)), node('p', fieldStatus(field)));
     if (field.current_value === null && Number.isFinite(field.last_value)) item.append(node('p', `Darrer valor històric: ${decimal.format(field.last_value)} ${units[field.unit] || field.unit}`));
     grid.append(item);
   }
-  fragment.append(grid, node('p', `Observació: ${time(station.observed_at)}`), node('p', `Identificador públic: ${station.public_station_id}`), node('p', `Font: ${station.provenance.source} · ${station.provenance.licence_or_legal_basis_ref}`));
+  fragment.append(grid, node('p', `${station.resource_kind === 'ESTIMATION' ? 'Temps de l’estimació' : 'Observació'}: ${time(station.observed_at)}`), node('p', `Identificador públic: ${station.public_station_id}`), node('p', `Font: ${station.provenance.source} · ${station.provenance.licence_or_legal_basis_ref}`));
   return fragment;
 }
 async function verifiedStation(id) {
@@ -263,8 +266,10 @@ function renderList() {
     const item = node('li'), top = node('div', undefined, 'station-top');
     const button = node('button', station.public_name, 'station-name'); button.type = 'button'; button.onclick = () => showSummary(station.public_station_id);
     top.append(button, node('span', formatted(temperature(station)), 'temperature'));
-    item.append(top, node('p', station.access_scope ? `${stationStatus(station)} · Vista privada` : stationStatus(station), 'status-tag'));
-    item.append(node('p', `${time(station.observed_at)} · ${station.geo_publication === 'APPROXIMATED' ? 'Ubicació aproximada' : 'Ubicació exacta'}`, 'station-meta'));
+    item.append(top, node('p', station.resource_kind === 'ESTIMATION'
+      ? `Estimació · ${stationStatus(station)}`
+      : station.access_scope ? `${stationStatus(station)} · Vista privada` : stationStatus(station), 'status-tag'));
+    item.append(node('p', `${time(station.observed_at)} · ${station.resource_kind === 'ESTIMATION' ? `Referència: ${station.reference_label}` : station.geo_publication === 'APPROXIMATED' ? 'Ubicació aproximada' : 'Ubicació exacta'}`, 'station-meta'));
     const link = node('a', 'Veure fitxa →', 'station-link'); link.href = stationUrl(station.public_station_id);
     item.append(link); fragment.append(item);
   }

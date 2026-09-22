@@ -6,11 +6,12 @@ const express = require('express');
 const OWN_URL = 'https://tecnolord.cat/api/v1/mesures/darreres?limit=1';
 const MODEL_URL = 'https://api.open-meteo.com/v1/forecast';
 const POINTS = Object.freeze([
-  { id: 'barcelona', name: 'Barcelona', lat: 41.3874, lon: 2.1686 },
-  { id: 'girona', name: 'Girona', lat: 41.9794, lon: 2.8214 },
-  { id: 'lleida', name: 'Lleida', lat: 41.6176, lon: 0.6200 },
-  { id: 'tarragona', name: 'Tarragona', lat: 41.1189, lon: 1.2445 },
-  { id: 'la-seu', name: 'La Seu d’Urgell', lat: 42.3574, lon: 1.4616 },
+  { id: 'manresa', name: 'Manresa', reference: 'Manresa', lat: 41.72815, lon: 1.82399 },
+  { id: 'solsona', name: 'Solsona', reference: 'Solsona', lat: 41.99389, lon: 1.51706 },
+  { id: 'berga', name: 'Berga', reference: 'Berga', lat: 42.10429, lon: 1.84628 },
+  { id: 'vic', name: 'Vic', reference: 'Vic', lat: 41.93012, lon: 2.25486 },
+  { id: 'la-seu-durgell', name: 'La Seu d’Urgell', reference: 'La Seu d’Urgell', lat: 42.35877, lon: 1.46144 },
+  { id: 'andorra', name: 'Andorra', reference: 'Andorra la Vella', lat: 42.50632, lon: 1.52184 },
 ]);
 
 function isoTime(value) {
@@ -30,11 +31,13 @@ function field(fieldId, unit, rawValue, observedAt, now) {
   };
 }
 
-function feature({ id, name, lon, lat, temperature, humidity, observedAt, source, legal, now }) {
+function feature({ id, name, lon, lat, temperature, humidity, observedAt, source, legal, now, estimated = false, referenceLabel }) {
   return {
     type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
     properties: {
-      public_station_id: id, public_name: name, geo_publication: 'APPROXIMATED',
+      public_station_id: id, public_name: name, geo_publication: estimated ? 'REFERENCE' : 'APPROXIMATED',
+      resource_kind: estimated ? 'ESTIMATION' : 'STATION', nature: estimated ? 'ESTIMATED' : 'OBSERVED',
+      ...(referenceLabel ? { reference_label: referenceLabel } : {}),
       observed_at: observedAt,
       provenance: { source, licence_or_legal_basis_ref: legal },
       sensors: [{ sensor_id: 'weather', fields: [
@@ -77,11 +80,11 @@ async function loadLiveMap({ fetchImpl = globalThis.fetch, now = Date.now() } = 
       POINTS.forEach((point, index) => {
         const current = results[index]?.current;
         if (!current) return;
-        features.push(feature({ id: `model-${point.id}`, name: `${point.name} · model`,
+        features.push(feature({ id: `model-${point.id}`, name: point.name,
           lon: point.lon, lat: point.lat,
           temperature: current.temperature_2m, humidity: current.relative_humidity_2m,
           observedAt: isoTime(current.time), source: 'Open-Meteo · estimació de model, no observació d’estació',
-          legal: 'CC BY 4.0 · https://open-meteo.com/', now }));
+          legal: 'CC BY 4.0 · https://open-meteo.com/', now, estimated: true, referenceLabel: point.reference }));
       });
       if (features.some((item) => item.properties.public_station_id.startsWith('model-'))) sources.push('Open-Meteo');
     }

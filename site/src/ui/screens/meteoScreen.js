@@ -7,6 +7,7 @@ import { windNameCa } from "../format.js";
 import {
   clearDefaultStation,
   fetchMeteoPayload,
+  fetchEstimationCurrent,
   fetchMeteoSession,
   fetchPublicView,
   fetchStationCatalog,
@@ -109,10 +110,13 @@ async function refreshMeteo(ui, store, publicView) {
   const estacio = (s.estacio || "").trim();
   const selectedStationId = (s.stationId || "").trim();
   const stationId = selectedStationId || publicView?.station?.id || "";
+  const estimationId = selectedStationId.startsWith("estimation:") ? selectedStationId.slice(11) : "";
   const limit = clamp(parseInt(s.limit || "48", 10), 1, 500);
 
   try {
-    const stationPayload = stationId ? await fetchStationCurrent(stationId) : null;
+    const stationPayload = estimationId
+      ? await fetchEstimationCurrent(estimationId)
+      : stationId ? await fetchStationCurrent(stationId) : null;
     const globalPayload = stationId ? null : await fetchMeteoPayload({ estacio, limit });
     const meteoRows = stationPayload?.items || globalPayload?.items || [];
     if (ui.cards) ui.cards.innerHTML = "";
@@ -120,7 +124,11 @@ async function refreshMeteo(ui, store, publicView) {
     // Tracking: refresh OK (sense dades)
     trackEvent(CONFIG, "meteo_refresh_ok", { limit, has_station: !!(stationId || estacio) });
 
+    const isEstimation = !!stationPayload?.estimation;
     if (stationPayload?.station && ui.summary) ui.summary.textContent = stationPayload.station.name;
+    if (isEstimation && ui.summary) {
+      ui.summary.textContent = `Estimació · ${stationPayload.estimation.name} · referència: ${stationPayload.estimation.reference.label} · Open-Meteo`;
+    }
     if (stationPayload?.source?.error && ui.err) {
       ui.err.textContent = "La font no respon; es mostra l’última lectura disponible.";
     }
@@ -239,7 +247,7 @@ async function refreshMeteo(ui, store, publicView) {
 
     // 2) Temperatura
     const cTemp = card({
-      title: "Temperatura",
+      title: isEstimation ? "Temperatura · Estimació" : "Temperatura",
       value: fmt1(temp_c),
       unit: "°C",
       //badge: "Última lectura",
@@ -471,7 +479,7 @@ export function initMeteoScreen(root, store) {
     for (const station of stations) {
       const option = document.createElement("option");
       option.value = station.id;
-      option.textContent = `${station.name}${station.visibility === "PRIVATE" ? " · privada" : ""}`;
+      option.textContent = `${station.name}${station.kind === "ESTIMATION" ? " · Estimació" : station.visibility === "PRIVATE" ? " · privada" : ""}`;
       ui.station.append(option);
     }
     if (selected && !stations.some((station) => station.id === selected)) {

@@ -32,6 +32,7 @@ const { makePublicViewRouter } = require('./routes/publicView');
 const { makeAdminCatalogRouter } = require('./routes/adminCatalog');
 const { makeImportsRouter } = require('./routes/imports');
 const { makeGrafanaRouter } = require('./routes/grafana');
+const { makeEstimationsRouter } = require('./routes/estimations');
 const { makeIdentityService } = require('./services/identityService');
 const { makeStationCatalogService } = require('./services/stationCatalogService');
 const { makeConnectorRegistryService } = require('./services/connectorRegistryService');
@@ -42,6 +43,7 @@ const { makePublicViewService } = require('./services/publicViewService');
 const { makeAdminCatalogService } = require('./services/adminCatalogService');
 const { makeImportService } = require('./services/importService');
 const { makeGrafanaAdapterService } = require('./services/grafanaAdapterService');
+const { makeEstimationService } = require('./services/estimationService');
 const { makeLocalMailOutbox } = require('./services/localMailOutbox');
 
 const { makePreviService } = require('./services/previService');
@@ -290,6 +292,10 @@ function createApp({
     enabled: environment.METEOLORD_GRAFANA_INTERNAL_ENABLED === 'true',
   });
   runtime.grafana = grafana;
+  const estimations = makeEstimationService({
+    pool: runtime.pool, fetch: runtime.transport, clock: runtime.clock,
+  });
+  runtime.estimations = estimations;
 
   // ──────────────────────────────────────────────────────────
   // Routers
@@ -304,6 +310,7 @@ function createApp({
   if (adminCatalog) app.use(makeAdminCatalogRouter({ identityService, adminCatalog, mode }));
   if (imports) app.use(makeImportsRouter({ identityService, imports, mode }));
   app.use(makeGrafanaRouter({ identityService, grafana }));
+  app.use(makeEstimationsRouter({ estimations }));
   app.use(makeStationsRouter({
     pool: runtime.pool, identityService, stationCatalog, connectorRegistry, snapshotService, stationLocations, mode,
   }));
@@ -334,7 +341,9 @@ function createApp({
       observations: mapPublicObservations,
     }));
   } else {
-    app.use(makeStationMapRouter({ identityService, stationLocations, rateLimit: mapPublicRateLimit }));
+    app.use(makeStationMapRouter({
+      identityService, stationLocations, estimations, rateLimit: mapPublicRateLimit,
+    }));
   }
 
   // Frontend local: les rutes API es registren abans dels estàtics.

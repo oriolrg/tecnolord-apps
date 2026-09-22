@@ -11,18 +11,25 @@ async function httpGetJson(url) {
 }
 
 export async function fetchStationCatalog(includeOwn = true) {
-  const [publicResult, ownResult] = await Promise.all([
+  const [publicResult, ownResult, estimationResult] = await Promise.all([
     httpGetJson("/api/v1/stations"),
     includeOwn ? fetch("/api/v1/me/stations", {
       headers: { accept: "application/json" }, credentials: "same-origin",
     }).then((response) => response.ok ? response.json() : { items: [] }) : Promise.resolve({ items: [] }),
+    httpGetJson("/api/v1/estimations").catch(() => ({ items: [] })),
   ]);
   const byId = new Map();
   for (const station of publicResult?.items || []) {
-    byId.set(station.id, { ...station, owned: false });
+    byId.set(station.id, { ...station, kind: "STATION", owned: false });
   }
   for (const station of ownResult?.items || []) {
-    byId.set(station.id, { ...station, owned: true });
+    byId.set(station.id, { ...station, kind: "STATION", owned: true });
+  }
+  for (const estimation of estimationResult?.items || []) {
+    byId.set(`estimation:${estimation.id}`, {
+      ...estimation, id: `estimation:${estimation.id}`, resource_id: estimation.id,
+      kind: "ESTIMATION", owned: false, visibility: "PUBLIC", lifecycle: "ACTIVE",
+    });
   }
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "ca"));
 }
@@ -75,6 +82,13 @@ export async function fetchStationCurrent(stationId) {
     throw new Error("Identificador d’estació no vàlid");
   }
   return httpGetJson(`/api/v1/stations/${encodeURIComponent(stationId)}/current`);
+}
+
+export async function fetchEstimationCurrent(estimationId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(estimationId || "")) {
+    throw new Error("Identificador d’estimació no vàlid");
+  }
+  return httpGetJson(`/api/v1/estimations/${encodeURIComponent(estimationId)}/current`);
 }
 
 export async function fetchMeteoPayload({ estacio, limit, period, date_from, date_to }) {
