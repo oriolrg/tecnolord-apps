@@ -20,7 +20,6 @@ const publicViewStation = get('#account-public-view-station');
 const publicViewCards = get('#account-public-view-cards');
 const catalogCreate = get('#account-catalog-create');
 const catalogList = get('#account-catalog-list');
-const grafanaList = get('#account-grafana-list');
 const importForm = get('#account-import-form');
 const importSource = get('#account-import-source');
 const importFile = get('#account-import-file');
@@ -125,13 +124,6 @@ async function importRequest(path = '', options = {}) {
   return { response, data: await response.json() };
 }
 
-async function grafanaRequest(path = '') {
-  const response = await fetch(`${CONFIG.apiBase}/v1/admin/grafana/stations${path}`, {
-    credentials: 'same-origin', cache: 'no-store',
-  });
-  return { response, data: await response.json() };
-}
-
 async function historyRequest(path = '', options = {}) {
   const response = await fetch(`${CONFIG.apiBase}/v1/admin/station-history-policies${path}`, {
     credentials: 'same-origin', cache: 'no-store', ...options,
@@ -203,81 +195,6 @@ async function loadHistoryPolicies() {
   const { response, data } = await historyRequest();
   if (!response.ok || !Array.isArray(data.items)) throw new Error('history policies');
   renderHistoryPolicies(data.items);
-}
-
-function renderGrafanaResult(container, data) {
-  container.replaceChildren();
-  const meta = document.createElement('p'); meta.className = 'account-grafana-meta';
-  meta.textContent = `${data.window.minutes} min · ${data.source.persistence === 'DISABLED' ? 'sense persistència' : data.source.persistence} · pluja desactivada`;
-  container.append(meta);
-  for (const series of data.series) {
-    const block = document.createElement('section');
-    const heading = document.createElement('h4');
-    const table = document.createElement('table');
-    heading.textContent = `${series.name} · ${series.unit === 'celsius' ? '°C' : series.unit}`;
-    table.className = 'account-grafana-points';
-    const head = document.createElement('thead'); const headRow = document.createElement('tr');
-    for (const label of ['Hora', 'Valor', 'Qualitat']) {
-      const cell = document.createElement('th'); cell.scope = 'col'; cell.textContent = label; headRow.append(cell);
-    }
-    head.append(headRow); table.append(head);
-    const body = document.createElement('tbody');
-    for (const point of series.points.slice(-8)) {
-      const row = document.createElement('tr');
-      const values = [new Date(point.observed_at).toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' }),
-        point.value == null ? '—' : `${point.value} °C`, point.quality];
-      for (const value of values) { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }
-      body.append(row);
-    }
-    table.append(body); block.append(heading, table); container.append(block);
-  }
-  if (data.warnings.length) {
-    const warning = document.createElement('p'); warning.className = 'account-grafana-warning';
-    warning.textContent = `Advertiments de la font: ${data.warnings.join(', ')}`; container.append(warning);
-  }
-}
-
-function renderGrafanaStations(items) {
-  grafanaList.replaceChildren();
-  for (const item of items) {
-    const article = document.createElement('article');
-    const summary = document.createElement('div');
-    const identity = document.createElement('div');
-    const title = document.createElement('strong'); const detail = document.createElement('small');
-    const button = document.createElement('button'); const result = document.createElement('div');
-    article.className = 'account-grafana-station'; summary.className = 'account-import-summary';
-    result.className = 'account-grafana-result'; title.textContent = item.name;
-    detail.textContent = `${item.external_id} · només intern · temperatura`; identity.append(title, detail);
-    button.type = 'button'; button.textContent = 'Consulta 15 minuts';
-    button.setAttribute('aria-label', `Consulta 15 minuts — ${item.name}`);
-    button.addEventListener('click', async () => {
-      button.disabled = true; result.textContent = 'Consultant…';
-      try {
-        const { response, data } = await grafanaRequest(`/${encodeURIComponent(item.id)}/current`);
-        if (!response.ok) {
-          result.replaceChildren();
-          message(response.status === 503 ? 'El connector intern de Grafana està desactivat en aquest entorn.'
-            : response.status === 502 ? `Grafana no ha retornat dades utilitzables (${data.code || 'error de font'}).`
-              : 'No s’ha pogut consultar aquesta estació.');
-          return;
-        }
-        renderGrafanaResult(result, data);
-        message(`Consulta interna de «${data.station.name}» completada sense persistir dades.`);
-      } catch { result.replaceChildren(); message('No s’ha pogut contactar amb el servidor.'); }
-      finally { button.disabled = false; }
-    });
-    summary.append(identity, button); article.append(summary, result); grafanaList.append(article);
-  }
-  if (!items.length) {
-    const empty = document.createElement('p'); empty.className = 'account-admin-empty';
-    empty.textContent = 'No hi ha cap binding Grafana validat al catàleg intern.'; grafanaList.append(empty);
-  }
-}
-
-async function loadGrafanaStations() {
-  const { response, data } = await grafanaRequest();
-  if (!response.ok || !Array.isArray(data.items)) throw new Error('grafana');
-  renderGrafanaStations(data.items);
 }
 
 const importStatusLabels = Object.freeze({
@@ -836,7 +753,6 @@ function showSignedIn(user, csrf) {
     loadPublicView().catch(() => message('Sessió activa, però no s’ha pogut carregar la vista pública.'));
     loadAdminCatalog().catch(() => message('Sessió activa, però no s’ha pogut carregar el catàleg administrat.'));
     loadImports().catch(() => message('Sessió activa, però no s’han pogut carregar les importacions.'));
-    loadGrafanaStations().catch(() => message('Sessió activa, però no s’ha pogut carregar el catàleg intern de Grafana.'));
   }
 }
 
@@ -929,11 +845,6 @@ importForm.addEventListener('submit', async (event) => {
 get('#account-imports-refresh').addEventListener('click', () => {
   loadImports().then(() => message('Llista d’importacions actualitzada.'))
     .catch(() => message('No s’han pogut actualitzar les importacions.'));
-});
-
-get('#account-grafana-refresh').addEventListener('click', () => {
-  loadGrafanaStations().then(() => message('Catàleg intern de Grafana actualitzat.'))
-    .catch(() => message('No s’ha pogut actualitzar el catàleg intern de Grafana.'));
 });
 
 get('#account-history-refresh').addEventListener('click', () => {

@@ -102,9 +102,12 @@ function buildMeteoUI(root) {
   };
 }
 
-async function refreshMeteo(ui, store, publicView) {
+async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => true } = {}) {
   if (ui.err) ui.err.textContent = "";
   if (ui.backGlobal) ui.backGlobal.hidden = true;
+  if (ui.cards) ui.cards.replaceChildren();
+  if (ui.summary) ui.summary.textContent = "";
+  if (ui.last) ui.last.textContent = "Carregant…";
 
   const s = store.get();
   const estacio = (s.estacio || "").trim();
@@ -115,11 +118,24 @@ async function refreshMeteo(ui, store, publicView) {
 
   try {
     const stationPayload = estimationId
-      ? await fetchEstimationCurrent(estimationId)
-      : stationId ? await fetchStationCurrent(stationId, limit) : null;
-    const globalPayload = stationId ? null : await fetchMeteoPayload({ estacio, limit });
+      ? await fetchEstimationCurrent(estimationId, { signal })
+      : stationId ? await fetchStationCurrent(stationId, limit, { signal }) : null;
+    const globalPayload = stationId ? null : await fetchMeteoPayload({ estacio, limit, signal });
+    if (!isCurrent() || signal?.aborted) return;
     const meteoRows = stationPayload?.items || globalPayload?.items || [];
-    if (ui.cards) ui.cards.innerHTML = "";
+    const freshness = stationPayload?.source?.freshness;
+    const hideCurrentValues = freshness === "OBSOLETE" || freshness === "UNKNOWN";
+    const chartRows = [];
+    const chartInstants = new Set();
+    const chartCandidates = stationPayload
+      ? [...(hideCurrentValues ? [] : meteoRows), ...(stationPayload.historyItems || [])]
+      : meteoRows;
+    for (const row of chartCandidates) {
+      const rowInstant = row.instant ?? row.at;
+      if (!rowInstant || chartInstants.has(rowInstant)) continue;
+      chartInstants.add(rowInstant);
+      chartRows.push(row);
+    }
 
     // Tracking: refresh OK (sense dades)
     trackEvent(CONFIG, "meteo_refresh_ok", { limit, has_station: !!(stationId || estacio) });
@@ -130,13 +146,13 @@ async function refreshMeteo(ui, store, publicView) {
       const freshness = stationPayload.source?.freshness;
       const freshnessLabel = freshness === "STALE" ? " · dades antigues"
         : freshness === "OBSOLETE" ? " · dades obsoletes"
-          : freshness === "UNAVAILABLE" ? " · sense dades disponibles" : "";
+          : freshness === "UNKNOWN" || freshness === "UNAVAILABLE" ? " · frescor desconeguda" : "";
       ui.summary.textContent = `Estimació · ${stationPayload.estimation.name} · referència: ${stationPayload.estimation.reference.label} · Open-Meteo${freshnessLabel}`;
     }
     if ((stationPayload?.source?.error || stationPayload?.source?.status === "ERROR") && ui.err) {
       ui.err.textContent = meteoRows.length
         ? "La font no respon; es mostra l’última lectura disponible."
-        : "La font no respon i ara mateix no hi ha cap estimació disponible.";
+        : "La font no respon i ara mateix no hi ha cap lectura disponible.";
     }
 
     if (!meteoRows.length) {
@@ -145,35 +161,41 @@ async function refreshMeteo(ui, store, publicView) {
           ? "Cap estació pública configurada."
           : "Meteo: Sense registres.";
       }
-      if (ui.last) ui.last.textContent = "Sense dades";
+      if (ui.last) {
+        ui.last.textContent = freshness === "OBSOLETE" ? "Dades obsoletes · Sense lectura actual"
+          : freshness === "UNKNOWN" ? "Frescor desconeguda · Sense dades"
+            : freshness === "STALE" ? "Dades antigues · Sense lectura actual"
+              : "Sense dades";
+      }
       return;
     }
 
     const r0 = meteoRows[0];
     const instant = r0.instant ?? r0.at;
+    const currentNumber = (value) => hideCurrentValues ? null : num(value);
 
-    const temp_c = num(r0.temp_c ?? r0.temperature);
-    const feels = num(r0.sensacio_c ?? r0.feels_like ?? r0.feels_like_c);
-    const dew = num(r0.punt_rosada_c ?? r0.dew_point ?? r0.dew_point_c);
+    const temp_c = currentNumber(r0.temp_c ?? r0.temperature);
+    const feels = currentNumber(r0.sensacio_c ?? r0.feels_like ?? r0.feels_like_c);
+    const dew = currentNumber(r0.punt_rosada_c ?? r0.dew_point ?? r0.dew_point_c);
 
-    const hum = num(r0.humitat_pct ?? r0.humidity);
-    const pRel = num(r0.pressio_rel_hpa ?? r0.pressure_hpa ?? r0.pressure_rel_hpa);
-    const pAbs = num(r0.pressio_abs_hpa ?? r0.pressure_abs_hpa);
+    const hum = currentNumber(r0.humitat_pct ?? r0.humidity);
+    const pRel = currentNumber(r0.pressio_rel_hpa ?? r0.pressure_hpa ?? r0.pressure_rel_hpa);
+    const pAbs = currentNumber(r0.pressio_abs_hpa ?? r0.pressure_abs_hpa);
 
-    const uvi = num(r0.uvi);
-    const solar = num(r0.solar_wm2);
+    const uvi = currentNumber(r0.uvi);
+    const solar = currentNumber(r0.solar_wm2);
 
-    const rainRate = num(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
-    const rainDay = num(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
-    const rain1h = num(r0.pluja_hora_mm ?? r0.rain_hour_mm);
-    const rainWeek = num(r0.pluja_setmana_mm ?? r0.rain_week_mm);
-    const rainEvent = num(r0.pluja_event_mm ?? r0.rain_event_mm);
-    const rainMonth = num(r0.pluja_mes_mm ?? r0.rain_month_mm);
-    const rainYear = num(r0.pluja_any_mm ?? r0.rain_year_mm);
+    const rainRate = currentNumber(r0.taxa_pluja_mm_h ?? r0.rain_rate_mmph);
+    const rainDay = currentNumber(r0.pluja_diaria_mm ?? r0.rain_daily_mm ?? r0.rain_mm);
+    const rain1h = currentNumber(r0.pluja_hora_mm ?? r0.rain_hour_mm);
+    const rainWeek = currentNumber(r0.pluja_setmana_mm ?? r0.rain_week_mm);
+    const rainEvent = currentNumber(r0.pluja_event_mm ?? r0.rain_event_mm);
+    const rainMonth = currentNumber(r0.pluja_mes_mm ?? r0.rain_month_mm);
+    const rainYear = currentNumber(r0.pluja_any_mm ?? r0.rain_year_mm);
 
-    const wind = num(r0.vent_ms ?? r0.wind_speed_ms);
-    const gust = num(r0.vent_rafega_ms ?? r0.wind_gust_ms);
-    const wdir = num(r0.vent_direccio_graus ?? r0.wind_dir_deg);
+    const wind = currentNumber(r0.vent_ms ?? r0.wind_speed_ms);
+    const gust = currentNumber(r0.vent_rafega_ms ?? r0.wind_gust_ms);
+    const wdir = currentNumber(r0.vent_direccio_graus ?? r0.wind_dir_deg);
 
     const deg = wdir == null || Number.isNaN(wdir) ? null : ((wdir % 360) + 360) % 360;
     const degTxt = deg == null ? "—" : `${Math.round(deg)}°`;
@@ -187,8 +209,9 @@ async function refreshMeteo(ui, store, publicView) {
       ageSec < 3600 ? `${Math.round(ageSec / 60)} min` :
       `${Math.round(ageSec / 3600)} h`;
 
-    const freshness = stationPayload?.source?.freshness;
-    const freshnessLabel = freshness === "STALE" ? " · dades antigues" : freshness === "OBSOLETE" ? " · dades obsoletes" : "";
+    const freshnessLabel = freshness === "STALE" ? " · dades antigues"
+      : freshness === "OBSOLETE" ? " · dades obsoletes"
+        : freshness === "UNKNOWN" ? " · frescor desconeguda" : "";
     if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}${freshnessLabel}`;
     if (ui.summary && CONFIG.environment === 'local' && !CONFIG.syntheticData) {
       ui.summary.textContent = 'Observacions reals de MeteoLord · tecnolord.cat';
@@ -208,7 +231,7 @@ async function refreshMeteo(ui, store, publicView) {
     let tMin = null;
     let tMax = null;
 
-    for (const r of meteoRows) {
+    for (const r of chartRows) {
       const t = num(r.temp_c ?? r.temperature);
       if (t == null || Number.isNaN(t)) continue;
 
@@ -379,7 +402,7 @@ async function refreshMeteo(ui, store, publicView) {
       const mm0 = dd0.getMonth();
       const dayy0 = dd0.getDate();
 
-      const todayRows = meteoRows.filter((r) => {
+      const todayRows = chartRows.filter((r) => {
         const ts = r.instant ?? r.at;
         if (!ts) return false;
         const d = new Date(ts);
@@ -423,6 +446,7 @@ async function refreshMeteo(ui, store, publicView) {
     }
 
   } catch (e) {
+    if (e?.name === "AbortError" || !isCurrent() || signal?.aborted) return;
     if (ui.err) ui.err.textContent = e?.status === 404 && selectedStationId
       ? "Aquesta estació no està disponible o no hi tens accés."
       : "No s’han pogut carregar les dades meteorològiques.";
@@ -468,11 +492,34 @@ export function initMeteoScreen(root, store) {
 
   let disposed = false;
   let timer = null;
+  let accessController = null;
+  let accessRevision = 0;
+  let refreshController = null;
+  let refreshRevision = 0;
+  let preferenceApplied = false;
   let stations = [];
   let session = null;
   let preference = { default_station: null, revision: 0, invalidated: false };
   let publicView = { station: null, card_ids: ['wind', 'temperature', 'rain', 'pressure', 'humidity', 'uv'], revision: 0 };
   const selectedFromUrl = new URL(location.href).searchParams.has("station_id");
+
+  function clearSelectedStation() {
+    store.set({ stationId: "" });
+    const url = new URL(location.href);
+    url.searchParams.delete("station_id");
+    history.replaceState(null, "", url);
+  }
+
+  function runRefresh() {
+    refreshController?.abort();
+    const controller = new AbortController();
+    const revision = ++refreshRevision;
+    refreshController = controller;
+    return refreshMeteo(ui, store, publicView, {
+      signal: controller.signal,
+      isCurrent: () => !disposed && revision === refreshRevision,
+    });
+  }
 
   function renderStationOptions() {
     if (!ui.station) return;
@@ -512,30 +559,73 @@ export function initMeteoScreen(root, store) {
     }
   }
 
-  async function bootstrap() {
-    // La vista pública existent no depèn de les capacitats opcionals de compte.
-    // Això manté la càrrega immediata durant una actualització gradual del backend.
-    refreshMeteo(ui, store, publicView);
+  async function reloadAccess() {
+    accessController?.abort();
+    refreshController?.abort();
+    refreshRevision += 1;
+    const controller = new AbortController();
+    const revision = ++accessRevision;
+    accessController = controller;
+    if (ui.cards) ui.cards.replaceChildren();
+    if (ui.summary) ui.summary.textContent = "";
+    if (ui.last) ui.last.textContent = "Carregant…";
+
     try {
-      [session, publicView] = await Promise.all([
-        fetchMeteoSession().catch(() => null), fetchPublicView().catch(() => publicView),
+      const [nextSession, nextPublicView] = await Promise.all([
+        fetchMeteoSession({ signal: controller.signal }).catch((error) => {
+          if (error?.name === "AbortError") throw error;
+          return null;
+        }),
+        fetchPublicView({ signal: controller.signal }).catch((error) => {
+          if (error?.name === "AbortError") throw error;
+          return publicView;
+        }),
       ]);
-      stations = await fetchStationCatalog(!!session).catch(() => []);
-      if (session) preference = await fetchStationPreference();
-      if (disposed) return;
-      if (!selectedFromUrl && !store.get().stationId && preference.default_station) {
+      const isSuperadmin = nextSession?.user?.role === "SUPERADMIN";
+      const [nextStations, nextPreference] = await Promise.all([
+        fetchStationCatalog({
+          includeOwn: !!nextSession, includeAdmin: isSuperadmin, signal: controller.signal,
+        }).catch((error) => {
+          if (error?.name === "AbortError") throw error;
+          return [];
+        }),
+        nextSession
+          ? fetchStationPreference({ signal: controller.signal }).catch((error) => {
+            if (error?.name === "AbortError") throw error;
+            return { default_station: null, revision: 0, invalidated: false };
+          })
+          : Promise.resolve({ default_station: null, revision: 0, invalidated: false }),
+      ]);
+      if (disposed || controller.signal.aborted || revision !== accessRevision) return;
+
+      session = nextSession;
+      publicView = nextPublicView;
+      stations = nextStations;
+      preference = nextPreference;
+      const selectedId = store.get().stationId || "";
+      if (selectedId && !stations.some((station) => station.id === selectedId)) clearSelectedStation();
+      if (!preferenceApplied && !selectedFromUrl && !store.get().stationId && preference.default_station) {
         store.set({ stationId: preference.default_station.id });
       }
+      preferenceApplied = true;
       if (preference.invalidated && ui.preferenceStatus) {
         ui.preferenceStatus.textContent = "La teva estació predeterminada ja no està disponible. Es mostra la vista pública.";
       }
       renderStationOptions();
       updatePreferenceControls();
-      await refreshMeteo(ui, store, publicView);
-    } catch {
-      // La vista pública ja s'ha carregat; les opcions personals són progressives.
+      await runRefresh();
+    } catch (error) {
+      if (error?.name === "AbortError" || disposed || revision !== accessRevision) return;
       renderStationOptions();
+      await runRefresh();
     }
+  }
+
+  function bootstrap() {
+    // La vista pública existent no depèn de les capacitats opcionals de compte.
+    // Això manté la càrrega immediata durant una actualització gradual del backend.
+    if (!store.get().stationId) runRefresh();
+    reloadAccess();
   }
 
   const onStationChange = () => {
@@ -545,7 +635,7 @@ export function initMeteoScreen(root, store) {
     else url.searchParams.delete("station_id");
     history.replaceState(null, "", url);
     updatePreferenceControls();
-    refreshMeteo(ui, store, publicView);
+    runRefresh();
   };
   ui.station?.addEventListener("change", onStationChange);
 
@@ -584,21 +674,34 @@ export function initMeteoScreen(root, store) {
     history.replaceState(null, "", url);
     renderStationOptions();
     updatePreferenceControls();
-    refreshMeteo(ui, store, publicView);
+    runRefresh();
   };
   ui.setDefault?.addEventListener("click", onSetDefault);
   ui.clearDefault?.addEventListener("click", onClearDefault);
   ui.backGlobal?.addEventListener("click", onBackGlobal);
 
+  const onAccessMayHaveChanged = () => reloadAccess();
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") reloadAccess();
+  };
+  window.addEventListener("storage", onAccessMayHaveChanged);
+  window.addEventListener("focus", onAccessMayHaveChanged);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
   bootstrap();
-  if (store.get().auto) timer = setInterval(() => refreshMeteo(ui, store, publicView), CONFIG.autoRefreshMs);
+  if (store.get().auto) timer = setInterval(runRefresh, CONFIG.autoRefreshMs);
 
   return () => {
     disposed = true;
+    accessController?.abort();
+    refreshController?.abort();
     ui.station?.removeEventListener("change", onStationChange);
     ui.setDefault?.removeEventListener("click", onSetDefault);
     ui.clearDefault?.removeEventListener("click", onClearDefault);
     ui.backGlobal?.removeEventListener("click", onBackGlobal);
+    window.removeEventListener("storage", onAccessMayHaveChanged);
+    window.removeEventListener("focus", onAccessMayHaveChanged);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     if (timer) clearInterval(timer);
   };
 }
