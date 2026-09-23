@@ -6,12 +6,86 @@ const { stationDto } = require('../services/stationCatalogService');
 const { sameOriginMutation } = require('./identity');
 const { getWindowFromQuery } = require('../utils/periods');
 
-const MEASUREMENT_FIELDS = `
-  m.instant,m.temp_c,m.sensacio_c,m.punt_rosada_c,m.humitat_pct,m.solar_wm2,m.uvi,
-  m.taxa_pluja_mm_h,m.pluja_diaria_mm,m.pluja_event_mm,m.pluja_hora_mm,
-  m.pluja_setmana_mm,m.pluja_mes_mm,m.pluja_any_mm,m.vent_ms,m.vent_rafega_ms,
-  m.vent_direccio_graus,m.pressio_rel_hpa,m.pressio_abs_hpa,m.bateria_pct
-`;
+const MEASUREMENT_FIELD_NAMES = Object.freeze([
+  'temp_c', 'sensacio_c', 'punt_rosada_c', 'humitat_pct', 'solar_wm2', 'uvi',
+  'taxa_pluja_mm_h', 'pluja_diaria_mm', 'pluja_event_mm', 'pluja_hora_mm',
+  'pluja_setmana_mm', 'pluja_mes_mm', 'pluja_any_mm', 'vent_ms', 'vent_rafega_ms',
+  'vent_direccio_graus', 'pressio_rel_hpa', 'pressio_abs_hpa', 'bateria_pct',
+]);
+const MEASUREMENT_FIELDS = `m.instant,${MEASUREMENT_FIELD_NAMES.map((field) => `m.${field}`).join(',')}`;
+const FRESHNESS_STATES = new Set(['FRESH', 'STALE', 'OBSOLETE', 'UNKNOWN']);
+const FIELD_QUALITY_STATES = new Set(['VALID', 'MISSING', 'INVALID', 'OUT_OF_RANGE']);
+const QUALITY_WARNINGS = new Set([
+  'INVALID_FRAME_SCHEMA', 'INCONSISTENT_LENGTH', 'SENSOR_MISMATCH', 'UNSUPPORTED_UNIT',
+  'SOURCE_UNIT_UNDECLARED', 'FUTURE_TIMESTAMP', 'INVALID_TIMESTAMP',
+]);
+const SOURCE_ERRORS = new Set([
+  'AUTH_REQUIRED', 'RATE_LIMITED', 'PROVIDER_UNAVAILABLE', 'TIMEOUT', 'INVALID_JSON',
+  'RESPONSE_TOO_LARGE', 'UPSTREAM_REJECTED', 'INVALID_BINDING', 'QUERY_ERROR', 'EMPTY_DATA',
+  'SENSOR_MISMATCH', 'AMBIGUOUS_SERIES', 'INVALID_FRAMES', 'FUTURE_TIMESTAMP',
+  'INVALID_TIMESTAMP', 'NO_VALID_VALUE', 'AMBIGUOUS_OBSERVATION', 'PROVIDER_ERROR', 'HTTP_429',
+]);
+
+function sanitizedTimestamp(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const timestamp = new Date(value);
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp.toISOString();
+}
+
+function sanitizedQuality(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const result = {};
+  if (FRESHNESS_STATES.has(value.freshness)) result.freshness = value.freshness;
+  if (value.fields && typeof value.fields === 'object' && !Array.isArray(value.fields)) {
+    result.fields = Object.fromEntries(MEASUREMENT_FIELD_NAMES
+      .filter((field) => FIELD_QUALITY_STATES.has(value.fields[field]))
+      .map((field) => [field, value.fields[field]]));
+  }
+  if (Array.isArray(value.warnings)) {
+    result.warnings = [...new Set(value.warnings.filter((warning) => QUALITY_WARNINGS.has(warning)))].sort();
+  }
+  if (value.units && typeof value.units === 'object' && !Array.isArray(value.units)) {
+    const units = {};
+    for (const field of MEASUREMENT_FIELD_NAMES) {
+      const unit = value.units[field];
+      if (!unit || typeof unit !== 'object' || Array.isArray(unit)) continue;
+      const canonical = unit.canonical === 'celsius' ? 'celsius' : undefined;
+      const sourceUnit = ['celsius', '°C', 'C', 'celcius'].includes(unit.source_unit)
+        ? unit.source_unit : null;
+      const basis = ['SOURCE_DECLARED', 'QUERY_CONTRACT'].includes(unit.unit_basis)
+        ? unit.unit_basis : undefined;
+      if (canonical && basis) units[field] = { canonical, source_unit: sourceUnit, unit_basis: basis };
+    }
+    result.units = units;
+  }
+  return result;
+}
+
+function currentSnapshotDto(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  let item = null;
+  if (snapshot.item && typeof snapshot.item === 'object' && !Array.isArray(snapshot.item)) {
+    item = { instant: sanitizedTimestamp(snapshot.item.instant) };
+    for (const field of MEASUREMENT_FIELD_NAMES) {
+      if (!(field in snapshot.item)) continue;
+      const value = snapshot.item[field];
+      item[field] = value === null || (typeof value === 'number' && Number.isFinite(value)) ? value : null;
+    }
+  }
+  const input = snapshot.source && typeof snapshot.source === 'object' ? snapshot.source : {};
+  const source = {};
+  if (FRESHNESS_STATES.has(input.freshness)) source.freshness = input.freshness;
+  if (input.observed_at !== undefined) source.observed_at = sanitizedTimestamp(input.observed_at);
+  if (input.fetched_at !== undefined) source.fetched_at = sanitizedTimestamp(input.fetched_at);
+  if (input.error === null) source.error = null;
+  else if (typeof input.error === 'string') {
+    source.error = SOURCE_ERRORS.has(input.error) || /^HTTP_5[0-9]{2}$/.test(input.error)
+      ? input.error : 'PROVIDER_ERROR';
+  }
+  const quality = sanitizedQuality(input.quality);
+  if (quality) source.quality = quality;
+  return { item, source };
+}
 
 function makeStationsRouter({ pool, identityService, stationCatalog, connectorRegistry, snapshotService, stationLocations, mode } = {}) {
   if (!pool || !identityService || !stationCatalog) throw new TypeError('Station route dependencies are required');
@@ -153,10 +227,11 @@ function makeStationsRouter({ pool, identityService, stationCatalog, connectorRe
       ? await snapshotService.readCurrent(station.id)
       : null;
     if (!snapshot) return measurements(req, res, true);
+    const serialized = currentSnapshotDto(snapshot);
     return res.json({
       station: stationDto(station),
-      items: snapshot.item ? [snapshot.item] : [],
-      source: snapshot.source,
+      items: serialized.item ? [serialized.item] : [],
+      source: serialized.source,
     });
   }));
   router.get('/api/v1/stations/:id/history', safe((req, res) => measurements(req, res, false)));
@@ -164,4 +239,4 @@ function makeStationsRouter({ pool, identityService, stationCatalog, connectorRe
   return router;
 }
 
-module.exports = { MEASUREMENT_FIELDS, makeStationsRouter };
+module.exports = { MEASUREMENT_FIELDS, currentSnapshotDto, makeStationsRouter };

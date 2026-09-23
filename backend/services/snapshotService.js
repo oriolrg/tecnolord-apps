@@ -201,9 +201,20 @@ function makeSnapshotService({
       WHERE b.station_id=$1 AND b.binding_status='VALIDATED'
       ORDER BY b.id LIMIT 1
     `, [stationId]);
-    if (result.rowCount !== 1 || !result.rows[0].fetched_at) return null;
+    if (result.rowCount !== 1) return null;
     const row = result.rows[0];
-    const freshness = freshnessAt(row.observed_at, now(), intervalFor(row.source_namespace));
+    if (!row.fetched_at) {
+      return row.source_namespace === 'GRAFANA' ? {
+        item: null,
+        source: {
+          freshness: 'UNKNOWN', observed_at: null, fetched_at: null, error: null,
+          quality: { freshness: 'UNKNOWN' },
+        },
+      } : null;
+    }
+    const freshness = row.observed_at
+      ? freshnessAt(row.observed_at, now(), intervalFor(row.source_namespace))
+      : 'UNKNOWN';
     const values = freshness === 'OBSOLETE'
       ? Object.fromEntries(Object.keys(row.values_json || {}).map((key) => [key, null]))
       : (row.values_json || {});
