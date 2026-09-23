@@ -267,12 +267,20 @@ function createApp({
     pool: runtime.pool,
     keyring: connectorKeyring || environment.METEOLORD_CONNECTOR_KEYS,
   });
+  const grafana = makeGrafanaAdapterService({
+    pool: runtime.pool, fetch: runtime.transport, clock: runtime.clock,
+    enabled: runtime.sourceCadence.grafanaEnabled,
+  });
+  runtime.grafana = grafana;
   const snapshotService = typeof runtime.pool.connect === 'function'
     ? makeSnapshotService({
       pool: runtime.pool,
       connectorRegistry,
+      grafana,
       fetch: runtime.transport,
       clock: runtime.clock,
+      sourceIntervals: runtime.sourceCadence.intervals,
+      grafanaEnabled: runtime.sourceCadence.grafanaEnabled,
     })
     : null;
   runtime.snapshotService = snapshotService;
@@ -292,11 +300,6 @@ function createApp({
     ? makeImportService({ pool: runtime.pool, clock: runtime.clock })
     : null;
   runtime.imports = imports;
-  const grafana = makeGrafanaAdapterService({
-    pool: runtime.pool, fetch: runtime.transport, clock: runtime.clock,
-    enabled: runtime.sourceCadence.grafanaEnabled,
-  });
-  runtime.grafana = grafana;
   const estimations = makeEstimationService({
     pool: runtime.pool, fetch: runtime.transport, clock: runtime.clock,
   });
