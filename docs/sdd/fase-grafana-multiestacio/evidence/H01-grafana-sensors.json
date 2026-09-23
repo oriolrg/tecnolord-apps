@@ -1,0 +1,105 @@
+{
+  "task": "H01",
+  "observed_at": "2026-09-23T21:19:18Z",
+  "dashboard": {
+    "uid": "i2cat-public-jul27",
+    "title": "Vall de Lord",
+    "url": "https://grafana.commonscloud.coop/d/i2cat-public-jul27/vall-de-lord",
+    "api_url": "https://grafana.commonscloud.coop/api/dashboards/uid/i2cat-public-jul27"
+  },
+  "variable": {
+    "name": "sensor",
+    "label": "Sensor",
+    "query": "{tag1=\"I2CAT\"}",
+    "regex": "/tag4=\"(?<text>[^\"]+)/g",
+    "refresh": 2,
+    "sort": 3,
+    "range": {
+      "from": "2026-09-22T21:19:18Z",
+      "to": "2026-09-23T21:19:18Z"
+    },
+    "values_api": "https://grafana.commonscloud.coop/api/datasources/uid/SWLXFBHvz/resources/api/v1/label/tag4/values?match%5B%5D=%7Btag1%3D%22I2CAT%22%7D&start=1790111958&end=1790198358"
+  },
+  "verification": {
+    "label_values_status": "success",
+    "series_status": "success",
+    "independent_lists_equal": true,
+    "grafana_discovered": 29,
+    "grafana_unbounded": 36,
+    "catalog_known": 27,
+    "match": 24,
+    "partial_match": 3,
+    "grafana_only": 2,
+    "catalog_only": 0,
+    "conflict": 0
+  },
+  "sensors": [
+    { "external_id": "Meteo-001-3100044", "catalog_name": "Granja Vaques ca l'Andal", "classification": "MATCH" },
+    { "external_id": "Meteo-002-3100007", "catalog_name": "Can Pernals", "classification": "MATCH" },
+    { "external_id": "Meteo-003-3100338", "catalog_name": "Cal Reli", "classification": "MATCH" },
+    { "external_id": "Meteo-004-3100360", "catalog_name": "Escola Aiguadora", "classification": "MATCH" },
+    { "external_id": "Meteo-005-5310489", "catalog_name": "El Planàs", "classification": "MATCH" },
+    { "external_id": "Meteo-007-3100206", "catalog_name": "El Vancell", "classification": "MATCH" },
+    { "external_id": "Meteo-008-3100134", "catalog_name": "Casa La Mora", "classification": "MATCH" },
+    { "external_id": "Meteo-009-3100496", "catalog_name": "Casa Valielles", "classification": "MATCH" },
+    { "external_id": "Meteo-010-54000046", "catalog_name": "Font d'Estivella", "classification": "MATCH" },
+    { "external_id": "Meteo-011-3300274", "catalog_name": "Sallord", "classification": "MATCH" },
+    { "external_id": "Meteo-012-3300391", "catalog_name": "El Collell", "classification": "MATCH" },
+    { "external_id": "Meteo-013-3300161", "catalog_name": "Forat Bòfia", "classification": "MATCH" },
+    { "external_id": "Meteo-015-4000206", "catalog_name": "Duocastella", "classification": "MATCH" },
+    { "external_id": "Meteo-016-4000258", "catalog_name": "Apartaments Casafont", "classification": "MATCH" },
+    { "external_id": "Meteo-017-4000161", "catalog_name": "Casa Ventolra", "classification": "MATCH" },
+    { "external_id": "Meteo-018-4000158", "catalog_name": "Can Sans-Can Costa", "classification": "MATCH" },
+    { "external_id": "Meteo-019-4000143", "catalog_name": "Prat Formiu", "classification": "MATCH" },
+    { "external_id": "Meteo-020-4000245", "catalog_name": "El Jou", "classification": "MATCH" },
+    { "external_id": "Meteo-021-000070", "catalog_name": "Masia Guixerons", "classification": "MATCH" },
+    { "external_id": "Meteo-022-00368", "catalog_name": "Cap del Verd", "classification": "MATCH" },
+    { "external_id": "Meteo-023-00386", "catalog_name": "Casa Ginebres", "classification": "MATCH" },
+    { "external_id": "Meteo-024-00225", "catalog_name": "Cal Samarrà", "classification": "MATCH" },
+    { "external_id": "Meteo-025-00279", "catalog_name": "Codó", "classification": "MATCH" },
+    { "external_id": "Meteo-026-", "catalog_name": "Cal Sec", "classification": "PARTIAL_MATCH" },
+    { "external_id": "Meteo-027-", "catalog_name": "Coll de Port", "classification": "PARTIAL_MATCH" },
+    { "external_id": "Meteo-028-300127", "catalog_name": "Torrent Foranca", "classification": "MATCH" },
+    { "external_id": "Meteo-029-", "catalog_name": "Casa Postils", "classification": "PARTIAL_MATCH" },
+    { "external_id": "S31-119416", "catalog_name": null, "classification": "GRAFANA_ONLY" },
+    { "external_id": "S31-99933", "catalog_name": null, "classification": "GRAFANA_ONLY" }
+  ],
+  "partial_resolution": [
+    {
+      "external_id": "Meteo-026-",
+      "catalog_name": "Cal Sec",
+      "resolved": false,
+      "grafana_series_count": 11,
+      "evidence": "Grafana only exposes tag4=Meteo-026-; the other labels contain no station identifier."
+    },
+    {
+      "external_id": "Meteo-027-",
+      "catalog_name": "Coll de Port",
+      "resolved": false,
+      "grafana_series_count": 11,
+      "evidence": "Grafana only exposes tag4=Meteo-027-; the other labels contain no station identifier."
+    },
+    {
+      "external_id": "Meteo-029-",
+      "catalog_name": "Casa Postils",
+      "resolved": false,
+      "grafana_series_count": 11,
+      "evidence": "Grafana only exposes tag4=Meteo-029-; the other labels contain no station identifier."
+    }
+  ],
+  "catalog_only": [],
+  "excluded_outside_24h": [
+    "EM300th-301004",
+    "EM300th-511008",
+    "Meteo-006-3100492",
+    "Meteo-014-3300344",
+    "S31-119412",
+    "S31-99925",
+    "S31-99926"
+  ],
+  "notes": [
+    "No identifier was completed by inference.",
+    "Unbounded Grafana queries return seven additional historical values; they are excluded because they are absent from the dashboard's current 24-hour range.",
+    "No database, backend, frontend, metric mapping or location data was changed."
+  ]
+}

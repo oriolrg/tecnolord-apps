@@ -1,0 +1,296 @@
+{
+  "task": "H02",
+  "created_at": "2026-09-23",
+  "baseline": "evidence/H01-grafana-sensors.json",
+  "sources": {
+    "H01_GRAFANA_CURRENT_24H": "Grafana sensor variable values verified in H01",
+    "USER_CATALOG_H01": "Canonical working names supplied by the user in H01",
+    "PDF_ESTACIONS_LLISTA_2": {
+      "path": "/home/lab-host/Baixades/Estacions - llista (2).pdf",
+      "sha256": "90cf25a73a84a7e6730c6a8650a9027b3c3e013769de2150fa2e0d12b0ae9fec",
+      "role": "Auxiliary source for explicit MLW codes and name discrepancies"
+    }
+  },
+  "summary": {
+    "current_sensors": 29,
+    "confirmed": 21,
+    "partial_external_id": 3,
+    "unidentified_grafana": 2,
+    "pendent_revisio": 3,
+    "with_mlw_code": 23,
+    "without_mlw_code": 6,
+    "historical_not_current": 7
+  },
+  "current_stations": [
+    {
+      "external_id": "Meteo-001-3100044",
+      "name": "Granja Vaques ca l'Andal",
+      "mlw_code": "MLW28",
+      "grafana_status": "CURRENT",
+      "mapping_status": "PENDENT_REVISIO",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF explicitly maps the external_id to MLW28 but shortens the name to 'Granja Vaques'; the user catalog name is retained. Existing UUID 5da7eece-6954-413f-8e22-390fe4144830 must be preserved."
+    },
+    {
+      "external_id": "Meteo-002-3100007",
+      "name": "Can Pernals",
+      "mlw_code": "MLW01",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-003-3100338",
+      "name": "Cal Reli",
+      "mlw_code": null,
+      "grafana_status": "CURRENT",
+      "mapping_status": "PENDENT_REVISIO",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF assigns TEST01 rather than an MLW code and names the row 'Cal Reli estacio_prova'; the user catalog name is retained."
+    },
+    {
+      "external_id": "Meteo-004-3100360",
+      "name": "Escola Aiguadora",
+      "mlw_code": null,
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01"],
+      "notes": "The PDF only contains the ambiguous text '004? 014?' on a TEST02 row; it does not prove an MLW mapping."
+    },
+    {
+      "external_id": "Meteo-005-5310489",
+      "name": "El Planàs",
+      "mlw_code": "MLW25",
+      "grafana_status": "CURRENT",
+      "mapping_status": "PENDENT_REVISIO",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF explicitly maps the external_id to MLW25 but spells the name 'El Planars'; the user catalog name is retained."
+    },
+    {
+      "external_id": "Meteo-007-3100206",
+      "name": "El Vancell",
+      "mlw_code": "MLW04",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-008-3100134",
+      "name": "Casa La Mora",
+      "mlw_code": "MLW22",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF MLW22 row has no external_id; the code correspondence is supported by the exact canonical name in both sources."
+    },
+    {
+      "external_id": "Meteo-009-3100496",
+      "name": "Casa Valielles",
+      "mlw_code": "MLW08",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF also contains the annotation 'low'."
+    },
+    {
+      "external_id": "Meteo-010-54000046",
+      "name": "Font d'Estivella",
+      "mlw_code": "MLW18",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-011-3300274",
+      "name": "Sallord",
+      "mlw_code": "MLW05",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-012-3300391",
+      "name": "El Collell",
+      "mlw_code": "MLW07",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-013-3300161",
+      "name": "Forat Bòfia",
+      "mlw_code": "MLW02",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-015-4000206",
+      "name": "Duocastella",
+      "mlw_code": "MLW13",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-016-4000258",
+      "name": "Apartaments Casafont",
+      "mlw_code": "MLW16",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-017-4000161",
+      "name": "Casa Ventolra",
+      "mlw_code": "MLW14",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-018-4000158",
+      "name": "Can Sans-Can Costa",
+      "mlw_code": "MLW20",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF also contains the annotation 'low'."
+    },
+    {
+      "external_id": "Meteo-019-4000143",
+      "name": "Prat Formiu",
+      "mlw_code": "MLW06",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-020-4000245",
+      "name": "El Jou",
+      "mlw_code": "MLW32",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF also contains the annotation 'la coma'."
+    },
+    {
+      "external_id": "Meteo-021-000070",
+      "name": "Masia Guixerons",
+      "mlw_code": "MLW03",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF also contains the annotation 'batery??'."
+    },
+    {
+      "external_id": "Meteo-022-00368",
+      "name": "Cap del Verd",
+      "mlw_code": "MLW19",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-023-00386",
+      "name": "Casa Ginebres",
+      "mlw_code": "MLW09",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-024-00225",
+      "name": "Cal Samarrà",
+      "mlw_code": "MLW17",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-025-00279",
+      "name": "Codó",
+      "mlw_code": "MLW29",
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": null
+    },
+    {
+      "external_id": "Meteo-026-",
+      "name": "Cal Sec",
+      "mlw_code": "MLW26",
+      "grafana_status": "CURRENT",
+      "mapping_status": "PARTIAL_EXTERNAL_ID",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "Grafana and the PDF both preserve the truncated external_id; no suffix is inferred."
+    },
+    {
+      "external_id": "Meteo-027-",
+      "name": "Coll de Port",
+      "mlw_code": "MLW27",
+      "grafana_status": "CURRENT",
+      "mapping_status": "PARTIAL_EXTERNAL_ID",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF MLW27 row has no external_id; the code is supported by the exact canonical name, while the Grafana external_id remains truncated."
+    },
+    {
+      "external_id": "Meteo-028-300127",
+      "name": "Torrent Foranca",
+      "mlw_code": null,
+      "grafana_status": "CURRENT",
+      "mapping_status": "CONFIRMED",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01"],
+      "notes": "No corresponding PDF row was identified."
+    },
+    {
+      "external_id": "Meteo-029-",
+      "name": "Casa Postils",
+      "mlw_code": null,
+      "grafana_status": "CURRENT",
+      "mapping_status": "PARTIAL_EXTERNAL_ID",
+      "sources": ["H01_GRAFANA_CURRENT_24H", "USER_CATALOG_H01", "PDF_ESTACIONS_LLISTA_2"],
+      "notes": "The PDF lists MLW15 as 'Moli de Postils', which does not explicitly prove a mapping to 'Casa Postils'; no MLW code or external_id suffix is inferred."
+    },
+    {
+      "external_id": "S31-119416",
+      "name": null,
+      "mlw_code": null,
+      "grafana_status": "CURRENT",
+      "mapping_status": "UNIDENTIFIED_GRAFANA",
+      "sources": ["H01_GRAFANA_CURRENT_24H"],
+      "notes": "No user-catalog or explicit PDF correspondence."
+    },
+    {
+      "external_id": "S31-99933",
+      "name": null,
+      "mlw_code": null,
+      "grafana_status": "CURRENT",
+      "mapping_status": "UNIDENTIFIED_GRAFANA",
+      "sources": ["H01_GRAFANA_CURRENT_24H"],
+      "notes": "No user-catalog or explicit PDF correspondence."
+    }
+  ],
+  "historical_not_current": [
+    { "external_id": "EM300th-301004", "status": "HISTORICAL_NOT_CURRENT" },
+    { "external_id": "EM300th-511008", "status": "HISTORICAL_NOT_CURRENT" },
+    { "external_id": "Meteo-006-3100492", "status": "HISTORICAL_NOT_CURRENT" },
+    { "external_id": "Meteo-014-3300344", "status": "HISTORICAL_NOT_CURRENT" },
+    { "external_id": "S31-119412", "status": "HISTORICAL_NOT_CURRENT" },
+    { "external_id": "S31-99925", "status": "HISTORICAL_NOT_CURRENT" },
+    { "external_id": "S31-99926", "status": "HISTORICAL_NOT_CURRENT" }
+  ]
+}
