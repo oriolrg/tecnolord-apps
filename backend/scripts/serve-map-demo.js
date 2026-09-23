@@ -17,6 +17,10 @@ function createPreviewApp({ mode = 'synthetic' } = {}) {
     .replace("connect-src 'self';", "connect-src 'self' https://tile.openstreetmap.org;") : LOCAL_FRONTEND_CSP;
   const app = express();
   app.use((_req, res, next) => { res.setHeader('Content-Security-Policy', csp); next(); });
+  app.get('/api/v1/auth/session', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ authenticated: false, accounts_available: false });
+  });
   app.use(realPreview
     ? makeLiveMapPreviewRouter()
     : makeMapPublicRouter({ environment: { METEOLORD_ENV: 'local' } }));

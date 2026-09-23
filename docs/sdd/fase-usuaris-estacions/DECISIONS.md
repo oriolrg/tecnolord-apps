@@ -141,12 +141,13 @@ Les decisions de producte estan resoltes, però continuen existint comprovacions
    * determinar el conjunt real d'estacions accessible;
    * validar drets de reutilització i publicació de les dades.
 
-2. **Persistència**
+2. **Persistència local — validada a UE-T17/18**
 
-   * adaptar el model de dades perquè la política d'històric sigui per estació;
-   * definir mecanisme de planificació de captures amb periodicitats diferents;
-   * implementar purga per retenció individual;
-   * preservar els històrics existents.
+   * model i administració de política per estació implementats;
+   * worker protegit compatible amb periodicitats diferents i leases implementat;
+   * purga transaccional per retenció individual implementada;
+   * històrics legacy preservats i primera purga protegida per previsualització;
+   * abans d’operar amb fonts reals cal configurar el planificador de l’entorn i confirmar-ne els drets de persistència.
 
 3. **Correu**
 

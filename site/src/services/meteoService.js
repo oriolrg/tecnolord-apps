@@ -35,12 +35,13 @@ export async function fetchStationCatalog(includeOwn = true) {
 }
 
 export async function fetchMeteoSession() {
-  const response = await fetch("/api/v1/auth/me", {
+  const response = await fetch("/api/v1/auth/session", {
     headers: { accept: "application/json" }, credentials: "same-origin", cache: "no-store",
   });
-  if (response.status === 401 || response.status === 404) return null;
+  if (response.status === 404) return null;
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
+  const session = await response.json();
+  return session.authenticated ? session : null;
 }
 
 export async function fetchStationPreference() {
@@ -77,11 +78,34 @@ export function clearDefaultStation(revision, csrfToken) {
   return mutatePreference("DELETE", null, revision, csrfToken);
 }
 
-export async function fetchStationCurrent(stationId) {
+export async function fetchStationCurrent(stationId, limit = CONFIG.defaultLimit) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stationId || "")) {
     throw new Error("Identificador d’estació no vàlid");
   }
-  return httpGetJson(`/api/v1/stations/${encodeURIComponent(stationId)}/current`);
+  const encoded = encodeURIComponent(stationId);
+  const [currentResult, historyResult] = await Promise.allSettled([
+    httpGetJson(`/api/v1/stations/${encoded}/current`),
+    httpGetJson(`/api/v1/stations/${encoded}/history?limit=${clampLimit(limit)}`),
+  ]);
+  if (currentResult.status === "rejected") throw currentResult.reason;
+  const current = currentResult.value;
+  const history = historyResult.status === "fulfilled" ? historyResult.value : { items: [] };
+  const byInstant = new Map();
+  for (const row of [...(current.items || []), ...(history.items || [])]) {
+    const instant = row.instant ?? row.at;
+    if (instant && !byInstant.has(instant)) byInstant.set(instant, row);
+  }
+  return {
+    ...current,
+    items: [...byInstant.values()]
+      .sort((left, right) => Date.parse(right.instant ?? right.at) - Date.parse(left.instant ?? left.at))
+      .slice(0, clampLimit(limit)),
+  };
+}
+
+function clampLimit(limit) {
+  const value = Number.parseInt(limit, 10);
+  return Number.isInteger(value) ? Math.min(Math.max(value, 1), 500) : CONFIG.defaultLimit;
 }
 
 export async function fetchEstimationCurrent(estimationId) {

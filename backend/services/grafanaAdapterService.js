@@ -10,6 +10,12 @@ const MAX_POINTS = 20;
 const MAX_BYTES = 2 * 1024 * 1024;
 const TIMEOUT_MS = 10_000;
 const EXTERNAL_ID = /^Meteo-[0-9]{3}-[0-9]{5,8}$/;
+const CANONICAL_SNAPSHOT_FIELDS = Object.freeze([
+  'temp_c', 'sensacio_c', 'punt_rosada_c', 'humitat_pct', 'solar_wm2', 'uvi',
+  'taxa_pluja_mm_h', 'pluja_diaria_mm', 'pluja_event_mm', 'pluja_hora_mm',
+  'pluja_setmana_mm', 'pluja_mes_mm', 'pluja_any_mm', 'vent_ms', 'vent_rafega_ms',
+  'vent_direccio_graus', 'pressio_rel_hpa', 'pressio_abs_hpa', 'bateria_pct',
+]);
 
 function resolveNow(clock) {
   const read = typeof clock === 'function' ? clock : clock?.now?.bind(clock);
@@ -88,7 +94,8 @@ function normalizeGrafanaPayload(payload, { externalId, from, to } = {}) {
       for (let index = 0; index < times.length; index += 1) {
         const timestamp = Number(times[index]);
         if (!Number.isFinite(timestamp)) { warnings.add('INVALID_TIMESTAMP'); continue; }
-        if (timestamp < from || timestamp > to) continue;
+        if (timestamp > to) { warnings.add('FUTURE_TIMESTAMP'); continue; }
+        if (timestamp < from) continue;
         const raw = values[index];
         let value = null; let quality = 'MISSING';
         if (raw !== null && raw !== undefined) {
@@ -113,6 +120,84 @@ function normalizeGrafanaPayload(payload, { externalId, from, to } = {}) {
   return { ok: true, series, warnings: [...warnings].sort() };
 }
 
+function snapshotSeriesIdentityError(payload, externalId) {
+  const frames = payload?.results?.A?.frames;
+  if (!Array.isArray(frames)) return null;
+  for (const frame of frames) {
+    const fields = frame?.schema?.fields;
+    if (!Array.isArray(fields)) continue;
+    let temperatureSeries = 0;
+    for (const field of fields) {
+      if (field?.type !== 'number') continue;
+      const labels = field?.labels && typeof field.labels === 'object' && !Array.isArray(field.labels)
+        ? field.labels : {};
+      const labelledSensor = labels.tag4 || labels.sensor_id || labels.station;
+      if (labelledSensor == null) return 'AMBIGUOUS_SERIES';
+      if (labelledSensor !== externalId) return 'SENSOR_MISMATCH';
+      temperatureSeries += 1;
+    }
+    if (temperatureSeries > 1) return 'AMBIGUOUS_SERIES';
+  }
+  return null;
+}
+
+function normalizeGrafanaSnapshot(payload, options = {}) {
+  const identityError = snapshotSeriesIdentityError(payload, options.externalId);
+  if (identityError) return { ok: false, error: identityError };
+  const normalized = normalizeGrafanaPayload(payload, options);
+  if (!normalized.ok) {
+    if (normalized.error === 'EMPTY_DATA' && normalized.warnings?.includes('FUTURE_TIMESTAMP')) {
+      return { ok: false, error: 'FUTURE_TIMESTAMP', warnings: normalized.warnings };
+    }
+    if (normalized.error === 'EMPTY_DATA' && normalized.warnings?.includes('INVALID_TIMESTAMP')) {
+      return { ok: false, error: 'INVALID_TIMESTAMP', warnings: normalized.warnings };
+    }
+    return normalized;
+  }
+
+  const byTimestamp = new Map();
+  for (const series of normalized.series) {
+    for (const point of series.points) {
+      if (point.quality !== 'VALID') continue;
+      const existing = byTimestamp.get(point.observed_at);
+      if (existing && existing.value !== point.value) {
+        return { ok: false, error: 'AMBIGUOUS_OBSERVATION', warnings: normalized.warnings };
+      }
+      if (!existing || (existing.unit_basis !== 'SOURCE_DECLARED' && series.unit_basis === 'SOURCE_DECLARED')) {
+        byTimestamp.set(point.observed_at, {
+          value: point.value,
+          source_unit: series.source_unit,
+          unit_basis: series.unit_basis,
+        });
+      }
+    }
+  }
+  if (byTimestamp.size === 0) {
+    return { ok: false, error: 'NO_VALID_VALUE', warnings: normalized.warnings };
+  }
+
+  const observedAtText = [...byTimestamp.keys()].sort().at(-1);
+  const selected = byTimestamp.get(observedAtText);
+  const values = Object.fromEntries(CANONICAL_SNAPSHOT_FIELDS.map((field) => [field, null]));
+  values.temp_c = selected.value;
+  const fields = Object.fromEntries(CANONICAL_SNAPSHOT_FIELDS.map((field) => [field, 'MISSING']));
+  fields.temp_c = 'VALID';
+  return {
+    ok: true,
+    observedAt: new Date(observedAtText),
+    values,
+    quality: {
+      fields,
+      warnings: normalized.warnings,
+      units: {
+        temp_c: {
+          canonical: 'celsius', source_unit: selected.source_unit, unit_basis: selected.unit_basis,
+        },
+      },
+    },
+  };
+}
+
 async function readJsonBounded(response) {
   const declared = Number(response.headers?.get?.('content-length'));
   if (Number.isFinite(declared) && declared > MAX_BYTES) throw new Error('RESPONSE_TOO_LARGE');
@@ -131,6 +216,44 @@ async function readJsonBounded(response) {
 function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = false } = {}) {
   if (!pool?.query || typeof fetchImpl !== 'function') throw new TypeError('Grafana adapter dependencies are required');
   const now = resolveNow(clock);
+
+  async function fetchPayload(externalId) {
+    if (!enabled) return { ok: false, error: 'DISABLED' };
+    if (!EXTERNAL_ID.test(externalId || '')) return { ok: false, error: 'INVALID_BINDING' };
+    const endedAt = now();
+    const from = endedAt.getTime() - WINDOW_MS;
+    const body = buildGrafanaQuery(externalId, from, endedAt.getTime());
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetchImpl(GRAFANA_ENDPOINT, {
+        method: 'POST', redirect: 'error', signal: controller.signal,
+        headers: { accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify(body),
+      });
+    } catch (error) {
+      return { ok: false, error: error?.name === 'AbortError' ? 'TIMEOUT' : 'UNAVAILABLE' };
+    } finally { clearTimeout(timeout); }
+    if (!response?.ok) {
+      if ([401, 403].includes(response?.status)) return { ok: false, error: 'AUTH_REQUIRED' };
+      if (response?.status === 429) return { ok: false, error: 'RATE_LIMITED' };
+      return {
+        ok: false,
+        error: Number(response?.status) >= 500 ? 'PROVIDER_UNAVAILABLE' : 'UPSTREAM_REJECTED',
+      };
+    }
+    try {
+      return {
+        ok: true, payload: await readJsonBounded(response),
+        externalId, from, to: endedAt.getTime(), fetchedAt: endedAt,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error.message === 'RESPONSE_TOO_LARGE' ? 'RESPONSE_TOO_LARGE' : 'INVALID_JSON',
+      };
+    }
+  }
 
   async function list() {
     const result = await pool.query(`
@@ -157,30 +280,12 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
         AND b.source_namespace='GRAFANA' AND b.binding_status='VALIDATED' LIMIT 1
     `, [publicId]);
     if (binding.rowCount !== 1 || !EXTERNAL_ID.test(binding.rows[0].external_id)) return { notFound: true };
-    const endedAt = now();
-    const from = endedAt.getTime() - WINDOW_MS;
-    const body = buildGrafanaQuery(binding.rows[0].external_id, from, endedAt.getTime());
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    let response;
-    try {
-      response = await fetchImpl(GRAFANA_ENDPOINT, {
-        method: 'POST', redirect: 'error', signal: controller.signal,
-        headers: { accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify(body),
-      });
-    } catch (error) {
-      return { upstreamError: error?.name === 'AbortError' ? 'TIMEOUT' : 'UNAVAILABLE' };
-    } finally { clearTimeout(timeout); }
-    if (!response?.ok) {
-      if ([401, 403].includes(response?.status)) return { upstreamError: 'AUTH_REQUIRED' };
-      if (response?.status === 429) return { upstreamError: 'RATE_LIMITED' };
-      return { upstreamError: Number(response?.status) >= 500 ? 'PROVIDER_UNAVAILABLE' : 'UPSTREAM_REJECTED' };
+    const fetched = await fetchPayload(binding.rows[0].external_id);
+    if (!fetched.ok) {
+      return { upstreamError: fetched.error === 'INVALID_JSON' ? 'INVALID_RESPONSE' : fetched.error };
     }
-    let payload;
-    try { payload = await readJsonBounded(response); }
-    catch (error) { return { upstreamError: error.message === 'RESPONSE_TOO_LARGE' ? error.message : 'INVALID_RESPONSE' }; }
-    const normalized = normalizeGrafanaPayload(payload, {
-      externalId: binding.rows[0].external_id, from, to: endedAt.getTime(),
+    const normalized = normalizeGrafanaPayload(fetched.payload, {
+      externalId: fetched.externalId, from: fetched.from, to: fetched.to,
     });
     if (!normalized.ok) return { upstreamError: normalized.error, warnings: normalized.warnings || [] };
     return {
@@ -191,16 +296,24 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
           access_scope: 'INTERNAL_ONLY', datasource_uid: DATASOURCE_UID,
           persistence: 'DISABLED', rain_enabled: false,
         },
-        window: { from: new Date(from).toISOString(), to: endedAt.toISOString(), minutes: 15 },
-        fetched_at: endedAt.toISOString(), series: normalized.series, warnings: normalized.warnings,
+        window: { from: new Date(fetched.from).toISOString(), to: fetched.fetchedAt.toISOString(), minutes: 15 },
+        fetched_at: fetched.fetchedAt.toISOString(), series: normalized.series, warnings: normalized.warnings,
       },
     };
   }
 
-  return { list, query };
+  async function fetchSnapshot(binding) {
+    const fetched = await fetchPayload(binding?.external_id);
+    if (!fetched.ok) return fetched;
+    return normalizeGrafanaSnapshot(fetched.payload, {
+      externalId: fetched.externalId, from: fetched.from, to: fetched.to,
+    });
+  }
+
+  return { fetchSnapshot, list, query };
 }
 
 module.exports = {
-  DATASOURCE_UID, GRAFANA_ENDPOINT, MAX_BYTES, TIMEOUT_MS, WINDOW_MS,
-  buildGrafanaQuery, makeGrafanaAdapterService, normalizeGrafanaPayload,
+  CANONICAL_SNAPSHOT_FIELDS, DATASOURCE_UID, GRAFANA_ENDPOINT, MAX_BYTES, TIMEOUT_MS, WINDOW_MS,
+  buildGrafanaQuery, makeGrafanaAdapterService, normalizeGrafanaPayload, normalizeGrafanaSnapshot,
 };

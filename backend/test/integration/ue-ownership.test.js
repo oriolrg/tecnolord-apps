@@ -142,6 +142,13 @@ test('UE-T05 owner, other user, admin and visitor share one fail-closed station 
       assert.equal(JSON.stringify(publicCurrent.body).includes('estacio_id'), false);
       assert.equal((await json(base, `/api/v1/stations/${a1.body.station.id}/current`, { cookie: b.cookie })).response.status, 404);
       assert.equal((await json(base, `/api/v1/stations/${a1.body.station.id}/current`, { cookie: admin.cookie })).response.status, 200);
+      assert.equal((await json(base, `/api/v1/stations/${a1.body.station.id}/history`)).response.status, 404);
+      assert.equal((await json(base, `/api/v1/stations/${a1.body.station.id}/history`, { cookie: b.cookie })).response.status, 404);
+      assert.equal((await json(base, `/api/v1/stations/${a1.body.station.id}/history`, { cookie: a.cookie })).response.status, 200);
+      assert.equal((await json(base, `/api/v1/stations/${a1.body.station.id}/history`, { cookie: admin.cookie })).response.status, 200);
+      const publicHistory = await json(base, `/api/v1/stations/${a2.body.station.id}/history`);
+      assert.equal(publicHistory.response.status, 200);
+      assert.equal(publicHistory.body.items[0].temp_c, 22.5);
 
       const ownerLegacy = await json(base, `/api/v1/mesures/darreres?estacio=${encodeURIComponent(privateRow.codi)}`, { cookie: a.cookie });
       assert.equal(ownerLegacy.response.status, 200);

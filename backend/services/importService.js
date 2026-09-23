@@ -26,7 +26,10 @@ function normalizeInventory(input) {
   for (const raw of input.rows) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const inventoryCode = boundedString(raw.inventory_code, 32);
+    const stationCode = raw.station_code == null || raw.station_code === ''
+      ? null : boundedString(raw.station_code, 64);
     if (!inventoryCode || !/^[A-Z][A-Z0-9_-]{1,31}$/.test(inventoryCode) || codes.has(inventoryCode)) return null;
+    if (stationCode && !/^[A-Z][A-Z0-9_]{1,63}$/.test(stationCode)) return null;
     codes.add(inventoryCode);
     const name = boundedString(raw.name, 200);
     const externalId = raw.external_id == null || raw.external_id === '' ? null : boundedString(raw.external_id, 120);
@@ -41,7 +44,8 @@ function normalizeInventory(input) {
         || (latitude !== null && !Number.isFinite(latitude))
         || (accuracy !== null && (!Number.isSafeInteger(accuracy) || accuracy < 0 || accuracy > 100000))) return null;
     rows.push({
-      inventory_code: inventoryCode, name, description, external_id: externalId,
+      inventory_code: inventoryCode, ...(stationCode ? { station_code: stationCode } : {}),
+      name, description, external_id: externalId,
       mapping_status: raw.mapping_status, longitude, latitude, accuracy_m: accuracy,
       evidence_ref: evidenceRef,
     });
@@ -121,7 +125,7 @@ function makeImportService({ pool, clock } = {}) {
   async function previousMappings(client, namespace) {
     const result = await client.query(`
       SELECT DISTINCT ON (r.inventory_code) r.inventory_code,r.station_id,r.candidate,e.revision,
-        e.nom,e.description,b.external_id,
+        e.codi,e.nom,e.description,b.external_id,
         public.ST_X(l.private_geometry) AS longitude,public.ST_Y(l.private_geometry) AS latitude,
         l.accuracy_m,l.reference_label
       FROM meteo.import_rows r
@@ -167,6 +171,8 @@ function makeImportService({ pool, clock } = {}) {
         if (status === 'VALIDATED' && prior) {
           if (prior.external_id !== row.external_id) {
             status = 'CONFLICT'; issue = 'SOURCE_ID_CHANGED';
+          } else if (row.station_code && prior.codi !== row.station_code) {
+            status = 'CONFLICT'; issue = 'STATION_CODE_CHANGED';
           } else {
             const fields = {
               name: [prior.nom, normalizeStationName(row.name)],
@@ -196,6 +202,11 @@ function makeImportService({ pool, clock } = {}) {
               AND binding_status='VALIDATED' LIMIT 1
           `, [inventory.source_namespace, row.external_id]);
           if (bound.rowCount) { status = 'CONFLICT'; issue = 'EXTERNAL_ID_ALREADY_BOUND'; }
+          if (status === 'VALIDATED' && row.station_code) {
+            const stationCode = await client.query('SELECT 1 FROM meteo.estacions WHERE codi=$1 LIMIT 1',
+              [row.station_code]);
+            if (stationCode.rowCount) { status = 'CONFLICT'; issue = 'STATION_CODE_ALREADY_USED'; }
+          }
           candidate._action = 'CREATE'; candidate._changes = [];
         }
         await client.query(`
@@ -236,11 +247,12 @@ function makeImportService({ pool, clock } = {}) {
         let stationId = row.station_id;
         let appliedRevision = candidate._expected_revision || 0;
         if (candidate._action === 'CREATE') {
+          const stationCode = candidate.station_code
+            || `imp-${batch.source_namespace.toLowerCase()}-${row.inventory_code.toLowerCase()}`;
           const station = await client.query(`
             INSERT INTO meteo.estacions(codi,nom,description,management_kind,lifecycle,visibility)
             VALUES ($1,$2,$3,'ADMIN','ACTIVE','PRIVATE') RETURNING id
-          `, [`imp-${batch.source_namespace.toLowerCase()}-${row.inventory_code.toLowerCase()}`,
-            normalizeStationName(candidate.name), normalizeDescription(candidate.description)]);
+          `, [stationCode, normalizeStationName(candidate.name), normalizeDescription(candidate.description)]);
           stationId = station.rows[0].id;
           await client.query(`
             INSERT INTO meteo.source_bindings(station_id,source_namespace,external_id,binding_status,evidence_ref)

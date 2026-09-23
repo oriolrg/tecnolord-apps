@@ -1,0 +1,17 @@
+{
+  "source_namespace": "GRAFANA",
+  "rows": [
+    {
+      "inventory_code": "GRAFANA_LOCAL_001",
+      "station_code": "GRAFANA_LOCAL_001",
+      "name": "Estació de prova Grafana local",
+      "description": "Identitat tècnica local sense correspondència física ni ubicació verificades.",
+      "external_id": "Meteo-001-3100044",
+      "mapping_status": "VERIFIED",
+      "longitude": null,
+      "latitude": null,
+      "accuracy_m": null,
+      "evidence_ref": "UE-T12-identitat-tecnica-sensor"
+    }
+  ]
+}

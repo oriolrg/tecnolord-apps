@@ -70,6 +70,7 @@ function makeTasksRouter({
   pullPreviAndSave,
   logger,
   snapshotService,
+  historyService,
 }) {
   const router = express.Router();
   const runTask = taskRunner || createTaskRunner({
@@ -115,6 +116,20 @@ function makeTasksRouter({
       return res.status(200).json({ ok: true, ...(await snapshotService.refreshReadyStations()) });
     } catch {
       return res.status(500).json({ ok: false, error: 'snapshot refresh failed' });
+    }
+  });
+
+  router.post(['/tasks/capture-station-history', '/api/tasks/capture-station-history'], checkApiKey, async (_req, res) => {
+    if (!historyService?.captureDue || !historyService?.purgeDue) {
+      return res.status(503).json({ ok: false, error: 'history worker unavailable' });
+    }
+    try {
+      const captures = await historyService.captureDue();
+      const purges = await historyService.purgeDue();
+      const ok = ![...captures, ...purges].some((item) => item.failed === true);
+      return res.status(ok ? 200 : 500).json({ ok, captures, purges });
+    } catch {
+      return res.status(500).json({ ok: false, error: 'history worker failed' });
     }
   });
 

@@ -194,6 +194,7 @@ async function loadMeteo(client, fixture, counts) {
     'bateria_pct', 'extres',
   ];
 
+  let primaryStationId = null;
   for (const station of fixture.estacions) {
     counts['meteo.estacions'] += await insertRow(
       client,
@@ -202,6 +203,7 @@ async function loadMeteo(client, fixture, counts) {
       [station.codi, station.nom, userId]
     );
     const stationId = await selectId(client, 'meteo.estacions', 'codi', station.codi);
+    if (primaryStationId === null) primaryStationId = stationId;
     counts['meteo.membres_estacio'] += await insertRow(
       client,
       'meteo.membres_estacio',
@@ -227,6 +229,23 @@ async function loadMeteo(client, fixture, counts) {
         values.map((value) => value === undefined ? null : value)
       );
     }
+  }
+
+  // The canonical synthetic station remains the public fallback once the
+  // additive user/station catalog exists. Legacy-only migration fixtures do
+  // not yet have these relations and deliberately keep their original state.
+  const catalog = await client.query("SELECT to_regclass('meteo.public_view_config') AS relation");
+  if (primaryStationId !== null && catalog.rows[0].relation === 'meteo.public_view_config') {
+    await client.query(`
+      UPDATE meteo.estacions
+      SET lifecycle='ACTIVE',visibility='PUBLIC'
+      WHERE id=$1 AND management_kind='LEGACY'
+    `, [primaryStationId]);
+    await client.query(`
+      UPDATE meteo.public_view_config
+      SET public_station_id=$1,updated_at=now()
+      WHERE id=1 AND public_station_id IS NULL
+    `, [primaryStationId]);
   }
 }
 

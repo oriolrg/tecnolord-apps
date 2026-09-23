@@ -27,9 +27,10 @@ async function main() {
     await context.route('**/*', async (route) => {
       const url = new URL(route.request().url());
       if (url.origin !== origin) { external.push(url.href); return route.abort(); }
-      if (url.pathname === '/api/v1/auth/me') {
-        if (role !== 'admin') return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthenticated"}' });
+      if (url.pathname === '/api/v1/auth/session') {
+        if (role !== 'admin') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"authenticated":false,"accounts_available":true}' });
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          authenticated: true, accounts_available: true,
           user: { id: '1', name: 'Administradora', email: 'admin@example.invalid', role: 'SUPERADMIN' },
           csrf_token: 'synthetic-csrf',
         }) });

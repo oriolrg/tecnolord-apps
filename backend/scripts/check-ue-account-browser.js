@@ -72,6 +72,9 @@ async function main() {
     await context.route('**/*', (route) => {
       const url = new URL(route.request().url());
       if (url.origin !== origin) { egress.push(route.request().url()); return route.abort(); }
+      if (url.pathname === '/api/v1/auth/session') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '{"authenticated":false,"accounts_available":true}' });
+      }
       if (url.pathname === '/api/v1/me/stations' && route.request().method() === 'GET') {
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: stations }) });
       }

@@ -1,6 +1,6 @@
 # Tasques executables
 
-Estat 2026-09-21: **UE-T01–14 FETES** amb [QA-UE-T01](QA-UE-T01.md), [QA-UE-T02](QA-UE-T02.md), [QA-UE-T03](QA-UE-T03.md), [QA-UE-T04](QA-UE-T04.md), [QA-UE-T05](QA-UE-T05.md), [QA-UE-T06](QA-UE-T06.md), [QA-UE-T07](QA-UE-T07.md), [QA-UE-T08](QA-UE-T08.md), [QA-UE-T09](QA-UE-T09.md), [QA-UE-T10](QA-UE-T10.md), [QA-UE-T11](QA-UE-T11.md), [QA-UE-T12](QA-UE-T12.md), [QA-UE-T13](QA-UE-T13.md) i [QA-UE-T14](QA-UE-T14.md); UE-T15–18 NO INICIADES. La fase completa continua en curs. Contractes: [SPEC](SPEC.md), [PLAN](PLAN.md); bloquejos: [DECISIONS](DECISIONS.md).
+Estat 2026-09-23: **UE-T01–18 FETES** amb [QA-UE-T01](QA-UE-T01.md), [QA-UE-T02](QA-UE-T02.md), [QA-UE-T03](QA-UE-T03.md), [QA-UE-T04](QA-UE-T04.md), [QA-UE-T05](QA-UE-T05.md), [QA-UE-T06](QA-UE-T06.md), [QA-UE-T07](QA-UE-T07.md), [QA-UE-T08](QA-UE-T08.md), [QA-UE-T09](QA-UE-T09.md), [QA-UE-T10](QA-UE-T10.md), [QA-UE-T11](QA-UE-T11.md), [QA-UE-T12](QA-UE-T12.md), [QA-UE-T13](QA-UE-T13.md), [QA-UE-T14](QA-UE-T14.md), [QA-UE-T15](QA-UE-T15.md), [QA-UE-T16](QA-UE-T16.md), [QA-UE-T17](QA-UE-T17.md) i [QA-UE-T18](QA-UE-T18.md). La fase funcional local queda completada; Grafana real, transport de correu, planificació operativa i G06-09 continuen com a requisits previs de publicació. Contractes: [SPEC](SPEC.md), [PLAN](PLAN.md); límits: [DECISIONS](DECISIONS.md).
 
 ## Convencions de proves i finalització
 
@@ -189,7 +189,7 @@ L’ordre és topològic, però una tasca bloquejada no impedeix executar altres
 - **Resultat observable:** Sis estimacions exactes, cap estació real eliminada, referències i hores visibles.
 - **Acceptació:** UE-CA08, UE-CA09; comparar conjunt exacte de sis slugs; preservar IDs reals; «Estimació» a mapa/llista/selector/Meteo; errors/null/stale; mostrar Andorra la Vella com a ubicació de referència.
 - **Proves i execució:** sufix `ue-estimates`; unit/http + integració + E2E, amb les ordres anteriors i els escenaris d’acceptació d’aquesta fitxa.
-- **Finalització:** regla comuna «Fet», amb evidència dels criteris indicats; estat actual NO INICIADA.
+- **Finalització:** FETA el 2026-09-22: sis punts tipats exactes, Open-Meteo via backend, substitució de les estimacions antigues i etiquetatge complet a Meteo i mapa; regressió 252/252, 0 SKIP. [Evidència](QA-UE-T15.md).
 - **Reversió:** Restaurar configuració versionada de punts sense tocar estacions observades; no publicar coordenada provisional.
 
 ## UE-T16 — Verificació integrada i dossier de continuació
@@ -200,7 +200,7 @@ L’ordre és topològic, però una tasca bloquejada no impedeix executar altres
 - **Resultat observable:** Evidència reproduïble de recorreguts complets, regressió i bloquejos restants.
 - **Acceptació:** UE-CA01, UE-CA02, UE-CA03, UE-CA04, UE-CA05, UE-CA06, UE-CA07, UE-CA08, UE-CA09, UE-CA10, UE-CA11; Suite Node, integració obligatòria sense skips, Playwright 375px/desktop/teclat, regressió Cabals/Històrics/Previ, G06-09 manual separat.
 - **Proves i execució:** sufix `ue-regression`; unit/http + integració + E2E, amb les ordres anteriors i els escenaris d’acceptació d’aquesta fitxa.
-- **Finalització:** regla comuna «Fet», amb evidència dels criteris indicats; estat actual NO INICIADA.
+- **Finalització:** FETA el 2026-09-23: regressió Node 252/252 sense skips, gate aïllada 19/19, Playwright 13/13 en escriptori/mòbil/teclat i deu recorreguts especialitzats PASS. G06-09 continua separat i pendent d’auditoria WCAG manual completa; no es declara conformitat WCAG ni preparació de producció. [Evidència](QA-UE-T16.md).
 - **Reversió:** Aturar promoció i mantenir increment segur anterior; no desplegar producció.
 
 ## UE-T17 — Política d’històric administrada per estació
@@ -211,7 +211,7 @@ L’ordre és topològic, però una tasca bloquejada no impedeix executar altres
 - **Resultat observable:** Admin activa estació A a 15 min/30 dies i B a 60 min/90 dies; C sense política conserva només snapshot. Captures i purgues no s’interfereixen.
 - **Acceptació:** UE-CA12, UE-CA10, UE-CA11; període >= cadència de font i dins 5–1440 min, retenció 1–3650 dies; admin únic editor de política; inserció repetida no duplica; aturada de font no inventa històric; purga amb predicate station_id i límit exacte; desactivar no esborra; l’estació MeteoLord legacy conserva la captura anterior fins tenir política explícita, sense purga durant el mode compatible; primera purga de llegat exigeix previsualització i conserva dades durant la migració; propietari/altre usuari/visitant només llegeixen històric si el permís de l’estació ho permet.
 - **Proves i execució:** sufix `ue-history`; unit/http + integració + E2E amb les ordres anteriors. Integració obligatòria sobre dues polítiques, una sense política, timestamps al límit, concurrència, upgrade de mesures legacy i fallada de purga; E2E de configuració admin i d’accés a històrics privats.
-- **Finalització:** regla comuna «Fet», amb evidència de captures, purga per estació i preservació del llegat; estat actual NO INICIADA.
+- **Finalització:** FETA el 2026-09-23: política admin per estació, worker amb leases i aïllament de fallades, captura idempotent, purga transaccional a tall estricte, previsualització legacy, matriu d’accés i UI mòbil verificades; regressió 257/257 sense skips. [Evidència](QA-UE-T17.md).
 - **Reversió:** Pausar scheduler i purga, preservar dades i polítiques; restaurar snapshot sintètic en proves. Cap rollback destructiu automàtic d’històrics reals.
 
 ## UE-T18 — Gate final amb històrics i decisions adoptades
@@ -222,5 +222,5 @@ L’ordre és topològic, però una tasca bloquejada no impedeix executar altres
 - **Resultat observable:** Dossier final que diferencia funcionalitat local verificada, connector Grafana condicional, dret de publicació i controls manuals pendents.
 - **Acceptació:** UE-CA01–UE-CA12; sense skips d’integració, regressió Meteo/Cabals/Històrics/Previ i mapa, alta verificada, matriu d’accés, dues retencions diferents i cap exposició pública de dades no autoritzades.
 - **Proves i execució:** `npm test`, `npx --no-install playwright test` i `bash scripts/meteolord-local.sh gate` amb run configurat; revisió manual d’accessibilitat separada segons G06-09. Registrar ordres, resultats i skips.
-- **Finalització:** regla comuna «Fet», amb QA datada; estat actual NO INICIADA. Cap declaració de producció preparada si falten drets, transport de correu o gate manual.
+- **Finalització:** FETA el 2026-09-23: regressió 257/257 sense skips, gate aïllat 19/19, Playwright 13/13, onze recorreguts especialitzats i traçabilitat UE-R01–12 completa. Grafana real, correu real, scheduler operatiu i G06-09 queden documentats com a requisits previs; no es declara preparació de producció. [Evidència](QA-UE-T18.md).
 - **Reversió:** Mantenir l’últim increment segur local; no promoure ni desplegar fins resoldre les comprovacions pendents.

@@ -34,7 +34,7 @@ async function main() {
       if (url.origin !== origin) { external.push(url.href); return route.abort(); }
       if (url.pathname === '/api/v1/me/map') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ type: 'FeatureCollection', features: [privateFeature] }) });
       if (url.pathname === '/api/v1/admin/map') return route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"forbidden"}' });
-      if (url.pathname === '/api/v1/auth/me') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: { id: '7', email: 'owner@example.invalid', name: 'Propietari', role: 'USER' }, csrf_token: 'c'.repeat(43) }) });
+      if (url.pathname === '/api/v1/auth/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ authenticated: true, accounts_available: true, user: { id: '7', email: 'owner@example.invalid', name: 'Propietari', role: 'USER' }, csrf_token: 'c'.repeat(43) }) });
       if (url.pathname === '/api/v1/me/stations') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [station] }) });
       if (url.pathname === `/api/v1/me/stations/${stationId}/location`) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ revision: 3, location: { mode: 'APPROX_5KM', longitude: 2.1734, latitude: 41.3851, accuracy_m: 5000, published: false, consented: false, policy_version: 'ue-user-grid-v1' } }) });
       return route.continue();

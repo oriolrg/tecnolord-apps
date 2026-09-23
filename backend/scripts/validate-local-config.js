@@ -5,6 +5,8 @@ const REQUIRED_VARIABLES = [
   'METEOLORD_PROVIDER_MODE',
   'METEOLORD_ALLOW_SYNTHETIC',
   'METEOLORD_EXTERNAL_NETWORK',
+  'METEOLORD_GRAFANA_INTERNAL_ENABLED',
+  'METEOLORD_GRAFANA_INTERVAL_SECONDS',
   'DB_HOST',
   'DB_PORT',
   'DB_NAME',
@@ -53,6 +55,16 @@ function validateLocalConfig(environment = process.env) {
   addExactValueError(errors, environment, 'METEOLORD_EXTERNAL_NETWORK', 'deny');
   addExactValueError(errors, environment, 'DB_HOST', 'db');
   addExactValueError(errors, environment, 'DB_PORT', '5432');
+
+  const grafanaEnabled = normalizedValue(environment, 'METEOLORD_GRAFANA_INTERNAL_ENABLED');
+  if (grafanaEnabled && !['true', 'false'].includes(grafanaEnabled)) {
+    errors.push('METEOLORD_GRAFANA_INTERNAL_ENABLED must be true or false');
+  }
+  const grafanaInterval = normalizedValue(environment, 'METEOLORD_GRAFANA_INTERVAL_SECONDS');
+  if (grafanaInterval && (!/^[1-9][0-9]*$/.test(grafanaInterval)
+      || !Number.isSafeInteger(Number(grafanaInterval)))) {
+    errors.push('METEOLORD_GRAFANA_INTERVAL_SECONDS must be a positive integer in seconds');
+  }
 
   for (const name of ['DB_NAME', 'DB_USER']) {
     const value = normalizedValue(environment, name);

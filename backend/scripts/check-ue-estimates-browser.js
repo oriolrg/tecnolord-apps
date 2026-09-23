@@ -4,16 +4,15 @@ const assert = require('node:assert/strict');
 const { chromium } = require('@playwright/test');
 const { createPreviewApp } = require('./serve-map-demo');
 
-const IDS = ['1', '2', '3', '4', '5', '6'].map((tail) => `15000000-0000-4000-8000-00000000000${tail}`);
 const POINTS = [
-  ['andorra', 'Andorra', 'Andorra la Vella', 1.52184, 42.50632],
-  ['berga', 'Berga', 'Berga', 1.84628, 42.10429],
-  ['la-seu-durgell', 'La Seu d’Urgell', 'La Seu d’Urgell', 1.46144, 42.35877],
-  ['manresa', 'Manresa', 'Manresa', 1.82399, 41.72815],
-  ['solsona', 'Solsona', 'Solsona', 1.51706, 41.99389],
-  ['vic', 'Vic', 'Vic', 2.25486, 41.93012],
-].map(([slug, name, reference, longitude, latitude], index) => ({
-  kind: 'ESTIMATION', id: IDS[index], slug, name,
+  ['6', 'andorra', 'Andorra', 'Andorra la Vella', 1.52184, 42.50632],
+  ['3', 'berga', 'Berga', 'Berga', 1.84628, 42.10429],
+  ['5', 'la-seu-durgell', 'La Seu d’Urgell', 'La Seu d’Urgell', 1.46144, 42.35877],
+  ['1', 'manresa', 'Manresa', 'Manresa', 1.82399, 41.72815],
+  ['2', 'solsona', 'Solsona', 'Solsona', 1.51706, 41.99389],
+  ['4', 'vic', 'Vic', 'Vic', 2.25486, 41.93012],
+].map(([tail, slug, name, reference, longitude, latitude]) => ({
+  kind: 'ESTIMATION', id: `15000000-0000-4000-8000-00000000000${tail}`, slug, name,
   reference: { label: reference, longitude, latitude, provenance: 'fixture-browser' },
   source: { provider: 'OPEN_METEO', label: 'Open-Meteo', attribution: 'CC BY 4.0' },
 }));
@@ -45,19 +44,28 @@ async function main() {
   const origin = `http://127.0.0.1:${server.address().port}`;
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: process.env.MAP_CHROME || chromium.executablePath(), headless: true, args: ['--no-sandbox'] });
+    browser = await chromium.launch({ executablePath: process.env.MAP_CHROME || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
     const context = await browser.newContext({ viewport: { width: 375, height: 812 }, serviceWorkers: 'block' });
     const external = []; const errors = [];
     await context.route('**/*', async (route) => {
       const request = route.request(); const url = new URL(request.url());
       if (url.origin !== origin) { external.push(url.href); return route.abort(); }
       const json = (body, headers = {}) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify(body) });
-      if (url.pathname === '/api/v1/auth/me') return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthenticated"}' });
+      if (url.pathname === '/api/v1/auth/session') return json({ authenticated: false, accounts_available: true });
       if (url.pathname === '/api/v1/public-view') return json({ config: { station: null, card_ids: ['wind', 'temperature', 'rain', 'pressure', 'humidity', 'uv'], revision: 0 } });
       if (url.pathname === '/api/v1/stations') return json({ items: [{ id: '11111111-1111-4111-8111-111111111111', name: 'Estació observada', visibility: 'PUBLIC', lifecycle: 'ACTIVE' }] });
       if (url.pathname === '/api/v1/estimations') return json({ items: POINTS });
       if (url.pathname.startsWith('/api/v1/estimations/') && url.pathname.endsWith('/current')) {
         const point = POINTS.find((item) => url.pathname.includes(item.id));
+        if (point.slug === 'berga') return json({
+          estimation: { ...point, observed_at: null, freshness: 'UNAVAILABLE', status: 'ERROR', values: null },
+          items: [], source: { provider: 'OPEN_METEO', status: 'ERROR', freshness: 'UNAVAILABLE',
+            reference_label: point.reference.label, attribution: 'CC BY 4.0' },
+        });
+        if (point.slug === 'vic') {
+          const payload = current(point, 8); payload.estimation.freshness = 'STALE'; payload.source.freshness = 'STALE';
+          return json(payload);
+        }
         return json(current(point));
       }
       if (url.pathname === '/api/v1/mesures/darreres') return json({ ok: true, items: [] });
@@ -81,11 +89,17 @@ async function main() {
     assert.match(await page.locator('#meteo-cards').textContent(), /Temperatura · Estimació/);
     assert.match(await page.locator('#meteo-cards').textContent(), /0/);
     assert.equal(await page.locator('#meteo-default-set').isHidden(), true);
+    await page.locator('#meteo-station').selectOption(`estimation:${POINTS.find((item) => item.slug === 'berga').id}`);
+    await page.waitForFunction(() => document.querySelector('#meteo-err')?.textContent.includes('no hi ha cap estimació'));
+    assert.match(await page.locator('#meteo-summary').textContent(), /Estimació · Berga.*sense dades disponibles/);
+    await page.locator('#meteo-station').selectOption(`estimation:${POINTS.find((item) => item.slug === 'vic').id}`);
+    await page.waitForFunction(() => document.querySelector('#meteo-last')?.textContent.includes('dades antigues'));
     await page.goto(`${origin}/meteo/mapa/`, { waitUntil: 'domcontentloaded' });
     await page.locator('#station-count').getByText('6').waitFor();
     const list = await page.locator('#station-list').textContent();
     assert.match(list, /Estimació/); assert.match(list, /Andorra la Vella/);
     await page.getByRole('button', { name: 'Andorra', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('#dialog-content')?.textContent.includes('No és una observació'));
     assert.match(await page.locator('#dialog-content').textContent(), /Estimació/);
     assert.match(await page.locator('#dialog-content').textContent(), /No és una observació d’estació/);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

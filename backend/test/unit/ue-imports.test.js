@@ -15,6 +15,16 @@ test('UE-T13 canonical inventory is ordered, bounded and stable', () => {
   assert.equal(normalizeInventory({ ...fixture, rows: [...fixture.rows, fixture.rows[0]] }), null);
 });
 
+test('G03 accepts an optional stable station code without changing legacy inventory normalization', () => {
+  const original = normalizeInventory(fixture);
+  assert.equal(Object.hasOwn(original.rows[0], 'station_code'), false);
+  const withCode = structuredClone(fixture);
+  withCode.rows[0].station_code = 'GRAFANA_LOCAL_001';
+  assert.equal(normalizeInventory(withCode).rows[0].station_code, 'GRAFANA_LOCAL_001');
+  withCode.rows[0].station_code = 'invalid-code';
+  assert.equal(normalizeInventory(withCode), null);
+});
+
 test('UE-T13 validation quarantines tests, incomplete mappings and invalid locations', () => {
   const [valid, , incomplete, syntheticTest] = normalizeInventory(fixture).rows;
   assert.deepEqual(validateCandidate('GRAFANA', valid), { status: 'VALIDATED', issue: null });

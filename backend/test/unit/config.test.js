@@ -13,6 +13,8 @@ function validConfig() {
     METEOLORD_PROVIDER_MODE: 'synthetic',
     METEOLORD_ALLOW_SYNTHETIC: 'true',
     METEOLORD_EXTERNAL_NETWORK: 'deny',
+    METEOLORD_GRAFANA_INTERNAL_ENABLED: 'false',
+    METEOLORD_GRAFANA_INTERVAL_SECONDS: '300',
     DB_HOST: 'db',
     DB_PORT: '5432',
     DB_NAME: 'meteolord_local',
@@ -121,6 +123,26 @@ test('rejects external network access', () => {
   config.METEOLORD_EXTERNAL_NETWORK = 'allow';
   assertRejected(config, 'METEOLORD_EXTERNAL_NETWORK');
 });
+
+test('accepts either explicit Grafana activation state without enabling it by default', () => {
+  const config = validConfig();
+  config.METEOLORD_GRAFANA_INTERNAL_ENABLED = 'true';
+  assert.deepEqual(validateLocalConfig(config), { ok: true, errors: [] });
+});
+
+test('rejects an invalid Grafana activation state', () => {
+  const config = validConfig();
+  config.METEOLORD_GRAFANA_INTERNAL_ENABLED = 'TRUE';
+  assertRejected(config, 'METEOLORD_GRAFANA_INTERNAL_ENABLED');
+});
+
+for (const interval of ['0', '-1', '300.5', 'not-a-number']) {
+  test(`rejects invalid Grafana interval ${interval}`, () => {
+    const config = validConfig();
+    config.METEOLORD_GRAFANA_INTERVAL_SECONDS = interval;
+    assertRejected(config, 'METEOLORD_GRAFANA_INTERVAL_SECONDS');
+  });
+}
 
 test('rejects a non-local database port', () => {
   const config = validConfig();

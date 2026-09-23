@@ -31,7 +31,8 @@ async function main() {
     await context.route('**/*', async (route) => {
       const request = route.request(); const url = new URL(request.url());
       if (url.origin !== origin) { external.push(url.href); return route.abort(); }
-      if (url.pathname === '/api/v1/auth/me') return json(route, {
+      if (url.pathname === '/api/v1/auth/session') return json(route, {
+        authenticated: true, accounts_available: true,
         user: {
           id: role === 'admin' ? '1' : '2',
           name: role === 'admin' ? 'Administradora' : 'Usuari',

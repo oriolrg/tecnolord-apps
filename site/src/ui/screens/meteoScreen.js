@@ -116,7 +116,7 @@ async function refreshMeteo(ui, store, publicView) {
   try {
     const stationPayload = estimationId
       ? await fetchEstimationCurrent(estimationId)
-      : stationId ? await fetchStationCurrent(stationId) : null;
+      : stationId ? await fetchStationCurrent(stationId, limit) : null;
     const globalPayload = stationId ? null : await fetchMeteoPayload({ estacio, limit });
     const meteoRows = stationPayload?.items || globalPayload?.items || [];
     if (ui.cards) ui.cards.innerHTML = "";
@@ -127,16 +127,24 @@ async function refreshMeteo(ui, store, publicView) {
     const isEstimation = !!stationPayload?.estimation;
     if (stationPayload?.station && ui.summary) ui.summary.textContent = stationPayload.station.name;
     if (isEstimation && ui.summary) {
-      ui.summary.textContent = `Estimació · ${stationPayload.estimation.name} · referència: ${stationPayload.estimation.reference.label} · Open-Meteo`;
+      const freshness = stationPayload.source?.freshness;
+      const freshnessLabel = freshness === "STALE" ? " · dades antigues"
+        : freshness === "OBSOLETE" ? " · dades obsoletes"
+          : freshness === "UNAVAILABLE" ? " · sense dades disponibles" : "";
+      ui.summary.textContent = `Estimació · ${stationPayload.estimation.name} · referència: ${stationPayload.estimation.reference.label} · Open-Meteo${freshnessLabel}`;
     }
-    if (stationPayload?.source?.error && ui.err) {
-      ui.err.textContent = "La font no respon; es mostra l’última lectura disponible.";
+    if ((stationPayload?.source?.error || stationPayload?.source?.status === "ERROR") && ui.err) {
+      ui.err.textContent = meteoRows.length
+        ? "La font no respon; es mostra l’última lectura disponible."
+        : "La font no respon i ara mateix no hi ha cap estimació disponible.";
     }
 
     if (!meteoRows.length) {
-      if (ui.summary) ui.summary.textContent = globalPayload?.status === "no_public_station"
-        ? "Cap estació pública configurada."
-        : "Meteo: Sense registres.";
+      if (ui.summary && !isEstimation) {
+        ui.summary.textContent = globalPayload?.status === "no_public_station"
+          ? "Cap estació pública configurada."
+          : "Meteo: Sense registres.";
+      }
       if (ui.last) ui.last.textContent = "Sense dades";
       return;
     }

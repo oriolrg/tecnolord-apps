@@ -31,8 +31,9 @@ async function main() {
         external.push(url.href);
         return route.abort();
       }
-      if (url.pathname === '/api/v1/auth/me') {
+      if (url.pathname === '/api/v1/auth/session') {
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          authenticated: true, accounts_available: true,
           user: { id: user, name: `Usuari ${user.toUpperCase()}`, role: 'USER' }, csrf_token: `csrf-${user}`,
         }) });
       }
@@ -65,7 +66,7 @@ async function main() {
           { id: B, name: 'Pública B', lifecycle: 'ACTIVE', visibility: 'PUBLIC', revision: 1 },
         ] }) });
       }
-      const current = url.pathname.match(/^\/api\/v1\/stations\/([^/]+)\/current$/);
+      const current = url.pathname.match(/^\/api\/v1\/stations\/([^/]+)\/(?:current|history)$/);
       if (current) {
         if (current[1] === UNKNOWN) {
           return route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"not_found"}' });

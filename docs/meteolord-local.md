@@ -65,6 +65,13 @@ chmod 600 config/meteolord/local.env
 
 [`config/meteolord/local.env.example`](../config/meteolord/local.env.example) només conté valors sintètics. `local.env` està ignorat per Git i no s'ha de versionar, compartir ni copiar als artefactes.
 
+La configuració local declara també:
+
+- `METEOLORD_GRAFANA_INTERNAL_ENABLED=false`: Grafana continua desactivat per defecte;
+- `METEOLORD_GRAFANA_INTERVAL_SECONDS=300`: cadència de referència per calcular la frescor de Grafana.
+
+La cadència no crea ni activa cap scheduler. El contracte de frescor existent es conserva: una observació és `FRESH` fins a dos intervals, `STALE` fins a vuit i `OBSOLETE` després de vuit. Ecowitt manté el seu interval de 900 segons. G01 només prepara i valida aquesta configuració; no autoritza ni executa connexions a Grafana.
+
 La validació fail-closed es pot executar amb la imatge Node fixada, sense xarxa:
 
 ```bash

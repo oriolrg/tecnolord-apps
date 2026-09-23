@@ -33,6 +33,7 @@ const { makeAdminCatalogRouter } = require('./routes/adminCatalog');
 const { makeImportsRouter } = require('./routes/imports');
 const { makeGrafanaRouter } = require('./routes/grafana');
 const { makeEstimationsRouter } = require('./routes/estimations');
+const { makeStationHistoryRouter } = require('./routes/stationHistory');
 const { makeIdentityService } = require('./services/identityService');
 const { makeStationCatalogService } = require('./services/stationCatalogService');
 const { makeConnectorRegistryService } = require('./services/connectorRegistryService');
@@ -44,7 +45,9 @@ const { makeAdminCatalogService } = require('./services/adminCatalogService');
 const { makeImportService } = require('./services/importService');
 const { makeGrafanaAdapterService } = require('./services/grafanaAdapterService');
 const { makeEstimationService } = require('./services/estimationService');
+const { makeStationHistoryService } = require('./services/stationHistoryService');
 const { makeLocalMailOutbox } = require('./services/localMailOutbox');
+const { resolveSourceCadenceConfig } = require('./services/sourceCadence');
 
 const { makePreviService } = require('./services/previService');
 const { makeAcaService } = require('./services/acaService');
@@ -101,6 +104,7 @@ function createRuntime({
   }
 
   const runtimeLogger = logger || createLogger();
+  const sourceCadence = resolveSourceCadenceConfig(environment);
   const pool = createPool({ environment, pool: injectedPool, logger: runtimeLogger });
   const transport = httpClient === undefined ? globalThis.fetch : httpClient;
   const runtimeClock = clock === undefined ? REAL_CLOCK : clock;
@@ -177,6 +181,7 @@ function createRuntime({
     transport,
     clock: runtimeClock,
     logger: runtimeLogger,
+    sourceCadence,
     previService,
     acaService,
     ecowittService,
@@ -289,13 +294,16 @@ function createApp({
   runtime.imports = imports;
   const grafana = makeGrafanaAdapterService({
     pool: runtime.pool, fetch: runtime.transport, clock: runtime.clock,
-    enabled: environment.METEOLORD_GRAFANA_INTERNAL_ENABLED === 'true',
+    enabled: runtime.sourceCadence.grafanaEnabled,
   });
   runtime.grafana = grafana;
   const estimations = makeEstimationService({
     pool: runtime.pool, fetch: runtime.transport, clock: runtime.clock,
   });
   runtime.estimations = estimations;
+  const historyService = typeof runtime.pool.connect === 'function'
+    ? makeStationHistoryService({ pool: runtime.pool, clock: runtime.clock }) : null;
+  runtime.historyService = historyService;
 
   // ──────────────────────────────────────────────────────────
   // Routers
@@ -311,6 +319,7 @@ function createApp({
   if (imports) app.use(makeImportsRouter({ identityService, imports, mode }));
   app.use(makeGrafanaRouter({ identityService, grafana }));
   app.use(makeEstimationsRouter({ estimations }));
+  if (historyService) app.use(makeStationHistoryRouter({ identityService, historyService, mode }));
   app.use(makeStationsRouter({
     pool: runtime.pool, identityService, stationCatalog, connectorRegistry, snapshotService, stationLocations, mode,
   }));
@@ -328,6 +337,7 @@ function createApp({
     checkApiKey,
     taskRunner: runtime.taskRunner,
     snapshotService,
+    historyService,
   }));
 
   // MAP-A is available only from the local/test composition and consumes the

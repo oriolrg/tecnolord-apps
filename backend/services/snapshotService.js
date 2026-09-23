@@ -1,8 +1,8 @@
 'use strict';
 
 const { fetchEcowittConnector, kmhToMs, numberOrNull } = require('./ecowittService');
+const { freshnessAt } = require('./sourceCadence');
 
-const SOURCE_INTERVAL_MS = 15 * 60 * 1000;
 const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 function resolveNow(clock) {
@@ -13,16 +13,6 @@ function resolveNow(clock) {
     if (Number.isNaN(value.getTime())) throw new TypeError('Snapshot clock returned an invalid instant');
     return value;
   };
-}
-
-function freshnessAt(observedAt, now = new Date()) {
-  const observed = new Date(observedAt);
-  const current = new Date(now);
-  if (Number.isNaN(observed.getTime()) || Number.isNaN(current.getTime())) return 'UNKNOWN';
-  const age = Math.max(0, current.getTime() - observed.getTime());
-  if (age <= 2 * SOURCE_INTERVAL_MS) return 'FRESH';
-  if (age <= 8 * SOURCE_INTERVAL_MS) return 'STALE';
-  return 'OBSOLETE';
 }
 
 const FIELD_RULES = Object.freeze({

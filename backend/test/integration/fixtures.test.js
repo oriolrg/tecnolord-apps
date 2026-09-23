@@ -52,6 +52,12 @@ test('loads every canonical business relation in a migrated empty database', int
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /load complete/);
     assert.deepEqual(await relationCounts(database), EXPECTED_COUNTS);
+    const publicView = await testDb.queryTestDatabase(database, `
+      SELECT e.codi,e.visibility,e.lifecycle
+      FROM meteo.public_view_config c JOIN meteo.estacions e ON e.id=c.public_station_id
+      WHERE c.id=1
+    `);
+    assert.deepEqual(publicView.rows, [{ codi: 'synthetic-meteo-01', visibility: 'PUBLIC', lifecycle: 'ACTIVE' }]);
   });
 });
 

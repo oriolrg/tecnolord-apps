@@ -70,6 +70,13 @@ function makeIdentityRouter({ pool, mode, now = Date.now, mailAdapter, identityS
     return res.json({ user: result.user, csrf_token: result.csrfToken });
   }));
 
+  router.get('/api/v1/auth/session', safe(async (req, res) => {
+    const current = await service.current(readSessionToken(req));
+    return res.json(current
+      ? { authenticated: true, accounts_available: true, user: current.user, csrf_token: current.csrfToken }
+      : { authenticated: false, accounts_available: true });
+  }));
+
   router.get('/api/v1/auth/me', safe(async (req, res) => {
     const current = await service.current(readSessionToken(req));
     return current

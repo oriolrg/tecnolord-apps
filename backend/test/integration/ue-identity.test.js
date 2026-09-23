@@ -73,6 +73,10 @@ test('UE-T03 login, CSRF, recovery and admin bootstrap use only the verified acc
         const accountPage = await fetch(`${base}/meteo/compte/`);
         assert.equal(accountPage.status, 200);
         assert.match(await accountPage.text(), /id="account-login"/);
+        const anonymousSession = await fetch(`${base}/api/v1/auth/session`);
+        assert.equal(anonymousSession.status, 200);
+        assert.equal(anonymousSession.headers.get('cache-control'), 'no-store');
+        assert.deepEqual(await anonymousSession.json(), { authenticated: false, accounts_available: true });
         assert.equal((await post(base, '/api/v1/auth/login', {
           email: adminEmail, password: 'synthetic-admin-passphrase',
         }, { origin: 'https://evil.invalid' })).response.status, 403);
@@ -90,8 +94,12 @@ test('UE-T03 login, CSRF, recovery and admin bootstrap use only the verified acc
         const me = await fetch(`${base}/api/v1/auth/me`, { headers: { cookie } });
         assert.equal(me.status, 200);
         assert.equal((await me.json()).user.id, adminId);
+        const activeSession = await fetch(`${base}/api/v1/auth/session`, { headers: { cookie } });
+        assert.equal(activeSession.status, 200);
+        assert.equal((await activeSession.json()).authenticated, true);
         now += 31 * 60 * 1000;
         assert.equal((await fetch(`${base}/api/v1/auth/me`, { headers: { cookie } })).status, 401);
+        assert.equal((await fetch(`${base}/api/v1/auth/session`, { headers: { cookie } }).then((response) => response.json())).authenticated, false);
         now -= 31 * 60 * 1000;
         assert.equal((await post(base, '/api/v1/auth/logout', {}, { cookie, csrf: 'bad' })).response.status, 403);
 

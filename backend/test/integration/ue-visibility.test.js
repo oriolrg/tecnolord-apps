@@ -125,8 +125,10 @@ test('UE-T08 keeps exact locations private and revokes every public map surface 
       const publicMap = await json(base, '/api/v1/map/stations');
       assert.equal(publicMap.response.status, 200);
       assert.equal(publicMap.response.headers.get('cache-control'), 'no-store, max-age=0');
-      assert.equal(publicMap.body.features.length, 1);
-      const publicFeature = publicMap.body.features[0];
+      const publicStations = publicMap.body.features.filter((feature) => feature.properties.resource_kind !== 'ESTIMATION');
+      assert.equal(publicStations.length, 1);
+      assert.equal(publicMap.body.features.filter((feature) => feature.properties.resource_kind === 'ESTIMATION').length, 6);
+      const publicFeature = publicStations[0];
       assert.equal(publicFeature.properties.public_station_id, stationA.id);
       assert.notDeepEqual(publicFeature.geometry.coordinates, [exactA.longitude, exactA.latitude]);
       const publicText = JSON.stringify(publicMap.body);
@@ -143,7 +145,8 @@ test('UE-T08 keeps exact locations private and revokes every public map surface 
       assert.equal(renamed.response.status, 200);
       stationA.revision = renamed.body.station.revision;
       assert.notEqual((await json(base, '/api/v1/map/catalog-version')).body.catalog_version, versionBeforeName);
-      assert.equal((await json(base, '/api/v1/map/stations')).body.features[0].properties.public_name, 'Pública A');
+      assert.equal((await json(base, '/api/v1/map/stations')).body.features
+        .find((feature) => feature.properties.public_station_id === stationA.id).properties.public_name, 'Pública A');
 
       const ownerMapA = await json(base, '/api/v1/me/map', a);
       const ownerMapB = await json(base, '/api/v1/me/map', b);
@@ -157,15 +160,17 @@ test('UE-T08 keeps exact locations private and revokes every public map surface 
       assert.equal((await json(base, '/api/v1/admin/map', b)).response.status, 403);
 
       const sitemap = await json(base, '/api/v1/map/sitemap');
-      assert.deepEqual(sitemap.body.ids, [stationA.id]);
+      assert.equal(sitemap.body.ids.includes(stationA.id), true);
+      assert.equal(sitemap.body.ids.length, 7);
       assert.equal((await json(base, `/api/v1/map/stations/${stationB.id}`)).response.status, 404);
       const revoked = await putLocation(a, stationA, { ...exactA, mode: 'APPROX_1KM', publish: false, consent: false });
       assert.equal(revoked.response.status, 200);
       const emptyMap = await json(base, '/api/v1/map/stations');
-      assert.equal(emptyMap.body.features.length, 0);
+      assert.equal(emptyMap.body.features.some((feature) => feature.properties.public_station_id === stationA.id), false);
+      assert.equal(emptyMap.body.features.filter((feature) => feature.properties.resource_kind === 'ESTIMATION').length, 6);
       assert.equal((await json(base, `/api/v1/map/stations/${stationA.id}`)).response.status, 404);
-      assert.equal((await json(base, '/api/v1/map/summary')).body.count, 0);
-      assert.equal((await json(base, '/api/v1/map/sitemap')).body.count, 0);
+      assert.equal((await json(base, '/api/v1/map/summary')).body.count, 6);
+      assert.equal((await json(base, '/api/v1/map/sitemap')).body.count, 6);
       const audit = await pool.query("SELECT details FROM meteo.audit_events WHERE resource_kind='STATION' AND resource_id=$1", [stationA.id]);
       assert.ok(audit.rowCount >= 2);
       assert.equal(JSON.stringify(audit.rows).includes(String(exactA.longitude)), false);

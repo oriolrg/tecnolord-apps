@@ -70,6 +70,18 @@ function makeSyntheticPreviewRouter() {
       },
     });
   });
+  router.get('/api/v1/stations/:id/history', (req, res) => {
+    const index = syntheticStations.findIndex((station) => station.id === req.params.id);
+    if (index < 0) return res.status(404).json({ error: 'not_found' });
+    const limit = requestedLimit(req.query, 500);
+    if (limit === null || !queryIsValid(req.query, new Set(['limit']))) {
+      return res.status(400).json({ error: 'invalid_query' });
+    }
+    return res.json({
+      station: syntheticStations[index],
+      items: meteo.estacions[0].observacions.slice(0, limit).map(publicValues),
+    });
+  });
 
   router.get('/api/v1/hidro/darreres', (req, res) => {
     if (!queryIsValid(req.query, new Set(['codi', 'limit', 'period', 'from', 'to', 'mode', 'ensure']))) {

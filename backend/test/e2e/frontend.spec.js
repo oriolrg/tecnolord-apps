@@ -93,7 +93,7 @@ test.afterAll(() => {
 });
 
 async function loadDashboard(page) {
-  const response = await page.goto('/meteo/', { waitUntil: 'networkidle' });
+  const response = await page.goto('/meteo/', { waitUntil: 'domcontentloaded' });
   expect(response?.status()).toBe(200);
   await expect(page.locator('.tl-title')).toHaveText('MeteoLord');
   await expect(page.locator('#screen-meteo .card')).not.toHaveCount(0);
@@ -203,4 +203,26 @@ test('10. charts render into non-empty canvases', async ({ page }) => {
   const forecastChart = page.locator('#chart-previ-temp');
   await expect(forecastChart).toBeVisible();
   expect(await forecastChart.evaluate((canvas) => canvas.__tlChart?.points?.length || 0)).toBe(3);
+});
+
+test('11. Meteo remains usable at 375 px without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await loadDashboard(page);
+  await expect(page.locator('#meteo-station')).toBeVisible();
+  await expect(page.locator('#screen-meteo .card').first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'synthetic-meteo-mobile.png'), fullPage: true });
+});
+
+test('12. primary navigation works from the keyboard', async ({ page }) => {
+  await loadDashboard(page);
+  const cabals = page.getByRole('button', { name: 'Cabals', exact: true });
+  await cabals.focus();
+  await expect(cabals).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#screen-cabals')).toHaveClass(/active/);
+  const historics = page.getByRole('button', { name: 'Històrics', exact: true });
+  await historics.focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('#screen-historics')).toHaveClass(/active/);
 });

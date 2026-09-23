@@ -26,6 +26,7 @@ const importSource = get('#account-import-source');
 const importFile = get('#account-import-file');
 const importJson = get('#account-import-json');
 const importList = get('#account-import-list');
+const historyList = get('#account-history-list');
 let csrfToken = null;
 let resetToken = null;
 let currentUser = null;
@@ -129,6 +130,79 @@ async function grafanaRequest(path = '') {
     credentials: 'same-origin', cache: 'no-store',
   });
   return { response, data: await response.json() };
+}
+
+async function historyRequest(path = '', options = {}) {
+  const response = await fetch(`${CONFIG.apiBase}/v1/admin/station-history-policies${path}`, {
+    credentials: 'same-origin', cache: 'no-store', ...options,
+    headers: {
+      ...(options.body ? { 'content-type': 'application/json' } : {}),
+      ...(options.method && options.method !== 'GET' ? { 'x-csrf-token': csrfToken } : {}),
+      ...options.headers,
+    },
+  });
+  return { response, data: await response.json() };
+}
+
+function renderHistoryPolicies(items) {
+  historyList.replaceChildren();
+  for (const item of items) {
+    const form = document.createElement('form'); form.className = 'account-station-edit account-history-policy';
+    const heading = document.createElement('strong'); heading.textContent = item.station.name;
+    const enabledLabel = document.createElement('label'); const enabled = document.createElement('input');
+    enabled.type = 'checkbox'; enabled.checked = item.policy?.enabled === true;
+    enabledLabel.className = 'account-check'; enabledLabel.append(enabled, document.createTextNode(' Captura històrica activa'));
+    const intervalLabel = document.createElement('label'); const interval = document.createElement('input');
+    interval.type = 'number'; interval.min = String(item.source_interval_minutes); interval.max = '1440'; interval.step = '1';
+    interval.value = String(item.policy?.capture_interval_minutes || Math.max(15, item.source_interval_minutes));
+    intervalLabel.textContent = `Període en minuts (mínim ${item.source_interval_minutes})`; intervalLabel.append(interval);
+    const retentionLabel = document.createElement('label'); const retention = document.createElement('input');
+    retention.type = 'number'; retention.min = '1'; retention.max = '3650'; retention.step = '1';
+    retention.value = String(item.policy?.retention_days || 30); retentionLabel.textContent = 'Retenció en dies'; retentionLabel.append(retention);
+    const note = document.createElement('p');
+    note.textContent = item.legacy_compatible
+      ? 'Mode compatible: l’històric existent es conserva fins que previsualitzis i activis una política.'
+      : item.policy?.last_capture_at ? `Última captura: ${new Date(item.policy.last_capture_at).toLocaleString('ca-ES')}` : 'Encara no hi ha cap captura programada.';
+    const actions = document.createElement('div'); actions.className = 'account-admin-actions';
+    const preview = document.createElement('button'); preview.type = 'button'; preview.textContent = 'Previsualitza la purga';
+    const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Desa la política';
+    preview.addEventListener('click', async () => {
+      preview.disabled = true;
+      try {
+        const { response, data } = await historyRequest(`/${encodeURIComponent(item.station.id)}/preview`, {
+          method: 'POST', body: JSON.stringify({ retention_days: retention.valueAsNumber }),
+        });
+        if (!response.ok) throw new Error('preview');
+        note.textContent = `La purga eliminaria ${data.preview.delete_count} registres anteriors a ${new Date(data.preview.cutoff).toLocaleString('ca-ES')}.`;
+        message('Previsualització calculada; ara pots desar la política.');
+      } catch { message('No s’ha pogut calcular la previsualització.'); }
+      finally { preview.disabled = false; }
+    });
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault(); save.disabled = true;
+      try {
+        const { response, data } = await historyRequest(`/${encodeURIComponent(item.station.id)}`, {
+          method: 'PUT', body: JSON.stringify({ enabled: enabled.checked, capture_interval_minutes: interval.valueAsNumber,
+            retention_days: retention.valueAsNumber, revision: item.policy?.revision || 0 }),
+        });
+        if (!response.ok) {
+          message(data.error === 'legacy_preview_required' ? 'Previsualitza primer l’impacte sobre l’històric legacy.'
+            : data.error === 'revision_conflict' ? 'La política ha canviat; torna-la a carregar.'
+              : 'No s’ha pogut desar la política.'); return;
+        }
+        await loadHistoryPolicies(); message('Política d’històric actualitzada.');
+      } catch { message('No s’ha pogut contactar amb el servidor.'); }
+      finally { save.disabled = false; }
+    });
+    actions.append(preview, save); form.append(heading, enabledLabel, intervalLabel, retentionLabel, note, actions); historyList.append(form);
+  }
+  if (!items.length) historyList.textContent = 'No hi ha estacions configurables.';
+}
+
+async function loadHistoryPolicies() {
+  const { response, data } = await historyRequest();
+  if (!response.ok || !Array.isArray(data.items)) throw new Error('history policies');
+  renderHistoryPolicies(data.items);
 }
 
 function renderGrafanaResult(container, data) {
@@ -862,6 +936,11 @@ get('#account-grafana-refresh').addEventListener('click', () => {
     .catch(() => message('No s’ha pogut actualitzar el catàleg intern de Grafana.'));
 });
 
+get('#account-history-refresh').addEventListener('click', () => {
+  loadHistoryPolicies().then(() => message('Polítiques d’històric actualitzades.'))
+    .catch(() => message('No s’han pogut carregar les polítiques d’històric.'));
+});
+
 async function initialize() {
   const fragment = new URLSearchParams(location.hash.slice(1));
   resetToken = fragment.get('reset');
@@ -889,11 +968,18 @@ async function initialize() {
     return;
   }
   try {
-    const response = await fetch(`${CONFIG.apiBase}/v1/auth/me`, { credentials: 'same-origin', cache: 'no-store' });
+    const response = await fetch(`${CONFIG.apiBase}/v1/auth/session`, { credentials: 'same-origin', cache: 'no-store' });
     if (response.ok) {
       const data = await response.json();
-      showSignedIn(data.user, data.csrf_token);
-      return;
+      if (data.authenticated && data.user) {
+        showSignedIn(data.user, data.csrf_token);
+        return;
+      }
+      if (data.accounts_available === false && CONFIG.environment === 'local') {
+        show(null);
+        message('Aquesta previsualització no gestiona comptes. Obre http://127.0.0.1:8088/meteo/compte/ per iniciar sessió.');
+        return;
+      }
     }
     if (response.status === 404 && CONFIG.environment === 'local') {
       show(null);
