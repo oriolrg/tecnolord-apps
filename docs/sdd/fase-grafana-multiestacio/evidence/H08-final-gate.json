@@ -1,0 +1,232 @@
+{
+  "task": "H08",
+  "created_at": "2026-09-24",
+  "scope": "local final gate only",
+  "status": "PASS",
+  "head": {
+    "commit": "b1c7557bfd345f59688a96e774fd92dd0fa0422c",
+    "oneline": "b1c7557 fix(meteolord): preserve Grafana station identity in empty state"
+  },
+  "baseline": [
+    "STATE.md",
+    "evidence/H06-import-result.json",
+    "evidence/H07-ui-map-validation.json"
+  ],
+  "local_runtime": {
+    "backend": "healthy",
+    "postgresql": "healthy",
+    "postgresql_existing": true,
+    "database_or_volumes_recreated": false,
+    "health_http_status": 200
+  },
+  "tests": {
+    "pass": 302,
+    "fail": 0,
+    "skip": 0,
+    "total": 302,
+    "git_diff_check": "PASS",
+    "javascript_syntax": "PASS",
+    "json_syntax": "PASS"
+  },
+  "catalog": {
+    "grafana_stations": 29,
+    "grafana_bindings": 29,
+    "external_id_duplicate_groups": 0,
+    "station_duplicate_groups": 0,
+    "admin_private": 29,
+    "validated_bindings": 29,
+    "mlw28": {
+      "uuid": "5da7eece-6954-413f-8e22-390fe4144830",
+      "code": "MLW28",
+      "name": "Granja Vaques ca l'Andal"
+    },
+    "literal_external_ids_preserved": [
+      "Meteo-026-",
+      "Meteo-027-",
+      "Meteo-029-"
+    ]
+  },
+  "refresh": {
+    "manual_only": true,
+    "scheduler_used": false,
+    "first_run": {
+      "stations": 30,
+      "updated": 28,
+      "grafana_source_errors": 2,
+      "error": "INVALID_FRAMES"
+    },
+    "repeated_runs": [
+      {
+        "stations": 30,
+        "updated": 10,
+        "without_new_update": 20
+      },
+      {
+        "stations": 30,
+        "updated": 1,
+        "without_new_update": 29
+      }
+    ],
+    "monotony": {
+      "temporal_regressions": 0,
+      "field_losses": 0,
+      "errors_destroying_last_good_value": 0,
+      "duplicate_snapshot_rows": 0
+    }
+  },
+  "snapshots": {
+    "rows": 29,
+    "successful_current": 27,
+    "unavailable_current": 2,
+    "errors": 2,
+    "quality_present": 29,
+    "stored_temperature": 29,
+    "stored_humidity": 29,
+    "unavailable_sources": [
+      {
+        "station": "MLW17 / Cal Samarrà",
+        "error": "INVALID_FRAMES",
+        "last_good_preserved": true
+      },
+      {
+        "station": "MLW26 / Cal Sec",
+        "error": "INVALID_FRAMES",
+        "last_good_preserved": true
+      }
+    ]
+  },
+  "sample_stations": [
+    {
+      "station": "MLW01 / Can Pernals",
+      "temp_c": 24.1,
+      "humidity_pct": 42,
+      "freshness": "FRESH",
+      "result": "PASS"
+    },
+    {
+      "station": "MLW02 / Forat Bòfia",
+      "temp_c": 16.5,
+      "humidity_pct": 52,
+      "freshness": "FRESH",
+      "result": "PASS"
+    },
+    {
+      "station": "MLW28 / Granja Vaques ca l'Andal",
+      "temp_c": 22.2,
+      "humidity_pct": 43,
+      "freshness": "STALE",
+      "result": "PASS"
+    },
+    {
+      "station": "Meteo-026- / Cal Sec",
+      "temp_c": null,
+      "humidity_pct": null,
+      "freshness": "OBSOLETE",
+      "result": "PASS_FAIL_CLOSED"
+    },
+    {
+      "station": "S31-99933",
+      "temp_c": 39.6,
+      "humidity_pct": 20.9,
+      "freshness": "STALE",
+      "result": "PASS"
+    },
+    {
+      "station": "S31-119416",
+      "temp_c": 26.6,
+      "humidity_pct": 43.6,
+      "freshness": "FRESH",
+      "result": "PASS"
+    }
+  ],
+  "api": {
+    "admin_catalog_status": 200,
+    "admin_catalog_grafana": 29,
+    "ordinary_current_api_only": true,
+    "sample_current_status": 200,
+    "sample_quality_present": true,
+    "internal_grafana_metadata_exposed": false
+  },
+  "permissions": {
+    "foreign_user_admin_catalog_status": 403,
+    "foreign_user_private_current_status": 404,
+    "visitor_admin_catalog_status": 401,
+    "visitor_private_current_status": 404,
+    "public_catalog_grafana": 0
+  },
+  "ui": {
+    "real_browser": true,
+    "selector_grafana": 29,
+    "selector_duplicates": 0,
+    "sequence": [
+      "MLW01",
+      "MLW02",
+      "MLW28",
+      "Meteo-026-",
+      "S31-99933",
+      "S31-119416",
+      "Ecowitt",
+      "MLW28"
+    ],
+    "missing_fields_rendered_as_dash": true,
+    "residual_station_data": false,
+    "late_response_rendered": false,
+    "logout": "PASS",
+    "browser_errors": 0
+  },
+  "map": {
+    "high_expected": 10,
+    "admin_grafana_visible": 10,
+    "browser_admin_total_with_estimations": 16,
+    "medium_applied": 0,
+    "low_applied": 0,
+    "unresolved_applied": 0,
+    "public_total_estimations": 6,
+    "public_grafana_leaked": 0
+  },
+  "network": {
+    "direct_grafana_requests": 0,
+    "legacy_grafana_api_requests": 0,
+    "ordinary_current_requests_observed": 11
+  },
+  "canonical_fields": {
+    "grafana_pressure_non_null": 0,
+    "grafana_rain_non_null": 0,
+    "pressure_mapping": "BLOCKED",
+    "rain_mapping": "BLOCKED"
+  },
+  "history_invariants": {
+    "grafana_current_snapshots": 29,
+    "grafana_measures": 0,
+    "grafana_history_policies": 0,
+    "purge_executed": false
+  },
+  "ecowitt_regression": {
+    "result": "PASS",
+    "connector_station": "Cabrera",
+    "refresh": "PASS",
+    "snapshot": "PASS",
+    "api_status": 200,
+    "temp_c": 27.8,
+    "humidity_pct": 42,
+    "freshness": "FRESH",
+    "quality_present": true,
+    "public_ui_station": "Meteo Synthetic 01",
+    "public_ui": "PASS",
+    "existing_history_rows": 5
+  },
+  "security": {
+    "grafana_host_exposed": false,
+    "datasource_uid_exposed": false,
+    "promql_exposed": false,
+    "external_id_exposed": false,
+    "secrets_exposed": false,
+    "upstream_payload_exposed": false
+  },
+  "cleanup": {
+    "temporary_sessions_deleted": true,
+    "temporary_users_deleted": true,
+    "production_accessed": false
+  },
+  "defects": []
+}

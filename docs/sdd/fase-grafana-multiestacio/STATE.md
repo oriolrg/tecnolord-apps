@@ -175,6 +175,22 @@ Evidència:
 - 0 mesures Grafana i 0 polítiques d'històric;
 - suite general: 302 PASS, 0 FAIL, 0 SKIP; regressió Ecowitt, permisos i històric existent PASS.
 
+H08 PASS — gate final Grafana multiestació completada en local.
+
+Evidència:
+- `evidence/H08-final-gate.json`;
+- HEAD `b1c7557`; backend i PostgreSQL existents i saludables, sense recrear BD ni volums;
+- 29 estacions, 29 bindings `VALIDATED`, 0 duplicats, totes `ADMIN / PRIVATE` i UUID de MLW28 preservat;
+- refresh manual repetit: 29 snapshots únics, 0 regressions temporals, 0 pèrdues de camp i últim valor bo preservat davant errors;
+- 27 lectures actuals utilitzables i 2 fonts temporalment no disponibles amb `INVALID_FRAMES`, sense trencar API ni UI;
+- selector i navegador real PASS amb 29 Grafana, canvi ràpid, camps absents `—`, retorn Ecowitt → Grafana i logout net;
+- mapa administratiu amb 10 ubicacions HIGH i 0 filtracions públiques; 0 coordenades MEDIUM, LOW o UNRESOLVED aplicades;
+- 0 peticions directes a Grafana, 0 peticions a `/admin/grafana/...` i 0 metadades internes exposades;
+- pressió i pluja continuen bloquejades i sense valors canònics;
+- 29 snapshots Grafana, 0 mesures Grafana i 0 polítiques d'històric;
+- regressió Ecowitt completa PASS, incloent refresh, snapshot, API, UI, frescor i històric existent;
+- suite completa: 302 PASS, 0 FAIL, 0 SKIP; sintaxi i `git diff --check` PASS.
+
 Ordre:
 
 H01 discovery sensors Grafana
@@ -188,7 +204,7 @@ H08 gate multiestació
 
 ## Següent tasca
 
-H08 — gate multiestació (no iniciada).
+Fase Grafana multiestació completada. Cap fase productiva iniciada.
 
 H05C continua bloquejada per pressió i pluja fins a obtenir contractes de font suficients (no iniciada).
 
