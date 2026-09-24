@@ -161,6 +161,20 @@ Evidència:
 - segona execució idempotent, sense bindings duplicats;
 - suite general: 301 PASS, 0 FAIL, 0 SKIP; regressió Ecowitt PASS.
 
+H07 PASS — integració API/UI/mapa del catàleg Grafana multiestació.
+
+Evidència:
+- `evidence/H07-ui-map-validation.json`;
+- selector SUPERADMIN amb les 29 estacions Grafana, sense duplicats;
+- API ordinària i vista Meteo verificades per MLW01, MLW02, MLW28, MLW26, S31-119416, S31-99933 i Ecowitt;
+- corregida només la pèrdua del nom seleccionat quan una estació no té lectura actual;
+- `S31-119416` validada amb estat buit sanejat, sense targetes antigues, i recuperació posterior de la font observada;
+- canvi ràpid amb resposta retardada PASS, retorn a Ecowitt PASS i logout PASS;
+- mapa administratiu amb exactament 10 ubicacions Grafana HIGH; 0 estacions Grafana al mapa, catàleg o vista pública;
+- 0 peticions directes a Grafana i 0 peticions a `/admin/grafana/...`;
+- 0 mesures Grafana i 0 polítiques d'històric;
+- suite general: 302 PASS, 0 FAIL, 0 SKIP; regressió Ecowitt, permisos i històric existent PASS.
+
 Ordre:
 
 H01 discovery sensors Grafana
@@ -174,7 +188,7 @@ H08 gate multiestació
 
 ## Següent tasca
 
-H07 — API/UI/mapa multiestació (no iniciada).
+H08 — gate multiestació (no iniciada).
 
 H05C continua bloquejada per pressió i pluja fins a obtenir contractes de font suficients (no iniciada).
 

@@ -156,7 +156,7 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
     }
 
     if (!meteoRows.length) {
-      if (ui.summary && !isEstimation) {
+      if (ui.summary && !isEstimation && !stationPayload?.station) {
         ui.summary.textContent = globalPayload?.status === "no_public_station"
           ? "Cap estació pública configurada."
           : "Meteo: Sense registres.";

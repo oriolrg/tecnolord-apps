@@ -1,0 +1,90 @@
+{
+  "task": "H07",
+  "created_at": "2026-09-24",
+  "scope": "local only",
+  "status": "PASS",
+  "baseline": ["STATE.md", "H06-import-plan.json", "H06-import-result.json"],
+  "initial_state_without_changes": {
+    "selector_grafana_visible": 29,
+    "selector_duplicates": 0,
+    "ordinary_current_api": true,
+    "request_invalidation": true,
+    "admin_grafana_locations": 10,
+    "public_grafana_leaks": 0,
+    "direct_grafana_requests": 0,
+    "legacy_grafana_api_requests": 0,
+    "defect": "S31-119416 lost its selected station name when the current snapshot contained no data"
+  },
+  "change": {
+    "files": ["site/src/ui/screens/meteoScreen.js", "backend/test/unit/grafana-meteo-ui.test.js"],
+    "behavior": "Keep the selected station name in the empty-current state while retaining the existing generic error and clearing old cards"
+  },
+  "selector": {
+    "total_options": 38,
+    "grafana_stations_visible": 29,
+    "duplicates": 0,
+    "tested": ["MLW01 / Can Pernals", "MLW02 / Forat Bòfia", "MLW28 / Granja Vaques ca l'Andal", "MLW26 / Cal Sec", "S31-119416", "S31-99933", "Ecowitt / Meteo Synthetic 01"],
+    "foreign_user_access": "DENIED_BY_EXISTING_POLICY",
+    "visitor_access": "DENIED_BY_EXISTING_POLICY"
+  },
+  "current_status_after_manual_refresh": [
+    { "station": "MLW01 / Can Pernals", "temp_c": 22.7, "humidity_pct": 43, "freshness": "STALE", "result": "PASS" },
+    { "station": "MLW02 / Forat Bòfia", "temp_c": 15.6, "humidity_pct": 56, "freshness": "STALE", "result": "PASS" },
+    { "station": "MLW28 / Granja Vaques ca l'Andal", "temp_c": 22.3, "humidity_pct": 45, "freshness": "STALE", "result": "PASS" },
+    { "station": "Meteo-026- / Cal Sec", "temp_c": null, "humidity_pct": null, "freshness": "OBSOLETE", "error": "INVALID_FRAMES", "result": "PASS_FAIL_CLOSED" },
+    { "station": "S31-99933", "temp_c": 40.8, "humidity_pct": 21, "freshness": "STALE", "result": "PASS" },
+    { "station": "S31-119416", "temp_c": 26.5, "humidity_pct": 43.3, "freshness": "STALE", "result": "PASS_SOURCE_RECOVERED" },
+    { "station": "Ecowitt / Meteo Synthetic 01", "temp_c": 18.5, "humidity_pct": 51, "freshness": null, "result": "PASS" }
+  ],
+  "s31_119416_empty_state": {
+    "verified_before_manual_refresh": true,
+    "catalog_entry_retained": true,
+    "selected_name": "S31-119416",
+    "cards_after_selection": 0,
+    "freshness_label": "Frescor desconeguda · Sense dades",
+    "generic_error": "La font no respon i ara mateix no hi ha cap lectura disponible.",
+    "raw_empty_data_shown": false,
+    "previous_station_data_retained": false,
+    "later_source_recovery": "A later manual refresh returned a valid temperature and humidity observation"
+  },
+  "navigation": {
+    "sequence": ["MLW01", "MLW02", "MLW28", "S31-119416", "S31-99933", "Ecowitt"],
+    "rapid_switch_delayed_response": "PASS",
+    "late_response_rendered_under_next_station": false,
+    "logout": "PASS",
+    "browser_errors": 0
+  },
+  "map": {
+    "high_locations_expected": 10,
+    "grafana_admin_visible": 10,
+    "admin_total_with_estimations": 16,
+    "public_total": 6,
+    "public_total_kind": "ESTIMATIONS_ONLY",
+    "public_grafana_leaked": 0,
+    "grafana_public_geometry_count": 0,
+    "medium_low_unresolved_or_s31_coordinates_invented": 0
+  },
+  "network": {
+    "ordinary_current_requests_observed": 10,
+    "direct_grafana_requests": 0,
+    "legacy_admin_grafana_api_requests": 0
+  },
+  "persistence": {
+    "grafana_stations": 29,
+    "grafana_private_locations": 10,
+    "grafana_public_stations": 0,
+    "grafana_measures": 0,
+    "grafana_history_policies": 0
+  },
+  "tests": {
+    "directed": { "pass": 3, "fail": 0, "skip": 0 },
+    "full_suite": { "pass": 302, "fail": 0, "skip": 0 },
+    "ecowitt_regression": "PASS",
+    "permissions": "PASS",
+    "existing_history": "PASS"
+  },
+  "cleanup": {
+    "temporary_superadmin_session_deleted": true,
+    "production_accessed": false
+  }
+}

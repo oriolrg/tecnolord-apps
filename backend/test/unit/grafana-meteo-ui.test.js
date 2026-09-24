@@ -104,3 +104,10 @@ test('G06 screen contains request invalidation, all freshness states and no lega
   assert.match(screen, /freshness === "UNKNOWN"/);
   assert.doesNotMatch(`${screen}\n${account}\n${accountHtml}`, /\/admin\/grafana\//);
 });
+
+test('H07 keeps the selected station name when its current snapshot has no data', () => {
+  const screen = fs.readFileSync(SCREEN_PATH, 'utf8');
+  assert.match(screen, /ui\.summary && !isEstimation && !stationPayload\?\.station/);
+  assert.match(screen, /La font no respon i ara mateix no hi ha cap lectura disponible\./);
+  assert.match(screen, /if \(ui\.cards\) ui\.cards\.replaceChildren\(\)/);
+});
