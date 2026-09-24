@@ -136,6 +136,31 @@ Evidència:
 - prova real PASS per MLW01, MLW02 i MLW28;
 - suite general: 295 PASS, 0 FAIL, 0 SKIP.
 
+H05B PASS — semàntica de pressió i pluja investigada, sense mapping autoritzat.
+
+Evidència:
+- `evidence/H05B-pressure-rain-semantics.json`;
+- les metadades Prometheus declaren ambdues mètriques com `type=unknown` i unitat buida;
+- pressió continua `SEMANTICS_UNRESOLVED`: no es pot distingir pressió absoluta/local de pressió corregida a nivell del mar;
+- pluja continua `SEMANTICS_UNRESOLVED` i `RESET_BEHAVIOR_UNRESOLVED`;
+- MLW28 presenta un descens real del comptador de pluja de 28,4 a 1,5 el 2026-04-20T15:20:00Z;
+- la resta `current - offset 1d` no implementa tractament de resets i no és universalment defensable com a precipitació de 24 h;
+- `pressure: BLOCKED` i `rain: BLOCKED` per a H05C;
+- cap canvi funcional, de BD, schema, snapshot o migració.
+
+H06 PASS — importació i reconciliació del catàleg Grafana local.
+
+Evidència:
+- `evidence/H06-import-plan.json` creat abans de l'aplicació: 26 `CREATE`, 1 `UPDATE_EXISTING`, 2 `CREATE_TECHNICAL`, 0 conflictes;
+- `evidence/H06-import-result.json`: 29 sensors representats com `ADMIN / PRIVATE / GRAFANA / VALIDATED`;
+- MLW28 actualitzada a codi `MLW28` i nom `Granja Vaques ca l'Andal`, conservant UUID, binding 2 i snapshot;
+- external IDs parcials conservats literalment i dos S31 creats sense identitat física ni coordenades inventades;
+- 10 ubicacions HIGH aplicades; 0 MEDIUM, LOW o UNRESOLVED aplicades;
+- refresh manual amb 2 workers: 28 snapshots amb temperatura i humitat; `S31-119416` va respondre `EMPTY_DATA` a la finestra CURRENT de 30 minuts i no es van inventar valors;
+- 0 mesures Grafana, 0 polítiques d'històric, pressió i pluja sense mapping;
+- segona execució idempotent, sense bindings duplicats;
+- suite general: 301 PASS, 0 FAIL, 0 SKIP; regressió Ecowitt PASS.
+
 Ordre:
 
 H01 discovery sensors Grafana
@@ -149,7 +174,9 @@ H08 gate multiestació
 
 ## Següent tasca
 
-H05B (no iniciada)
+H07 — API/UI/mapa multiestació (no iniciada).
+
+H05C continua bloquejada per pressió i pluja fins a obtenir contractes de font suficients (no iniciada).
 
 ## Invariants
 

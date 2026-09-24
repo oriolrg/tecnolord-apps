@@ -1,0 +1,80 @@
+{
+  "task": "H06",
+  "created_at": "2026-09-24",
+  "scope": "local meteolord_local only",
+  "status": "PASS",
+  "baseline": ["H01-grafana-sensors.json", "H02-station-mapping.json", "H03-station-locations.json", "H04-grafana-metrics.json", "H05A-validation.json", "H05B-pressure-rain-semantics.json", "H06-import-plan.json"],
+  "import": {
+    "created": 28,
+    "updated": 1,
+    "technical": 2,
+    "skipped": 0,
+    "conflicts": 0,
+    "catalog_count": 29,
+    "binding_status": "VALIDATED",
+    "second_execution": "ALREADY_PRESENT",
+    "duplicate_bindings": 0
+  },
+  "mlw28": {
+    "external_id": "Meteo-001-3100044",
+    "uuid_before": "5da7eece-6954-413f-8e22-390fe4144830",
+    "uuid_after": "5da7eece-6954-413f-8e22-390fe4144830",
+    "code_before": "GRAFANA_LOCAL_001",
+    "code_after": "MLW28",
+    "binding_id_before": "2",
+    "binding_id_after": "2",
+    "binding_preserved": true,
+    "snapshot_before": true,
+    "snapshot_after": true,
+    "snapshot_preserved": true
+  },
+  "locations": {
+    "high_applied": 10,
+    "medium_applied": 0,
+    "low_applied": 0,
+    "unresolved_applied": 0,
+    "requeried_maps": false
+  },
+  "snapshots": {
+    "manual_refresh": true,
+    "scheduler_used": false,
+    "worker_concurrency": 2,
+    "current_snapshot_rows": 29,
+    "successful": 28,
+    "failed": 1,
+    "temperature_available": 28,
+    "humidity_available": 28,
+    "failure_details": [{ "external_id": "S31-119416", "error": "EMPTY_DATA", "window_minutes": 30 }],
+    "canonical_pressure_values": 0,
+    "canonical_rain_values": 0,
+    "grafana_measures": 0,
+    "grafana_history_policies": 0
+  },
+  "real_proof": [
+    { "station": "MLW01 / Can Pernals", "uuid": "083202ad-b646-469e-9426-e5e3b48c225d", "binding_id": "7", "external_id": "Meteo-002-3100007", "temp_c": 22.2, "humidity_pct": 46, "freshness": "STALE", "latitude": null, "longitude": null },
+    { "station": "MLW02 / Forat Bòfia", "uuid": "e6c9dd81-77d0-41cf-9038-a3a128cda49e", "binding_id": "8", "external_id": "Meteo-013-3300161", "temp_c": 14.9, "humidity_pct": 60, "freshness": "FRESH", "latitude": 42.1647993, "longitude": 1.5338145 },
+    { "station": "MLW28 / Granja Vaques ca l'Andal", "uuid": "5da7eece-6954-413f-8e22-390fe4144830", "binding_id": "2", "external_id": "Meteo-001-3100044", "temp_c": 21.2, "humidity_pct": 44, "freshness": "FRESH", "latitude": null, "longitude": null },
+    { "station": "MLW26 / Cal Sec", "uuid": "039f0f90-ba93-46aa-9746-16cfd5958dbe", "binding_id": "25", "external_id": "Meteo-026-", "external_id_quality": "PARTIAL_SOURCE_IDENTIFIER", "temp_c": 21.5, "humidity_pct": 43, "freshness": "FRESH", "latitude": null, "longitude": null },
+    { "station": "S31-99933", "uuid": "c41e7370-aff9-44e5-9c4a-d780e38e6805", "binding_id": "30", "external_id": "S31-99933", "external_id_quality": "TECHNICAL_SOURCE_IDENTIFIER", "temp_c": 36.8, "humidity_pct": 23.7, "freshness": "FRESH", "latitude": null, "longitude": null }
+  ],
+  "access": {
+    "management_kind": "ADMIN",
+    "visibility": "PRIVATE",
+    "superadmin_catalog_contract": "PASS",
+    "user_visitor_private_access": "DENIED_BY_EXISTING_POLICY",
+    "selector_contract": "PASS",
+    "browser_direct_grafana_requests": false
+  },
+  "tests": {
+    "command": "npm test",
+    "pass": 301,
+    "fail": 0,
+    "skip": 0,
+    "ecowitt_regression": "PASS"
+  },
+  "notes": [
+    "S31-119416 remains representable and VALIDATED from the real H04/H05A baseline; its H06 manual 30-minute CURRENT refresh returned EMPTY_DATA and no value was invented.",
+    "Pressure and rain remain unmapped and H05C remains blocked.",
+    "No schema or migration change was made and production was not accessed."
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "task": "H05B",
+  "status": "PASS",
+  "checked_at": "2026-09-24T09:56:23.671Z",
+  "baseline": [
+    "STATE.md",
+    "evidence/H04-grafana-metrics.json",
+    "evidence/H05A-validation.json"
+  ],
+  "scope": {
+    "research_only": true,
+    "backend_changes": 0,
+    "frontend_changes": 0,
+    "database_changes": 0,
+    "schema_or_migration_changes": 0,
+    "snapshot_changes": 0
+  },
+  "grafana": {
+    "dashboard_uid": "i2cat-public-jul27",
+    "dashboard_version": 46,
+    "dashboard_api": "https://grafana.commonscloud.coop/api/dashboards/uid/i2cat-public-jul27",
+    "datasource_uid": "SWLXFBHvz",
+    "query_endpoint": "https://grafana.commonscloud.coop/api/ds/query",
+    "metadata_endpoint": "https://grafana.commonscloud.coop/api/datasources/proxy/uid/SWLXFBHvz/api/v1/metadata",
+    "datasource_type": "prometheus",
+    "upstream_pipeline": {
+      "metric_help": "InfluxDB Metric",
+      "instance": "influx-exporter.xoic.coop:80",
+      "job": "nodered-dedicats",
+      "tag1": "I2CAT",
+      "tag3": "meteo"
+    },
+    "pipeline_limit": "The public labels identify the exporter and ingestion job but not the device model, source field, unit conversion or reset policy."
+  },
+  "pressure": {
+    "metric": "xoic_I2CAT_pressio",
+    "unit": null,
+    "metadata": {
+      "type": "unknown",
+      "help": "InfluxDB Metric",
+      "unit": ""
+    },
+    "dashboard_configuration": {
+      "direct_dedicated_panel": false,
+      "available_through_generic_history_query": true,
+      "transformations": [],
+      "conversion": null,
+      "declared_unit": null
+    },
+    "observed_range": {
+      "from": "2026-09-10T06:40:48.170Z",
+      "to": "2026-09-24T06:40:48.170Z",
+      "minimum": 788.4,
+      "maximum": 890.4,
+      "stations_with_data": 5,
+      "requested_interval_seconds": 900
+    },
+    "semantics": "The series is pressure-like and varies substantially between stations, but no primary evidence states whether it is absolute/local, relative, or corrected to sea level. Numeric plausibility is auxiliary evidence only.",
+    "pressure_kind": "SEMANTICS_UNRESOLVED",
+    "sea_level_correction": "SEMANTICS_UNRESOLVED",
+    "origin": "Prometheus exposes an InfluxDB-exported metric produced through job nodered-dedicats; the originating device and source field are not identified.",
+    "canonical_field": null,
+    "candidate_fields_not_selected": [
+      "pressio_abs_hpa",
+      "pressio_rel_hpa"
+    ],
+    "status": "SEMANTICS_UNRESOLVED",
+    "h05c": "BLOCKED",
+    "blocking_reasons": [
+      "No unit is declared by the dashboard, returned field or Prometheus metadata.",
+      "No evidence distinguishes local/absolute pressure from sea-level-corrected pressure.",
+      "No documented device model or source-field contract was found.",
+      "The available station/location baseline does not document elevations, and altitude was not inferred from names or coordinates."
+    ]
+  },
+  "rain": {
+    "metric": "xoic_I2CAT_pluja_acumulada",
+    "base_unit": null,
+    "metadata": {
+      "type": "unknown",
+      "help": "InfluxDB Metric",
+      "unit": ""
+    },
+    "dashboard_query": "xoic_I2CAT_pluja_acumulada{tag4=\"$sensor\"} - xoic_I2CAT_pluja_acumulada{tag4=\"$sensor\"} offset 1d",
+    "dashboard_legend": "Pluja Acumulada 24h",
+    "dashboard_transformations": [],
+    "counter_reset_handling": "NONE",
+    "counter_semantics": "Observed as a non-decreasing accumulator between discontinuities. It is not a daily accumulator in the sampled periods, but its start epoch, reset trigger and physical unit are undocumented.",
+    "reset_analysis": {
+      "representative_raw_window": {
+        "from": "2026-06-26T06:40:48.337Z",
+        "to": "2026-09-24T06:40:48.337Z",
+        "days": 90,
+        "interval_seconds": 900,
+        "stations_with_data": 5,
+        "raw_points": 15805,
+        "raw_decreases_detected": 0,
+        "negative_24h_deltas_detected": 0
+      },
+      "annual_aggregate": {
+        "days": 365,
+        "stations": 5,
+        "promql_reset_indicators": [
+          {
+            "external_id": "Meteo-013-3300161",
+            "mlw_code": "MLW02",
+            "resets": 1,
+            "raw_decrease_reproduced": false,
+            "note": "The reset() indicator was repeatable, but the sampled raw values around its first positive evaluation did not contain a visible decrease; this signal remains inconclusive."
+          },
+          {
+            "external_id": "Meteo-001-3100044",
+            "mlw_code": "MLW28",
+            "resets": 1,
+            "raw_decrease_reproduced": true,
+            "timestamp": "2026-04-20T15:20:00.000Z",
+            "before": 28.4,
+            "after": 1.5,
+            "delta": -26.9,
+            "following_observation": {
+              "timestamp": "2026-04-20T16:10:00.000Z",
+              "value": 31.5
+            }
+          }
+        ],
+        "confirmed_raw_resets_detected": 1,
+        "negative_24h_deltas_detected": 0,
+        "behavior": "At least one real decrease/discontinuity exists. The cause and reset policy are unknown. Missing or non-aligned samples mean the dashboard expression did not expose a negative result around the confirmed event."
+      }
+    },
+    "derived_24h_semantics": "The expression is a rolling difference only while the base accumulator remains comparable across both instants. It contains no reset correction and cannot be treated as universally equivalent to precipitation over 24 hours.",
+    "canonical_field": null,
+    "candidate_fields_not_selected": [
+      "taxa_pluja_mm_h",
+      "pluja_diaria_mm",
+      "pluja_event_mm",
+      "pluja_hora_mm",
+      "pluja_setmana_mm",
+      "pluja_mes_mm",
+      "pluja_any_mm"
+    ],
+    "status": "SEMANTICS_UNRESOLVED",
+    "reset_status": "RESET_BEHAVIOR_UNRESOLVED",
+    "h05c": "BLOCKED",
+    "blocking_reasons": [
+      "The base unit is not declared.",
+      "The accumulator epoch and reset trigger are not documented.",
+      "A real counter decrease was observed, while the dashboard query has no reset handling.",
+      "The rolling difference cannot be mapped unequivocally to any existing canonical rain field."
+    ]
+  },
+  "samples": [
+    {
+      "mlw_code": "MLW01",
+      "name": "Can Pernals",
+      "external_id": "Meteo-002-3100007",
+      "pressure_timestamp": "2026-09-24T06:30:00.000Z",
+      "pressure_value": 872,
+      "pressure_unit": null,
+      "rain_timestamp": "2026-09-24T06:30:00.000Z",
+      "rain_counter_value": 752.6,
+      "rain_unit": null
+    },
+    {
+      "mlw_code": "MLW02",
+      "name": "Forat Bòfia",
+      "external_id": "Meteo-013-3300161",
+      "pressure_timestamp": "2026-09-20T04:30:00.000Z",
+      "pressure_value": 797.3,
+      "pressure_unit": null,
+      "rain_timestamp": "2026-09-20T04:30:00.000Z",
+      "rain_counter_value": 301.5,
+      "rain_unit": null
+    },
+    {
+      "mlw_code": "MLW28",
+      "name": "Granja Vaques ca l'Andal",
+      "external_id": "Meteo-001-3100044",
+      "pressure_timestamp": "2026-09-14T03:15:00.000Z",
+      "pressure_value": 867.8,
+      "pressure_unit": null,
+      "rain_timestamp": "2026-09-14T03:15:00.000Z",
+      "rain_counter_value": 563.9,
+      "rain_unit": null
+    },
+    {
+      "mlw_code": "MLW18",
+      "name": "Font d'Estivella",
+      "external_id": "Meteo-010-54000046",
+      "pressure_timestamp": "2026-09-24T06:30:00.000Z",
+      "pressure_value": 806.8,
+      "pressure_unit": null,
+      "rain_timestamp": "2026-09-24T06:30:00.000Z",
+      "rain_counter_value": 514.6,
+      "rain_unit": null
+    },
+    {
+      "mlw_code": "MLW32",
+      "name": "El Jou",
+      "external_id": "Meteo-020-4000245",
+      "pressure_timestamp": "2026-09-18T08:15:00.000Z",
+      "pressure_value": 883.6,
+      "pressure_unit": null,
+      "rain_timestamp": "2026-09-18T08:15:00.000Z",
+      "rain_counter_value": 176.3,
+      "rain_unit": null
+    }
+  ],
+  "additional_station_attempt": {
+    "external_id": "Meteo-004-3100360",
+    "name": "Escola Aiguadora",
+    "result": "NO_DATA_IN_QUERIED_WINDOWS"
+  },
+  "h05c_recommendation": {
+    "pressure": "BLOCKED",
+    "rain": "BLOCKED",
+    "required_new_evidence": [
+      "Producer/source-field documentation declaring pressure unit and correction semantics.",
+      "Producer/source-field documentation declaring rain unit, accumulator epoch and reset policy.",
+      "A reset-safe, source-approved definition for a canonical 24-hour rain value."
+    ]
+  },
+  "notes": [
+    "No full Grafana payloads or secrets are stored.",
+    "No canonical mapping is inferred from metric names or numeric ranges.",
+    "No production, database, backend, frontend, snapshot or migration change was made."
+  ]
+}

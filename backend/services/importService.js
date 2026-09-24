@@ -2,10 +2,13 @@
 
 const crypto = require('node:crypto');
 const { ADMIN_SOURCES } = require('./adminCatalogService');
-const { normalizeDescription, normalizeStationName } = require('./stationCatalogService');
+const { normalizeDescription, normalizeStationName, validPublicId } = require('./stationCatalogService');
 
 const MAX_ROWS = 500;
 const MAPPING_STATES = new Set(['VERIFIED', 'UNVERIFIED', 'UNKNOWN']);
+const EXTERNAL_ID_QUALITIES = new Set([
+  'COMPLETE', 'PARTIAL_SOURCE_IDENTIFIER', 'TECHNICAL_SOURCE_IDENTIFIER',
+]);
 
 function stable(value) {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
@@ -33,12 +36,18 @@ function normalizeInventory(input) {
     codes.add(inventoryCode);
     const name = boundedString(raw.name, 200);
     const externalId = raw.external_id == null || raw.external_id === '' ? null : boundedString(raw.external_id, 120);
+    const externalIdQuality = raw.external_id_quality == null
+      ? 'COMPLETE' : boundedString(raw.external_id_quality, 40);
+    const expectedPublicId = raw.expected_public_id == null || raw.expected_public_id === ''
+      ? null : boundedString(raw.expected_public_id, 36);
     const evidenceRef = boundedString(raw.evidence_ref, 200);
     const description = raw.description == null || raw.description === '' ? null : boundedString(raw.description, 500);
     const longitude = raw.longitude == null ? null : raw.longitude;
     const latitude = raw.latitude == null ? null : raw.latitude;
     const accuracy = raw.accuracy_m == null ? null : raw.accuracy_m;
     if (!name || (raw.external_id != null && raw.external_id !== '' && !externalId)
+        || !EXTERNAL_ID_QUALITIES.has(externalIdQuality)
+        || (expectedPublicId !== null && !validPublicId(expectedPublicId))
         || !evidenceRef || !MAPPING_STATES.has(raw.mapping_status)
         || (longitude !== null && !Number.isFinite(longitude))
         || (latitude !== null && !Number.isFinite(latitude))
@@ -46,6 +55,8 @@ function normalizeInventory(input) {
     rows.push({
       inventory_code: inventoryCode, ...(stationCode ? { station_code: stationCode } : {}),
       name, description, external_id: externalId,
+      ...(raw.external_id_quality == null ? {} : { external_id_quality: externalIdQuality }),
+      ...(expectedPublicId ? { expected_public_id: expectedPublicId } : {}),
       mapping_status: raw.mapping_status, longitude, latitude, accuracy_m: accuracy,
       evidence_ref: evidenceRef,
     });
@@ -54,15 +65,21 @@ function normalizeInventory(input) {
   return { source_namespace: input.source_namespace, rows };
 }
 
-function completeExternalId(namespace, value) {
-  if (namespace === 'GRAFANA') return typeof value === 'string' && /^Meteo-[0-9]{3}-[0-9]{5,8}$/.test(value);
+function completeExternalId(namespace, value, quality = 'COMPLETE') {
+  if (namespace === 'GRAFANA') {
+    if (quality === 'PARTIAL_SOURCE_IDENTIFIER') return typeof value === 'string' && /^Meteo-[0-9]{3}-$/.test(value);
+    if (quality === 'TECHNICAL_SOURCE_IDENTIFIER') return typeof value === 'string' && /^S31-[0-9]{1,8}$/.test(value);
+    return quality === 'COMPLETE' && typeof value === 'string' && /^Meteo-[0-9]{3}-[0-9]{5,8}$/.test(value);
+  }
   return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{2,119}$/.test(value);
 }
 
 function validateCandidate(namespace, row, duplicateIds = new Set()) {
   if (row.inventory_code.startsWith('TEST')) return { status: 'QUARANTINED', issue: 'TEST_STATION' };
   if (row.mapping_status !== 'VERIFIED') return { status: 'QUARANTINED', issue: 'MAPPING_UNVERIFIED' };
-  if (!completeExternalId(namespace, row.external_id)) return { status: 'QUARANTINED', issue: 'INCOMPLETE_EXTERNAL_ID' };
+  if (!completeExternalId(namespace, row.external_id, row.external_id_quality)) {
+    return { status: 'QUARANTINED', issue: 'INCOMPLETE_EXTERNAL_ID' };
+  }
   if (!normalizeStationName(row.name) || normalizeDescription(row.description) === undefined) {
     return { status: 'QUARANTINED', issue: 'INVALID_METADATA' };
   }
@@ -70,7 +87,7 @@ function validateCandidate(namespace, row, duplicateIds = new Set()) {
   const hasLatitude = row.latitude !== null;
   if (hasLongitude !== hasLatitude || (!hasLongitude && row.accuracy_m !== null)
       || hasLongitude && (row.longitude < -180 || row.longitude > 180
-      || row.latitude < -90 || row.latitude > 90 || row.accuracy_m === null)) {
+      || row.latitude < -90 || row.latitude > 90)) {
     return { status: 'QUARANTINED', issue: 'INVALID_LOCATION' };
   }
   if (duplicateIds.has(row.external_id)) return { status: 'CONFLICT', issue: 'DUPLICATE_EXTERNAL_ID' };
@@ -125,7 +142,7 @@ function makeImportService({ pool, clock } = {}) {
   async function previousMappings(client, namespace) {
     const result = await client.query(`
       SELECT DISTINCT ON (r.inventory_code) r.inventory_code,r.station_id,r.candidate,e.revision,
-        e.codi,e.nom,e.description,b.external_id,
+        e.public_id,e.codi,e.nom,e.description,b.external_id,
         public.ST_X(l.private_geometry) AS longitude,public.ST_Y(l.private_geometry) AS latitude,
         l.accuracy_m,l.reference_label
       FROM meteo.import_rows r
@@ -171,10 +188,11 @@ function makeImportService({ pool, clock } = {}) {
         if (status === 'VALIDATED' && prior) {
           if (prior.external_id !== row.external_id) {
             status = 'CONFLICT'; issue = 'SOURCE_ID_CHANGED';
-          } else if (row.station_code && prior.codi !== row.station_code) {
-            status = 'CONFLICT'; issue = 'STATION_CODE_CHANGED';
+          } else if (row.expected_public_id && prior.public_id !== row.expected_public_id) {
+            status = 'CONFLICT'; issue = 'UNEXPECTED_STATION_UUID';
           } else {
             const fields = {
+              ...(row.station_code ? { code: [prior.codi, row.station_code] } : {}),
               name: [prior.nom, normalizeStationName(row.name)],
               description: [prior.description, normalizeDescription(row.description)],
               ...(row.longitude === null ? {} : {
@@ -185,6 +203,15 @@ function makeImportService({ pool, clock } = {}) {
               }),
             };
             const changes = Object.entries(fields).filter(([, [before, after]]) => before !== after).map(([field]) => field);
+            if (changes.includes('code')) {
+              if (!row.expected_public_id) {
+                status = 'CONFLICT'; issue = 'STATION_CODE_CHANGED';
+              } else {
+                const codeOwner = await client.query('SELECT id FROM meteo.estacions WHERE codi=$1 AND id<>$2 LIMIT 1',
+                  [row.station_code, prior.station_id]);
+                if (codeOwner.rowCount) { status = 'CONFLICT'; issue = 'STATION_CODE_ALREADY_USED'; }
+              }
+            }
             if (changes.length) {
               const overrides = await client.query(`
                 SELECT field_key FROM meteo.manual_overrides WHERE station_id=$1 AND field_key=ANY($2::text[])
@@ -197,6 +224,9 @@ function makeImportService({ pool, clock } = {}) {
             candidate._before = Object.fromEntries(Object.entries(fields).map(([field, [before]]) => [field, before]));
           }
         } else if (status === 'VALIDATED') {
+          if (row.expected_public_id) {
+            status = 'CONFLICT'; issue = 'EXPECTED_STATION_MISSING';
+          }
           const bound = await client.query(`
             SELECT 1 FROM meteo.source_bindings WHERE source_namespace=$1 AND external_id=$2
               AND binding_status='VALIDATED' LIMIT 1
@@ -278,8 +308,9 @@ function makeImportService({ pool, clock } = {}) {
             SELECT 1 FROM meteo.manual_overrides WHERE station_id=$1 AND field_key=ANY($2::text[]) LIMIT 1
           `, [stationId, candidate._changes]);
           if (overrides.rowCount) throw new ImportConflict();
-          await client.query('UPDATE meteo.estacions SET nom=$2,description=$3,revision=revision+1 WHERE id=$1',
-            [stationId, normalizeStationName(candidate.name), normalizeDescription(candidate.description)]);
+          await client.query('UPDATE meteo.estacions SET nom=$2,description=$3,codi=COALESCE($4,codi),revision=revision+1 WHERE id=$1',
+            [stationId, normalizeStationName(candidate.name), normalizeDescription(candidate.description),
+              candidate.station_code || candidate._before?.code]);
           if (candidate.longitude !== null) {
             await client.query(`
               UPDATE meteo.station_locations SET
@@ -343,8 +374,8 @@ function makeImportService({ pool, clock } = {}) {
           await client.query('DELETE FROM meteo.estacions WHERE id=$1', [row.station_id]);
         } else if (candidate._action === 'UPDATE') {
           const before = candidate._before || {};
-          await client.query('UPDATE meteo.estacions SET nom=$2,description=$3,revision=revision+1 WHERE id=$1',
-            [row.station_id, before.name, before.description]);
+          await client.query('UPDATE meteo.estacions SET nom=$2,description=$3,codi=COALESCE($4,codi),revision=revision+1 WHERE id=$1',
+            [row.station_id, before.name, before.description, before.code || candidate.station_code]);
           if (Object.hasOwn(before, 'longitude')) {
             await client.query(`
               UPDATE meteo.station_locations SET

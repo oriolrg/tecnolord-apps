@@ -83,6 +83,15 @@ test('H05A builds fixed temperature and humidity queries without client-controll
   assert.equal(buildGrafanaQuery(SENSOR, FROM, TO + 1), null);
 });
 
+test('H06 builds the same bounded queries for literal partial and S31 identifiers', () => {
+  for (const externalId of ['Meteo-026-', 'Meteo-027-', 'Meteo-029-', 'S31-119416', 'S31-99933']) {
+    const body = buildGrafanaQuery(externalId, FROM, TO);
+    assert.equal(body.queries.length, 2);
+    assert.equal(body.queries[0].expr, `xoic_I2CAT_temperatura{tag4="${externalId}"}`);
+    assert.equal(body.queries[1].expr, `xoic_I2CAT_humitat{tag4="${externalId}"}`);
+  }
+});
+
 test('UE-T14 normalizes multiple frames, preserves zero/null and rejects inconsistent lengths', () => {
   const normalized = normalizeGrafanaPayload(fixture, { externalId: SENSOR, from: FROM, to: TO });
   assert.equal(normalized.ok, true);

@@ -9,7 +9,7 @@ const INTERVAL_MS = 5 * 60 * 1000;
 const MAX_POINTS = 20;
 const MAX_BYTES = 2 * 1024 * 1024;
 const TIMEOUT_MS = 10_000;
-const EXTERNAL_ID = /^Meteo-[0-9]{3}-[0-9]{5,8}$/;
+const EXTERNAL_ID = /^(?:Meteo-[0-9]{3}-(?:[0-9]{5,8})?|S31-[0-9]{1,8})$/;
 const CANONICAL_SNAPSHOT_FIELDS = Object.freeze([
   'temp_c', 'sensacio_c', 'punt_rosada_c', 'humitat_pct', 'solar_wm2', 'uvi',
   'taxa_pluja_mm_h', 'pluja_diaria_mm', 'pluja_event_mm', 'pluja_hora_mm',

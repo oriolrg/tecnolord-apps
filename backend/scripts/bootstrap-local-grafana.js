@@ -4,7 +4,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { Pool } = require('pg');
-const { makeImportService } = require('../services/importService');
+const { makeImportService, normalizeInventory } = require('../services/importService');
 
 const INVENTORY_PATH = path.resolve(__dirname, '../../config/meteolord/grafana-local-station.json');
 const EXPECTED = Object.freeze({
@@ -61,6 +61,14 @@ function validateInventory(inventory) {
   return inventory;
 }
 
+function validateGrafanaInventory(inventory) {
+  const normalized = normalizeInventory(inventory);
+  if (!normalized || normalized.source_namespace !== EXPECTED.namespace) {
+    throw new Error('Grafana inventory is invalid');
+  }
+  return inventory;
+}
+
 function batchSummary(result) {
   const batch = result.batch;
   return {
@@ -99,11 +107,26 @@ async function presentStation(pool) {
   return result.rows[0];
 }
 
-async function bootstrapLocalGrafana({ pool, actorId, inventory, apply = false, clock } = {}) {
+async function presentStations(pool, externalIds) {
+  const result = await pool.query(`
+    SELECT e.id,e.public_id,e.codi,e.nom,e.management_kind,e.visibility,
+      b.id AS binding_id,b.source_namespace,b.external_id,b.binding_status
+    FROM meteo.estacions e
+    JOIN meteo.source_bindings b ON b.station_id=e.id
+    WHERE b.source_namespace=$1 AND b.external_id=ANY($2::text[])
+      AND b.binding_status='VALIDATED'
+    ORDER BY b.external_id
+  `, [EXPECTED.namespace, externalIds]);
+  return result.rows;
+}
+
+async function bootstrapLocalGrafana({
+  pool, actorId, inventory, apply = false, clock, allowPartial = false,
+} = {}) {
   if (!pool?.query || typeof pool.connect !== 'function') throw new TypeError('Bootstrap pool is required');
   const numericActorId = Number(actorId);
   if (!Number.isSafeInteger(numericActorId) || numericActorId < 1) throw new TypeError('Bootstrap actor is invalid');
-  validateInventory(inventory);
+  validateGrafanaInventory(inventory);
   if (!await approvedSuperadmin(pool, numericActorId)) {
     return { status: 'FORBIDDEN_ACTOR' };
   }
@@ -112,25 +135,29 @@ async function bootstrapLocalGrafana({ pool, actorId, inventory, apply = false, 
   if (staged.invalid) return { status: 'INVALID_INVENTORY' };
   const dryRun = batchSummary(staged);
   const conflicts = dryRun.rows.filter((row) => row.status === 'CONFLICT');
-  if (conflicts.length) return { status: 'CONFLICT', dry_run: dryRun, conflicts };
+  if (conflicts.length && !allowPartial) return { status: 'CONFLICT', dry_run: dryRun, conflicts };
 
-  const target = dryRun.rows.find((row) => row.inventory_code === EXPECTED.inventoryCode);
-  if (!target) return { status: 'INVALID_INVENTORY', dry_run: dryRun };
-  if (dryRun.batch_status === 'APPLIED' && target.status === 'APPLIED') {
-    return { status: 'ALREADY_PRESENT', dry_run: dryRun, station: await presentStation(pool) };
+  const validRows = dryRun.rows.filter((row) => ['VALIDATED', 'APPLIED'].includes(row.status));
+  if (dryRun.batch_status === 'APPLIED' && validRows.every((row) => row.status === 'APPLIED')) {
+    const stations = await presentStations(pool, inventory.rows.map((row) => row.external_id));
+    return {
+      status: conflicts.length ? 'PARTIAL' : 'ALREADY_PRESENT', dry_run: dryRun, conflicts,
+      ...(inventory.rows.length === 1 ? { station: stations[0] || await presentStation(pool) } : { stations }),
+    };
   }
-  if (target.status !== 'VALIDATED') {
-    return { status: 'CONFLICT', dry_run: dryRun, conflicts: [target] };
+  if (validRows.length === 0) {
+    return { status: 'CONFLICT', dry_run: dryRun, conflicts: conflicts.length ? conflicts : dryRun.rows };
   }
   if (!apply) return { status: 'DRY_RUN', dry_run: dryRun };
 
   const applied = await imports.apply(numericActorId, dryRun.batch_id);
   if (applied.conflict) return { status: 'CONFLICT', dry_run: dryRun, conflicts: [] };
   if (applied.invalid || applied.notFound) throw new Error('Staged Grafana import could not be applied');
+  const stations = await presentStations(pool, inventory.rows.map((row) => row.external_id));
   return {
-    status: applied.idempotent ? 'ALREADY_PRESENT' : 'APPLIED',
-    dry_run: dryRun,
-    station: await presentStation(pool),
+    status: conflicts.length ? 'PARTIAL' : (applied.idempotent ? 'ALREADY_PRESENT' : 'APPLIED'),
+    dry_run: dryRun, conflicts,
+    ...(inventory.rows.length === 1 ? { station: stations[0] || await presentStation(pool) } : { stations }),
   };
 }
 
@@ -161,4 +188,5 @@ module.exports = {
   localDatabaseConfig,
   parseArgs,
   validateInventory,
+  validateGrafanaInventory,
 };

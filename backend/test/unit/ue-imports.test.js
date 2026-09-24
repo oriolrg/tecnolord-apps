@@ -36,6 +36,32 @@ test('UE-T13 validation quarantines tests, incomplete mappings and invalid locat
   assert.equal(completeExternalId('GRAFANA', 'Meteo-901-'), false);
 });
 
+test('H06 accepts explicit partial and technical Grafana identities without inventing suffixes', () => {
+  const [base] = normalizeInventory(fixture).rows;
+  const partial = { ...base, external_id: 'Meteo-026-', external_id_quality: 'PARTIAL_SOURCE_IDENTIFIER' };
+  const technical = { ...base, external_id: 'S31-119416', external_id_quality: 'TECHNICAL_SOURCE_IDENTIFIER' };
+  assert.equal(completeExternalId('GRAFANA', partial.external_id, partial.external_id_quality), true);
+  assert.equal(completeExternalId('GRAFANA', technical.external_id, technical.external_id_quality), true);
+  assert.deepEqual(validateCandidate('GRAFANA', partial), { status: 'VALIDATED', issue: null });
+  assert.deepEqual(validateCandidate('GRAFANA', technical), { status: 'VALIDATED', issue: null });
+  assert.equal(completeExternalId('GRAFANA', 'Meteo-026-', 'COMPLETE'), false);
+  assert.equal(completeExternalId('GRAFANA', 'S31-119416', 'COMPLETE'), false);
+});
+
+test('H06 permits an evidenced coordinate without inventing an accuracy and validates expected UUID', () => {
+  const withLocation = structuredClone(fixture);
+  withLocation.rows[0] = {
+    ...withLocation.rows[0], longitude: 1.5687399, latitude: 42.1926336, accuracy_m: null,
+    expected_public_id: '5da7eece-6954-413f-8e22-390fe4144830',
+  };
+  const normalized = normalizeInventory(withLocation);
+  assert.equal(normalized.rows[0].accuracy_m, null);
+  assert.equal(normalized.rows[0].expected_public_id, '5da7eece-6954-413f-8e22-390fe4144830');
+  assert.deepEqual(validateCandidate('GRAFANA', normalized.rows[0]), { status: 'VALIDATED', issue: null });
+  withLocation.rows[0].expected_public_id = 'not-a-uuid';
+  assert.equal(normalizeInventory(withLocation), null);
+});
+
 test('UE-T13 admin DTO never exposes rollback or revision internals', () => {
   const dto = batchDto({
     id: 7, source_namespace: 'GRAFANA', content_hash: 'a'.repeat(64), batch_status: 'STAGED',
