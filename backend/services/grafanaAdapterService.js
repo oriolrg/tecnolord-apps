@@ -4,7 +4,7 @@ const { validPublicId } = require('./stationCatalogService');
 
 const GRAFANA_ENDPOINT = 'https://grafana.commonscloud.coop/api/ds/query';
 const DATASOURCE_UID = 'SWLXFBHvz';
-const WINDOW_MS = 15 * 60 * 1000;
+const WINDOW_MS = 30 * 60 * 1000;
 const INTERVAL_MS = 5 * 60 * 1000;
 const MAX_POINTS = 20;
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -15,6 +15,18 @@ const CANONICAL_SNAPSHOT_FIELDS = Object.freeze([
   'taxa_pluja_mm_h', 'pluja_diaria_mm', 'pluja_event_mm', 'pluja_hora_mm',
   'pluja_setmana_mm', 'pluja_mes_mm', 'pluja_any_mm', 'vent_ms', 'vent_rafega_ms',
   'vent_direccio_graus', 'pressio_rel_hpa', 'pressio_abs_hpa', 'bateria_pct',
+]);
+const SNAPSHOT_METRICS = Object.freeze([
+  Object.freeze({
+    refId: 'A', canonicalField: 'temp_c', metric: 'xoic_I2CAT_temperatura',
+    name: 'Temperatura', unit: 'celsius', minimum: -80, maximum: 70,
+    sourceUnits: Object.freeze(['celsius', '°C', 'C', 'celcius']),
+  }),
+  Object.freeze({
+    refId: 'B', canonicalField: 'humitat_pct', metric: 'xoic_I2CAT_humitat',
+    name: 'Humitat relativa', unit: 'percent', minimum: 0, maximum: 100,
+    sourceUnits: Object.freeze(['humidity', 'percent', 'percentunit', '%']),
+  }),
 ]);
 
 function resolveNow(clock) {
@@ -31,11 +43,11 @@ function buildGrafanaQuery(externalId, from, to) {
       || to <= from || to - from !== WINDOW_MS) return null;
   return {
     from: String(from), to: String(to),
-    queries: [{
-      refId: 'A', datasource: { type: 'prometheus', uid: DATASOURCE_UID }, datasourceId: 11,
-      editorMode: 'code', expr: `xoic_I2CAT_temperatura{tag4="${externalId}"}`,
+    queries: SNAPSHOT_METRICS.map((metric) => ({
+      refId: metric.refId, datasource: { type: 'prometheus', uid: DATASOURCE_UID }, datasourceId: 11,
+      editorMode: 'code', expr: `${metric.metric}{tag4="${externalId}"}`,
       instant: false, range: true, intervalMs: INTERVAL_MS, maxDataPoints: MAX_POINTS,
-    }],
+    })),
   };
 }
 
@@ -44,18 +56,18 @@ function safeName(value, fallback) {
     && !/[\u0000-\u001f\u007f]/.test(value) ? value : fallback;
 }
 
-function sourceUnit(field) {
+function sourceUnit(field, metric) {
   const value = field?.config?.unit;
   if (value == null || value === '') return { unit: null, basis: 'QUERY_CONTRACT' };
-  if (['celsius', '°C', 'C', 'celcius'].includes(value)) return { unit: value, basis: 'SOURCE_DECLARED' };
+  if (metric.sourceUnits.includes(value)) return { unit: value, basis: 'SOURCE_DECLARED' };
   return null;
 }
 
-function normalizeGrafanaPayload(payload, { externalId, from, to } = {}) {
+function normalizeGrafanaMetric(payload, { externalId, from, to } = {}, metric = SNAPSHOT_METRICS[0]) {
   if (!EXTERNAL_ID.test(externalId || '') || !Number.isFinite(from) || !Number.isFinite(to)) {
     return { ok: false, error: 'INVALID_REQUEST' };
   }
-  const result = payload?.results?.A;
+  const result = payload?.results?.[metric.refId];
   if (!result || result.error || (result.status != null && Number(result.status) >= 400)) {
     return { ok: false, error: 'QUERY_ERROR' };
   }
@@ -87,7 +99,7 @@ function normalizeGrafanaPayload(payload, { externalId, from, to } = {}) {
       if (labelledSensor != null && labelledSensor !== externalId) {
         mismatchedSensor = true; warnings.add('SENSOR_MISMATCH'); continue;
       }
-      const unit = sourceUnit(field);
+      const unit = sourceUnit(field, metric);
       if (!unit) { warnings.add('UNSUPPORTED_UNIT'); continue; }
       if (!unit.unit) warnings.add('SOURCE_UNIT_UNDECLARED');
       const points = [];
@@ -100,7 +112,7 @@ function normalizeGrafanaPayload(payload, { externalId, from, to } = {}) {
         let value = null; let quality = 'MISSING';
         if (raw !== null && raw !== undefined) {
           if (typeof raw !== 'number' || !Number.isFinite(raw)) quality = 'INVALID';
-          else if (raw < -80 || raw > 70) quality = 'OUT_OF_RANGE';
+          else if (raw < metric.minimum || raw > metric.maximum) quality = 'OUT_OF_RANGE';
           else { value = raw; quality = 'VALID'; }
         }
         points.push({ observed_at: new Date(timestamp).toISOString(), value, quality });
@@ -108,8 +120,9 @@ function normalizeGrafanaPayload(payload, { externalId, from, to } = {}) {
       points.sort((left, right) => left.observed_at.localeCompare(right.observed_at));
       series.push({
         id: `frame-${frameIndex + 1}-series-${valueIndex + 1}`,
-        name: safeName(field?.name, 'Temperatura'), sensor_id: externalId,
-        unit: 'celsius', source_unit: unit.unit, unit_basis: unit.basis, points,
+        name: safeName(field?.name, metric.name), sensor_id: externalId,
+        canonical_field: metric.canonicalField,
+        unit: metric.unit, source_unit: unit.unit, unit_basis: unit.basis, points,
       });
     }
   }
@@ -120,8 +133,12 @@ function normalizeGrafanaPayload(payload, { externalId, from, to } = {}) {
   return { ok: true, series, warnings: [...warnings].sort() };
 }
 
-function snapshotSeriesIdentityError(payload, externalId) {
-  const frames = payload?.results?.A?.frames;
+function normalizeGrafanaPayload(payload, options = {}) {
+  return normalizeGrafanaMetric(payload, options, SNAPSHOT_METRICS[0]);
+}
+
+function snapshotSeriesIdentityError(payload, externalId, metric = SNAPSHOT_METRICS[0]) {
+  const frames = payload?.results?.[metric.refId]?.frames;
   if (!Array.isArray(frames)) return null;
   for (const frame of frames) {
     const fields = frame?.schema?.fields;
@@ -142,58 +159,87 @@ function snapshotSeriesIdentityError(payload, externalId) {
 }
 
 function normalizeGrafanaSnapshot(payload, options = {}) {
-  const identityError = snapshotSeriesIdentityError(payload, options.externalId);
-  if (identityError) return { ok: false, error: identityError };
-  const normalized = normalizeGrafanaPayload(payload, options);
-  if (!normalized.ok) {
-    if (normalized.error === 'EMPTY_DATA' && normalized.warnings?.includes('FUTURE_TIMESTAMP')) {
-      return { ok: false, error: 'FUTURE_TIMESTAMP', warnings: normalized.warnings };
-    }
-    if (normalized.error === 'EMPTY_DATA' && normalized.warnings?.includes('INVALID_TIMESTAMP')) {
-      return { ok: false, error: 'INVALID_TIMESTAMP', warnings: normalized.warnings };
-    }
-    return normalized;
-  }
-
-  const byTimestamp = new Map();
-  for (const series of normalized.series) {
-    for (const point of series.points) {
-      if (point.quality !== 'VALID') continue;
-      const existing = byTimestamp.get(point.observed_at);
-      if (existing && existing.value !== point.value) {
-        return { ok: false, error: 'AMBIGUOUS_OBSERVATION', warnings: normalized.warnings };
-      }
-      if (!existing || (existing.unit_basis !== 'SOURCE_DECLARED' && series.unit_basis === 'SOURCE_DECLARED')) {
-        byTimestamp.set(point.observed_at, {
-          value: point.value,
-          source_unit: series.source_unit,
-          unit_basis: series.unit_basis,
-        });
-      }
-    }
-  }
-  if (byTimestamp.size === 0) {
-    return { ok: false, error: 'NO_VALID_VALUE', warnings: normalized.warnings };
-  }
-
-  const observedAtText = [...byTimestamp.keys()].sort().at(-1);
-  const selected = byTimestamp.get(observedAtText);
   const values = Object.fromEntries(CANONICAL_SNAPSHOT_FIELDS.map((field) => [field, null]));
-  values.temp_c = selected.value;
   const fields = Object.fromEntries(CANONICAL_SNAPSHOT_FIELDS.map((field) => [field, 'MISSING']));
-  fields.temp_c = 'VALID';
+  const observedAtByField = {};
+  const units = {};
+  const warnings = new Set();
+  const errors = [];
+
+  for (const metric of SNAPSHOT_METRICS) {
+    const identityError = snapshotSeriesIdentityError(payload, options.externalId, metric);
+    if (identityError) {
+      fields[metric.canonicalField] = 'INVALID';
+      errors.push(identityError);
+      continue;
+    }
+    const normalized = normalizeGrafanaMetric(payload, options, metric);
+    for (const warning of normalized.warnings || []) warnings.add(warning);
+    if (!normalized.ok) {
+      let error = normalized.error;
+      if (error === 'EMPTY_DATA' && normalized.warnings?.includes('FUTURE_TIMESTAMP')) error = 'FUTURE_TIMESTAMP';
+      if (error === 'EMPTY_DATA' && normalized.warnings?.includes('INVALID_TIMESTAMP')) error = 'INVALID_TIMESTAMP';
+      errors.push(error);
+      fields[metric.canonicalField] = ['EMPTY_DATA', 'QUERY_ERROR'].includes(error) ? 'MISSING' : 'INVALID';
+      continue;
+    }
+
+    const byTimestamp = new Map();
+    let latestRejectedQuality = 'MISSING';
+    for (const series of normalized.series) {
+      for (const point of series.points) {
+        if (point.quality !== 'VALID') {
+          latestRejectedQuality = point.quality;
+          continue;
+        }
+        const existing = byTimestamp.get(point.observed_at);
+        if (existing && existing.value !== point.value) {
+          errors.push('AMBIGUOUS_OBSERVATION');
+          fields[metric.canonicalField] = 'INVALID';
+          byTimestamp.clear();
+          break;
+        }
+        if (!existing || (existing.unit_basis !== 'SOURCE_DECLARED' && series.unit_basis === 'SOURCE_DECLARED')) {
+          byTimestamp.set(point.observed_at, {
+            value: point.value,
+            source_unit: series.source_unit,
+            unit_basis: series.unit_basis,
+          });
+        }
+      }
+      if (fields[metric.canonicalField] === 'INVALID') break;
+    }
+    if (byTimestamp.size === 0) {
+      if (fields[metric.canonicalField] !== 'INVALID') fields[metric.canonicalField] = latestRejectedQuality;
+      errors.push('NO_VALID_VALUE');
+      continue;
+    }
+    const observedAtText = [...byTimestamp.keys()].sort().at(-1);
+    const selected = byTimestamp.get(observedAtText);
+    values[metric.canonicalField] = selected.value;
+    fields[metric.canonicalField] = 'VALID';
+    observedAtByField[metric.canonicalField] = observedAtText;
+    units[metric.canonicalField] = {
+      canonical: metric.unit, source_unit: selected.source_unit, unit_basis: selected.unit_basis,
+    };
+  }
+
+  const validTimestamps = Object.values(observedAtByField).sort();
+  if (validTimestamps.length === 0) {
+    const error = errors.find((item) => !['QUERY_ERROR', 'EMPTY_DATA', 'NO_VALID_VALUE'].includes(item))
+      || (errors.includes('NO_VALID_VALUE') ? 'NO_VALID_VALUE' : errors[0] || 'QUERY_ERROR');
+    return { ok: false, error, ...(warnings.size ? { warnings: [...warnings].sort() } : {}) };
+  }
+
   return {
     ok: true,
-    observedAt: new Date(observedAtText),
+    observedAt: new Date(validTimestamps.at(-1)),
     values,
     quality: {
       fields,
-      warnings: normalized.warnings,
-      units: {
-        temp_c: {
-          canonical: 'celsius', source_unit: selected.source_unit, unit_basis: selected.unit_basis,
-        },
-      },
+      observed_at_by_field: observedAtByField,
+      warnings: [...warnings].sort(),
+      units,
     },
   };
 }
@@ -265,7 +311,10 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
     `);
     return result.rows.map((row) => ({
       id: row.public_id, name: row.nom, external_id: row.external_id,
-      access_scope: 'INTERNAL_ONLY', fields: [{ id: 'temperature', unit: 'celsius' }],
+      access_scope: 'INTERNAL_ONLY', fields: [
+        { id: 'temperature', unit: 'celsius' },
+        { id: 'humidity', unit: 'percent' },
+      ],
       rain_enabled: false,
     }));
   }
@@ -296,7 +345,11 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
           access_scope: 'INTERNAL_ONLY', datasource_uid: DATASOURCE_UID,
           persistence: 'DISABLED', rain_enabled: false,
         },
-        window: { from: new Date(fetched.from).toISOString(), to: fetched.fetchedAt.toISOString(), minutes: 15 },
+        window: {
+          from: new Date(fetched.from).toISOString(),
+          to: fetched.fetchedAt.toISOString(),
+          minutes: WINDOW_MS / 60_000,
+        },
         fetched_at: fetched.fetchedAt.toISOString(), series: normalized.series, warnings: normalized.warnings,
       },
     };
@@ -314,6 +367,6 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
 }
 
 module.exports = {
-  CANONICAL_SNAPSHOT_FIELDS, DATASOURCE_UID, GRAFANA_ENDPOINT, MAX_BYTES, TIMEOUT_MS, WINDOW_MS,
+  CANONICAL_SNAPSHOT_FIELDS, DATASOURCE_UID, GRAFANA_ENDPOINT, MAX_BYTES, SNAPSHOT_METRICS, TIMEOUT_MS, WINDOW_MS,
   buildGrafanaQuery, makeGrafanaAdapterService, normalizeGrafanaPayload, normalizeGrafanaSnapshot,
 };

@@ -1,0 +1,94 @@
+{
+  "task": "H05A",
+  "status": "PASS",
+  "checked_at": "2026-09-24T06:05:29.624Z",
+  "scope": {
+    "canonical_fields": {
+      "xoic_I2CAT_temperatura": "temp_c",
+      "xoic_I2CAT_humitat": "humitat_pct"
+    },
+    "excluded_metrics": [
+      "xoic_I2CAT_pressio",
+      "xoic_I2CAT_pluja_acumulada"
+    ],
+    "database_migrations": 0,
+    "grafana_history_enabled": false
+  },
+  "cadence": {
+    "sample": "all 29 CURRENT sensors from H04",
+    "window_hours": 24,
+    "requested_query_interval_seconds": 300,
+    "modal_interval_distribution": {
+      "600": 2,
+      "900": 25,
+      "1200": 2
+    },
+    "interval_600_sensors": [
+      "Meteo-005-5310489",
+      "Meteo-016-4000258"
+    ],
+    "interval_1200_sensors": [
+      "S31-119416",
+      "S31-99933"
+    ],
+    "decision": "900 confirmed",
+    "configuration_override_preserved": true,
+    "scheduler_created": false
+  },
+  "snapshot_contract": {
+    "field_timestamps_path": "quality.observed_at_by_field",
+    "global_observed_at": "maximum timestamp among valid canonical fields",
+    "persistence": "one meteo.current_snapshots row per binding with monotonic merge per field",
+    "partial_success": true
+  },
+  "real_adapter_proof": [
+    {
+      "code": "MLW01",
+      "name": "Can Pernals",
+      "external_id": "Meteo-002-3100007",
+      "temp_c": 12.7,
+      "temp_at": "2026-09-24T06:00:00.000Z",
+      "humitat_pct": 66,
+      "humidity_at": "2026-09-24T06:00:00.000Z",
+      "observed_at": "2026-09-24T06:00:00.000Z",
+      "freshness": "FRESH",
+      "temp_quality": "VALID",
+      "humidity_quality": "VALID"
+    },
+    {
+      "code": "MLW02",
+      "name": "Forat Bofia",
+      "external_id": "Meteo-013-3300161",
+      "temp_c": 11.7,
+      "temp_at": "2026-09-24T06:05:00.000Z",
+      "humitat_pct": 71,
+      "humidity_at": "2026-09-24T06:05:00.000Z",
+      "observed_at": "2026-09-24T06:05:00.000Z",
+      "freshness": "FRESH",
+      "temp_quality": "VALID",
+      "humidity_quality": "VALID"
+    },
+    {
+      "code": "MLW28",
+      "name": "Granja Vaques ca l'Andal",
+      "external_id": "Meteo-001-3100044",
+      "temp_c": 13.2,
+      "temp_at": "2026-09-24T05:55:00.000Z",
+      "humitat_pct": 62,
+      "humidity_at": "2026-09-24T05:55:00.000Z",
+      "observed_at": "2026-09-24T05:55:00.000Z",
+      "freshness": "FRESH",
+      "temp_quality": "VALID",
+      "humidity_quality": "VALID"
+    }
+  ],
+  "tests": {
+    "general_suite": {
+      "pass": 295,
+      "fail": 0,
+      "skip": 0,
+      "total": 295
+    },
+    "git_diff_check": "PASS"
+  }
+}

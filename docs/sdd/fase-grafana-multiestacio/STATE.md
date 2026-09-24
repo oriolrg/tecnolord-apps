@@ -111,6 +111,31 @@ Evidència:
 - 10 `CANDIDATE_APPLY`, 3 `REVIEW` i 14 `DO_NOT_APPLY`;
 - cap coordenada aplicada a BD i cap external_id parcial completat.
 
+H04 PASS — discovery de mètriques Grafana.
+
+Evidència:
+- `evidence/H04-grafana-metrics.json`;
+- dashboard Vall de Lord versió 46 inspeccionat;
+- temperatura i humitat disponibles als 29 sensors `CURRENT`;
+- pressió i pluja disponibles en 27 sensors i absents als dos S31;
+- temperatura confirmada com `xoic_I2CAT_temperatura` → `temp_c`;
+- humitat relativa confirmada com `xoic_I2CAT_humitat` → `humitat_pct`;
+- pressió `xoic_I2CAT_pressio` sense unitat ni tipus demostrats: `SEMANTICS_UNRESOLVED`;
+- pluja calculada com diferència mòbil de l'acumulador a 24 h, sense unitat ni tractament de reset demostrats: `SEMANTICS_UNRESOLVED`;
+- cadència modal observada de 900 s, amb timestamps coincidents a les mostres MLW01, MLW02 i MLW28 però completitud independent per variable;
+- cap mapping nou aplicat i cap canvi de BD, backend o frontend.
+
+H05A PASS — snapshot Grafana multivariable confirmat.
+
+Evidència:
+- `evidence/H05A-validation.json`;
+- `xoic_I2CAT_temperatura` → `temp_c` i `xoic_I2CAT_humitat` → `humitat_pct`, sense mapar pressió ni pluja;
+- timestamps individuals a `quality.observed_at_by_field` i `observed_at` global derivat del màxim camp vàlid;
+- persistència monotònica per camp en un únic `current_snapshots`, sense files a `meteo.mesures`;
+- cadència Grafana de 900 s confirmada sobre els 29 sensors actuals, amb override conservat i cap scheduler;
+- prova real PASS per MLW01, MLW02 i MLW28;
+- suite general: 295 PASS, 0 FAIL, 0 SKIP.
+
 Ordre:
 
 H01 discovery sensors Grafana
@@ -124,7 +149,7 @@ H08 gate multiestació
 
 ## Següent tasca
 
-H04
+H05B (no iniciada)
 
 ## Invariants
 

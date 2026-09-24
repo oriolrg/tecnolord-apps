@@ -71,17 +71,21 @@ test('G05 exposes a private Grafana snapshot only through ordinary authorized AP
         binding_id,observed_at,received_at,fetched_at,values_json,quality_json,provider_error
       ) VALUES ($1,$2,$3,$3,$4,$5,'AUTH_REQUIRED')
     `, [main.bindingId, OBSERVED_AT, '2026-09-23T12:08:00.000Z', JSON.stringify({
-      temp_c: 21.9, humitat_pct: null, datasource: 'SWLXFBHvz', upstream_payload: { secret: true },
+      temp_c: 21.9, humitat_pct: 64, datasource: 'SWLXFBHvz', upstream_payload: { secret: true },
     }), JSON.stringify({
-      freshness: 'FRESH', fields: { temp_c: 'VALID', humitat_pct: 'MISSING', datasource: 'VALID' },
+      freshness: 'FRESH', fields: { temp_c: 'VALID', humitat_pct: 'VALID', datasource: 'VALID' },
+      observed_at_by_field: { temp_c: OBSERVED_AT, humitat_pct: '2026-09-23T11:55:00.000Z' },
       warnings: ['SOURCE_UNIT_UNDECLARED', 'datasource'],
-      units: { temp_c: { canonical: 'celsius', source_unit: null, unit_basis: 'QUERY_CONTRACT', datasource_id: 11 } },
+      units: {
+        temp_c: { canonical: 'celsius', source_unit: null, unit_basis: 'QUERY_CONTRACT', datasource_id: 11 },
+        humitat_pct: { canonical: 'percent', source_unit: 'percent', unit_basis: 'QUERY_CONTRACT' },
+      },
     })]);
 
     const app = createApp({
       environment: {
         METEOLORD_ENV: 'test', METEOLORD_GRAFANA_INTERNAL_ENABLED: 'true',
-        METEOLORD_GRAFANA_INTERVAL_SECONDS: '300',
+        METEOLORD_GRAFANA_INTERVAL_SECONDS: '900',
       },
       pool, clock: () => new Date('2026-09-23T12:09:00.000Z'),
       httpClient: async () => { throw new Error('No provider request expected in G05'); },
@@ -113,12 +117,17 @@ test('G05 exposes a private Grafana snapshot only through ordinary authorized AP
       const current = await request(base, `/api/v1/stations/${main.public_id}/current`, adminCookie);
       assert.equal(current.response.status, 200);
       assert.equal(current.body.items[0].temp_c, 21.9);
-      assert.equal(current.body.items[0].humitat_pct, null);
+      assert.equal(current.body.items[0].humitat_pct, 64);
       assert.equal(current.body.items[0].instant, OBSERVED_AT);
       assert.equal(current.body.source.observed_at, OBSERVED_AT);
       assert.equal(current.body.source.freshness, 'FRESH');
       assert.equal(current.body.source.error, 'AUTH_REQUIRED');
       assert.equal(current.body.source.quality.fields.temp_c, 'VALID');
+      assert.equal(current.body.source.quality.fields.humitat_pct, 'VALID');
+      assert.deepEqual(current.body.source.quality.observed_at_by_field, {
+        temp_c: OBSERVED_AT,
+        humitat_pct: '2026-09-23T11:55:00.000Z',
+      });
 
       const serialized = JSON.stringify(current.body).toLowerCase();
       for (const forbidden of ['grafana.commonscloud.coop', 'swlxfbhvz', 'datasource', 'promql',

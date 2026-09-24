@@ -11,16 +11,39 @@ const testDb = enabled ? require('../helpers/testDb') : null;
 const runId = process.env.UE_RUN_ID || '20260923-000000-0000000';
 const migrationDir = path.resolve(__dirname, '../../db/migrations');
 const BASE = new Date('2026-09-23T12:00:00.000Z');
-const intervals = { ECOWITT: 900, GRAFANA: 300 };
+const intervals = { ECOWITT: 900, GRAFANA: 900 };
 const connectorRegistry = { credentialsForStation: async () => null };
 const unusedFetch = async () => { throw new Error('Ecowitt must not be queried'); };
 
 function successfulSnapshot(observedAt, temp = 18.5) {
+  const timestamp = new Date(observedAt).toISOString();
   return {
     ok: true,
     observedAt: new Date(observedAt),
     values: { temp_c: temp, humitat_pct: null },
-    quality: { fields: { temp_c: 'VALID', humitat_pct: 'MISSING' } },
+    quality: {
+      fields: { temp_c: 'VALID', humitat_pct: 'MISSING' },
+      observed_at_by_field: { temp_c: timestamp },
+    },
+  };
+}
+
+function multivariableSnapshot({ temp, tempAt, humidity, humidityAt }) {
+  const timestamps = [tempAt, humidityAt].filter(Boolean).map((value) => new Date(value).toISOString()).sort();
+  return {
+    ok: true,
+    observedAt: new Date(timestamps.at(-1)),
+    values: { temp_c: temp ?? null, humitat_pct: humidity ?? null },
+    quality: {
+      fields: {
+        temp_c: temp == null ? 'MISSING' : 'VALID',
+        humitat_pct: humidity == null ? 'MISSING' : 'VALID',
+      },
+      observed_at_by_field: {
+        ...(temp == null ? {} : { temp_c: new Date(tempAt).toISOString() }),
+        ...(humidity == null ? {} : { humitat_pct: new Date(humidityAt).toISOString() }),
+      },
+    },
   };
 }
 
@@ -158,6 +181,55 @@ test('G04 persists Grafana snapshots monotonically and preserves Ecowitt isolati
       assert.deepEqual(await first.refreshStation(ambiguous.stationId), {
         skipped: true, reason: 'ambiguous_binding',
       });
+
+      const fields = await adminStation(pool, 'field-monotonic');
+      const at1530 = new Date(BASE.getTime() + 30 * 60_000);
+      const at1515 = new Date(BASE.getTime() + 15 * 60_000);
+      const at1545 = new Date(BASE.getTime() + 45 * 60_000);
+      const at1600 = new Date(BASE.getTime() + 60 * 60_000);
+      const initialFields = service(pool, {
+        clock: () => new Date(BASE.getTime() + 70 * 60_000),
+        grafana: { fetchSnapshot: async () => multivariableSnapshot({
+          temp: 15, tempAt: at1530, humidity: 60, humidityAt: at1530,
+        }) },
+      });
+      assert.equal((await initialFields.refreshStation(fields.stationId)).updated, true);
+      const newerTempOlderHumidity = service(pool, {
+        clock: () => new Date(BASE.getTime() + 71 * 60_000),
+        grafana: { fetchSnapshot: async () => multivariableSnapshot({
+          temp: 16, tempAt: at1545, humidity: 50, humidityAt: at1515,
+        }) },
+      });
+      assert.equal((await newerTempOlderHumidity.refreshStation(fields.stationId)).updated, true);
+      let fieldRow = (await pool.query(`
+        SELECT observed_at,values_json,quality_json FROM meteo.current_snapshots WHERE binding_id=$1
+      `, [fields.bindingId])).rows[0];
+      assert.equal(fieldRow.values_json.temp_c, 16);
+      assert.equal(fieldRow.values_json.humitat_pct, 60);
+      assert.equal(fieldRow.quality_json.observed_at_by_field.temp_c, at1545.toISOString());
+      assert.equal(fieldRow.quality_json.observed_at_by_field.humitat_pct, at1530.toISOString());
+
+      const newerHumidityOlderTemp = service(pool, {
+        clock: () => new Date(BASE.getTime() + 72 * 60_000),
+        grafana: { fetchSnapshot: async () => multivariableSnapshot({
+          temp: 14, tempAt: at1515, humidity: 70, humidityAt: at1600,
+        }) },
+      });
+      assert.equal((await newerHumidityOlderTemp.refreshStation(fields.stationId)).updated, true);
+      fieldRow = (await pool.query(`
+        SELECT observed_at,values_json,quality_json FROM meteo.current_snapshots WHERE binding_id=$1
+      `, [fields.bindingId])).rows[0];
+      assert.equal(new Date(fieldRow.observed_at).toISOString(), at1600.toISOString());
+      assert.equal(fieldRow.values_json.temp_c, 16);
+      assert.equal(fieldRow.values_json.humitat_pct, 70);
+      assert.equal(fieldRow.quality_json.observed_at_by_field.temp_c, at1545.toISOString());
+      assert.equal(fieldRow.quality_json.observed_at_by_field.humitat_pct, at1600.toISOString());
+      assert.equal(Number((await pool.query(`
+        SELECT count(*) FROM meteo.current_snapshots WHERE binding_id=$1
+      `, [fields.bindingId])).rows[0].count), 1);
+      assert.equal(Number((await pool.query(`
+        SELECT count(*) FROM meteo.mesures WHERE estacio_id=$1
+      `, [fields.stationId])).rows[0].count), 0);
 
       const counts = await pool.query(`
         SELECT

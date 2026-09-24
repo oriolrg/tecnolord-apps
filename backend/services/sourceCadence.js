@@ -2,7 +2,7 @@
 
 const DEFAULT_SOURCE_INTERVAL_SECONDS = Object.freeze({
   ECOWITT: 15 * 60,
-  GRAFANA: 5 * 60,
+  GRAFANA: 15 * 60,
 });
 
 const FRESH_INTERVALS = 2;

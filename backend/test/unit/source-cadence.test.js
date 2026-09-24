@@ -10,11 +10,11 @@ const {
 
 const NOW = new Date('2026-09-23T12:00:00.000Z');
 
-test('G01 keeps Ecowitt at fifteen minutes and Grafana at five minutes by default', () => {
-  assert.deepEqual(DEFAULT_SOURCE_INTERVAL_SECONDS, { ECOWITT: 900, GRAFANA: 300 });
+test('H05A keeps Ecowitt and the confirmed Grafana default at fifteen minutes', () => {
+  assert.deepEqual(DEFAULT_SOURCE_INTERVAL_SECONDS, { ECOWITT: 900, GRAFANA: 900 });
   assert.deepEqual(resolveSourceCadenceConfig({}), {
     grafanaEnabled: false,
-    intervals: { ECOWITT: 900, GRAFANA: 300 },
+    intervals: { ECOWITT: 900, GRAFANA: 900 },
   });
 });
 
@@ -45,4 +45,11 @@ test('G01 preserves the existing exact two/eight interval freshness contract', (
   assert.equal(freshnessAt(new Date(NOW - 8 * 300_000), NOW, 300), 'STALE');
   assert.equal(freshnessAt(new Date(NOW - 8 * 300_000 - 1), NOW, 300), 'OBSOLETE');
   assert.equal(freshnessAt('invalid', NOW, 300), 'UNKNOWN');
+});
+
+test('H05A applies the existing freshness contract to the confirmed Grafana cadence', () => {
+  assert.equal(freshnessAt(new Date(NOW - 2 * 900_000), NOW, 900), 'FRESH');
+  assert.equal(freshnessAt(new Date(NOW - 2 * 900_000 - 1), NOW, 900), 'STALE');
+  assert.equal(freshnessAt(new Date(NOW - 8 * 900_000), NOW, 900), 'STALE');
+  assert.equal(freshnessAt(new Date(NOW - 8 * 900_000 - 1), NOW, 900), 'OBSOLETE');
 });

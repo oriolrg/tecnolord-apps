@@ -44,14 +44,22 @@ function sanitizedQuality(value) {
   if (Array.isArray(value.warnings)) {
     result.warnings = [...new Set(value.warnings.filter((warning) => QUALITY_WARNINGS.has(warning)))].sort();
   }
+  if (value.observed_at_by_field && typeof value.observed_at_by_field === 'object'
+      && !Array.isArray(value.observed_at_by_field)) {
+    result.observed_at_by_field = Object.fromEntries(MEASUREMENT_FIELD_NAMES
+      .map((field) => [field, sanitizedTimestamp(value.observed_at_by_field[field])])
+      .filter(([, timestamp]) => timestamp !== null));
+  }
   if (value.units && typeof value.units === 'object' && !Array.isArray(value.units)) {
     const units = {};
     for (const field of MEASUREMENT_FIELD_NAMES) {
       const unit = value.units[field];
       if (!unit || typeof unit !== 'object' || Array.isArray(unit)) continue;
-      const canonical = unit.canonical === 'celsius' ? 'celsius' : undefined;
-      const sourceUnit = ['celsius', '°C', 'C', 'celcius'].includes(unit.source_unit)
-        ? unit.source_unit : null;
+      const canonical = ['celsius', 'percent'].includes(unit.canonical) ? unit.canonical : undefined;
+      const allowedSourceUnits = canonical === 'percent'
+        ? ['humidity', 'percent', 'percentunit', '%']
+        : ['celsius', '°C', 'C', 'celcius'];
+      const sourceUnit = allowedSourceUnits.includes(unit.source_unit) ? unit.source_unit : null;
       const basis = ['SOURCE_DECLARED', 'QUERY_CONTRACT'].includes(unit.unit_basis)
         ? unit.unit_basis : undefined;
       if (canonical && basis) units[field] = { canonical, source_unit: sourceUnit, unit_basis: basis };

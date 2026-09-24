@@ -85,6 +85,71 @@ function publicError(reason) {
   return 'PROVIDER_ERROR';
 }
 
+function validInstant(value) {
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? null : instant.toISOString();
+}
+
+function mergeGrafanaSnapshot(existing, normalized) {
+  const existingValues = existing?.values_json && typeof existing.values_json === 'object'
+    ? existing.values_json : {};
+  const existingQuality = existing?.quality_json && typeof existing.quality_json === 'object'
+    ? existing.quality_json : {};
+  const incomingQuality = normalized?.quality && typeof normalized.quality === 'object'
+    ? normalized.quality : {};
+  const existingTimes = existingQuality.observed_at_by_field || {};
+  const incomingTimes = incomingQuality.observed_at_by_field || {};
+  const values = {};
+  const fields = {};
+  const observedAtByField = {};
+  const units = {};
+
+  for (const name of Object.keys(FIELD_RULES)) {
+    const oldValue = existingValues[name];
+    const newValue = normalized?.values?.[name];
+    const oldValid = typeof oldValue === 'number' && Number.isFinite(oldValue);
+    const newValid = incomingQuality.fields?.[name] === 'VALID'
+      && typeof newValue === 'number' && Number.isFinite(newValue);
+    const oldTime = validInstant(existingTimes[name]) || (oldValid ? validInstant(existing?.observed_at) : null);
+    const newTime = validInstant(incomingTimes[name]) || (newValid ? validInstant(normalized?.observedAt) : null);
+    const useNew = newValid && (!oldValid || !oldTime || (newTime && newTime > oldTime));
+
+    if (useNew) {
+      values[name] = newValue;
+      fields[name] = 'VALID';
+      if (newTime) observedAtByField[name] = newTime;
+      if (incomingQuality.units?.[name]) units[name] = incomingQuality.units[name];
+    } else if (oldValid) {
+      values[name] = oldValue;
+      fields[name] = 'VALID';
+      if (oldTime) observedAtByField[name] = oldTime;
+      if (existingQuality.units?.[name]) units[name] = existingQuality.units[name];
+    } else {
+      values[name] = null;
+      fields[name] = incomingQuality.fields?.[name] || existingQuality.fields?.[name] || 'MISSING';
+    }
+  }
+
+  const timestamps = Object.values(observedAtByField).sort();
+  if (timestamps.length === 0) return { ok: false, error: 'NO_VALID_VALUE' };
+  const observedAt = new Date(timestamps.at(-1));
+  const quality = {
+    fields,
+    observed_at_by_field: observedAtByField,
+    warnings: Array.isArray(incomingQuality.warnings) ? incomingQuality.warnings : [],
+    units,
+  };
+  const previousObservedAt = validInstant(existing?.observed_at);
+  const fieldNames = Object.keys(FIELD_RULES);
+  const valuesChanged = fieldNames.some((name) => existingValues[name] !== values[name]);
+  const timestampsChanged = fieldNames.some((name) => (
+    validInstant(existingTimes[name]) !== validInstant(observedAtByField[name])
+  ));
+  const changed = !existing || previousObservedAt !== observedAt.toISOString()
+    || valuesChanged || timestampsChanged;
+  return { ok: true, observedAt, values, quality, changed };
+}
+
 function makeSnapshotService({
   pool, connectorRegistry, grafana, fetch: fetchImpl, clock,
   sourceIntervals = {}, grafanaEnabled = false,
@@ -111,6 +176,36 @@ function makeSnapshotService({
   }
 
   async function storeSuccess(binding, stationId, normalized, fetchedAt) {
+    if (binding.source_namespace === 'GRAFANA') {
+      const current = await pool.query(`
+        SELECT observed_at,values_json,quality_json
+        FROM meteo.current_snapshots WHERE binding_id=$1
+      `, [binding.id]);
+      const merged = mergeGrafanaSnapshot(current.rows[0] || null, normalized);
+      if (!merged.ok || !merged.changed) return false;
+      const quality = {
+        ...merged.quality,
+        freshness: freshnessAt(merged.observedAt, fetchedAt, intervalFor(binding.source_namespace)),
+      };
+      const stored = await pool.query(`
+        INSERT INTO meteo.current_snapshots(
+          binding_id,observed_at,received_at,fetched_at,values_json,quality_json,provider_error
+        ) VALUES ($1,$2,$3,$3,$4,$5,NULL)
+        ON CONFLICT (binding_id) DO UPDATE SET
+          observed_at=EXCLUDED.observed_at,received_at=EXCLUDED.received_at,
+          fetched_at=EXCLUDED.fetched_at,values_json=EXCLUDED.values_json,
+          quality_json=EXCLUDED.quality_json,provider_error=NULL
+        RETURNING binding_id
+      `, [binding.id, merged.observedAt, fetchedAt,
+        JSON.stringify(merged.values), JSON.stringify(quality)]);
+      if (stored.rowCount === 1) {
+        await pool.query(`
+          UPDATE meteo.estacions SET lifecycle='ACTIVE',revision=revision+1
+          WHERE id=$1 AND lifecycle='DRAFT'
+        `, [stationId]);
+      }
+      return stored.rowCount === 1;
+    }
     const quality = {
       ...(normalized.quality || {}),
       freshness: freshnessAt(normalized.observedAt, fetchedAt, intervalFor(binding.source_namespace)),
@@ -258,4 +353,4 @@ function makeSnapshotService({
   return { readCurrent, refreshReadyStations, refreshStation };
 }
 
-module.exports = { freshnessAt, makeSnapshotService, normalizeEcowittSnapshot };
+module.exports = { freshnessAt, makeSnapshotService, mergeGrafanaSnapshot, normalizeEcowittSnapshot };

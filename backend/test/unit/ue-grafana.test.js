@@ -30,6 +30,27 @@ function payload(times, values, { sensor = SENSOR, unit } = {}) {
   };
 }
 
+function humidityPayload(times, values, { sensor = SENSOR, unit } = {}) {
+  return {
+    results: {
+      B: {
+        status: 200,
+        frames: [{
+          schema: { fields: [
+            { name: 'Time', type: 'time' },
+            { name: 'Humitat relativa', type: 'number', labels: { tag4: sensor }, config: unit ? { unit } : {} },
+          ] },
+          data: { values: [times, values] },
+        }],
+      },
+    },
+  };
+}
+
+function multivariable(temperature, humidity) {
+  return { results: { ...(temperature?.results || {}), ...(humidity?.results || {}) } };
+}
+
 function providerResponse(body) {
   const encoded = Buffer.from(JSON.stringify(body));
   return {
@@ -46,14 +67,18 @@ function adapter(fetch, enabled = true) {
   });
 }
 
-test('UE-T14 builds one fixed temperature query without client-controlled endpoint or PromQL', () => {
+test('H05A builds fixed temperature and humidity queries without client-controlled endpoint or PromQL', () => {
   const body = buildGrafanaQuery(SENSOR, FROM, TO);
   assert.equal(GRAFANA_ENDPOINT, 'https://grafana.commonscloud.coop/api/ds/query');
-  assert.equal(body.queries.length, 1);
+  assert.equal(body.queries.length, 2);
   assert.equal(body.queries[0].datasource.uid, DATASOURCE_UID);
   assert.equal(body.queries[0].expr, `xoic_I2CAT_temperatura{tag4="${SENSOR}"}`);
   assert.equal(body.queries[0].intervalMs, 300000);
   assert.equal(body.queries[0].maxDataPoints, 20);
+  assert.equal(body.queries[1].datasource.uid, DATASOURCE_UID);
+  assert.equal(body.queries[1].expr, `xoic_I2CAT_humitat{tag4="${SENSOR}"}`);
+  assert.equal(body.queries[1].intervalMs, 300000);
+  assert.equal(TO - FROM, 30 * 60 * 1000);
   assert.equal(buildGrafanaQuery('unknown', FROM, TO), null);
   assert.equal(buildGrafanaQuery(SENSOR, FROM, TO + 1), null);
 });
@@ -63,6 +88,7 @@ test('UE-T14 normalizes multiple frames, preserves zero/null and rejects inconsi
   assert.equal(normalized.ok, true);
   assert.equal(normalized.series.length, 2);
   assert.deepEqual(normalized.series[0].points, [
+    { observed_at: '2026-09-24T09:00:00.000Z', value: null, quality: 'OUT_OF_RANGE' },
     { observed_at: '2026-09-24T09:05:00.000Z', value: 0, quality: 'VALID' },
     { observed_at: '2026-09-24T09:10:00.000Z', value: null, quality: 'MISSING' },
     { observed_at: '2026-09-24T09:15:00.000Z', value: 12.5, quality: 'VALID' },
@@ -234,4 +260,71 @@ test('G02 classifies HTTP, network, invalid JSON and incompatible Grafana respon
   })).fetchSnapshot({ external_id: SENSOR }), { ok: false, error: 'INVALID_JSON' });
   assert.deepEqual(await adapter(async () => providerResponse({ results: {} }))
     .fetchSnapshot({ external_id: SENSOR }), { ok: false, error: 'QUERY_ERROR' });
+});
+
+test('H05A normalizes temperature and humidity independently with per-field timestamps', () => {
+  const input = multivariable(
+    payload([TO - 60_000], [14], { unit: 'celsius' }),
+    humidityPayload([TO - 120_000], [65], { unit: 'humidity' }),
+  );
+  const result = normalizeGrafanaSnapshot(input, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(result.ok, true);
+  assert.equal(result.values.temp_c, 14);
+  assert.equal(result.values.humitat_pct, 65);
+  assert.equal(result.observedAt.toISOString(), new Date(TO - 60_000).toISOString());
+  assert.deepEqual(result.quality.observed_at_by_field, {
+    temp_c: new Date(TO - 60_000).toISOString(),
+    humitat_pct: new Date(TO - 120_000).toISOString(),
+  });
+  assert.deepEqual(result.quality.units.humitat_pct, {
+    canonical: 'percent', source_unit: 'humidity', unit_basis: 'SOURCE_DECLARED',
+  });
+  for (const field of CANONICAL_SNAPSHOT_FIELDS.filter((name) => !['temp_c', 'humitat_pct'].includes(name))) {
+    assert.equal(result.values[field], null);
+    assert.equal(result.quality.fields[field], 'MISSING');
+  }
+});
+
+test('H05A accepts humidity boundaries and rejects invalid values without clamping', () => {
+  for (const value of [0, 50, 100]) {
+    const result = normalizeGrafanaSnapshot(humidityPayload([TO], [value]), {
+      externalId: SENSOR, from: FROM, to: TO,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.values.temp_c, null);
+    assert.equal(result.values.humitat_pct, value);
+    assert.equal(result.quality.fields.humitat_pct, 'VALID');
+  }
+  for (const [value, quality] of [[null, 'MISSING'], [-1, 'OUT_OF_RANGE'], [101, 'OUT_OF_RANGE'], ['50', 'INVALID'], [Number.NaN, 'INVALID']]) {
+    const input = multivariable(payload([TO], [12]), humidityPayload([TO], [value]));
+    const result = normalizeGrafanaSnapshot(input, { externalId: SENSOR, from: FROM, to: TO });
+    assert.equal(result.ok, true);
+    assert.equal(result.values.temp_c, 12);
+    assert.equal(result.values.humitat_pct, null);
+    assert.equal(result.quality.fields.humitat_pct, quality);
+  }
+});
+
+test('H05A supports partial series and isolates variable failures', () => {
+  const onlyTemperature = normalizeGrafanaSnapshot(payload([TO], [12]), {
+    externalId: SENSOR, from: FROM, to: TO,
+  });
+  assert.equal(onlyTemperature.ok, true);
+  assert.equal(onlyTemperature.values.temp_c, 12);
+  assert.equal(onlyTemperature.quality.fields.humitat_pct, 'MISSING');
+
+  const onlyHumidity = normalizeGrafanaSnapshot(humidityPayload([TO], [40]), {
+    externalId: SENSOR, from: FROM, to: TO,
+  });
+  assert.equal(onlyHumidity.ok, true);
+  assert.equal(onlyHumidity.values.temp_c, null);
+  assert.equal(onlyHumidity.values.humitat_pct, 40);
+
+  const futureHumidity = multivariable(payload([TO], [12]), humidityPayload([TO + 1], [55]));
+  const result = normalizeGrafanaSnapshot(futureHumidity, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(result.ok, true);
+  assert.equal(result.values.temp_c, 12);
+  assert.equal(result.values.humitat_pct, null);
+  assert.equal(result.quality.fields.humitat_pct, 'INVALID');
+  assert.ok(result.quality.warnings.includes('FUTURE_TIMESTAMP'));
 });

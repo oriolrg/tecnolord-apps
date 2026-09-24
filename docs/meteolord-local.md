@@ -68,7 +68,7 @@ chmod 600 config/meteolord/local.env
 La configuració local declara també:
 
 - `METEOLORD_GRAFANA_INTERNAL_ENABLED=false`: Grafana continua desactivat per defecte;
-- `METEOLORD_GRAFANA_INTERVAL_SECONDS=300`: cadència de referència per calcular la frescor de Grafana.
+- `METEOLORD_GRAFANA_INTERVAL_SECONDS=900`: cadència de referència per calcular la frescor de Grafana, confirmada sobre els 29 sensors actuals.
 
 La cadència no crea ni activa cap scheduler. El contracte de frescor existent es conserva: una observació és `FRESH` fins a dos intervals, `STALE` fins a vuit i `OBSOLETE` després de vuit. Ecowitt manté el seu interval de 900 segons. G01 només prepara i valida aquesta configuració; no autoritza ni executa connexions a Grafana.
 

@@ -1,0 +1,227 @@
+{
+  "task": "H04",
+  "created_at": "2026-09-24",
+  "baseline": [
+    "STATE.md",
+    "evidence/H01-grafana-sensors.json",
+    "evidence/H02-station-mapping.json"
+  ],
+  "dashboard": {
+    "uid": "i2cat-public-jul27",
+    "title": "Vall de Lord",
+    "version": 46,
+    "api_url": "https://grafana.commonscloud.coop/api/dashboards/uid/i2cat-public-jul27",
+    "query_endpoint": "https://grafana.commonscloud.coop/api/ds/query",
+    "primary_datasource": {
+      "type": "prometheus",
+      "uid": "SWLXFBHvz"
+    },
+    "inspected_at": "2026-09-24T05:45:53.493Z"
+  },
+  "contract": {
+    "temperature": {
+      "panel": {
+        "id": 1,
+        "title": "Valors Actuals",
+        "ref_id": "B",
+        "reduce": "lastNotNull"
+      },
+      "metric": "xoic_I2CAT_temperatura",
+      "query": "xoic_I2CAT_temperatura{tag4=\"$sensor\"}",
+      "labels_filters": {
+        "tag4": "$sensor"
+      },
+      "sensor_binding": "Dashboard variable $sensor is substituted into tag4.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "SWLXFBHvz"
+      },
+      "unit": "celsius",
+      "unit_evidence": "The Extrems Temperatures panel declares fieldConfig.defaults.unit=celsius; the live datasource field itself declares no unit.",
+      "transformations": [],
+      "post_query_expression": null,
+      "semantics": "Raw temperature series; Valors Actuals displays the last non-null value in the selected range.",
+      "timestamp": "Timestamp returned with each Prometheus sample.",
+      "canonical_field": "temp_c",
+      "canonical_field_status": "EXISTING",
+      "status": "CONFIRMED"
+    },
+    "humidity": {
+      "panel": {
+        "id": 1,
+        "title": "Valors Actuals",
+        "ref_id": "C",
+        "reduce": "lastNotNull"
+      },
+      "metric": "xoic_I2CAT_humitat",
+      "query": "xoic_I2CAT_humitat{tag4=\"$sensor\"}",
+      "labels_filters": {
+        "tag4": "$sensor"
+      },
+      "sensor_binding": "Dashboard variable $sensor is substituted into tag4.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "SWLXFBHvz"
+      },
+      "unit": "percent_0_100",
+      "unit_evidence": "The Extrems Humitats panel declares Grafana unit=humidity, its legends use %, and its thresholds span 0 through 90; the live datasource field itself declares no unit.",
+      "expected_range": [0, 100],
+      "transformations": [],
+      "post_query_expression": null,
+      "semantics": "Relative humidity percentage; Valors Actuals displays the last non-null value in the selected range.",
+      "timestamp": "Timestamp returned with each Prometheus sample.",
+      "canonical_field": "humitat_pct",
+      "canonical_field_status": "EXISTING",
+      "status": "CONFIRMED"
+    },
+    "pressure": {
+      "panel": {
+        "id": 2,
+        "title": "Històric",
+        "ref_id": "A",
+        "query": "{tag1=\"I2CAT\",tag4=\"$sensor\"}",
+        "default_datasource_uid": "SWLXFBHvz",
+        "target_datasource_uid": "zvICMyGDk"
+      },
+      "metric": "xoic_I2CAT_pressio",
+      "discovery_query": "xoic_I2CAT_pressio{tag4=\"$sensor\"}",
+      "labels_filters": {
+        "tag1_in_generic_panel": "I2CAT",
+        "tag4": "$sensor"
+      },
+      "sensor_binding": "The metric was observed by __name__ in the generic Històric selector and then queried directly with tag4=$sensor on the validated SWLXFBHvz datasource.",
+      "datasource": {
+        "dashboard_panel_default_uid": "SWLXFBHvz",
+        "dashboard_target_uid": "zvICMyGDk",
+        "live_discovery_uid": "SWLXFBHvz"
+      },
+      "unit": null,
+      "pressure_kind": "SEMANTICS_UNRESOLVED",
+      "sea_level_correction": "SEMANTICS_UNRESOLVED",
+      "grafana_conversion": null,
+      "transformations": [],
+      "post_query_expression": null,
+      "semantics": "SEMANTICS_UNRESOLVED: the dashboard and returned fields do not declare a unit or whether the value is local/absolute or sea-level corrected.",
+      "timestamp": "Timestamp returned with each Prometheus sample.",
+      "canonical_field": null,
+      "canonical_field_status": "SEMANTICS_UNRESOLVED",
+      "existing_candidates_not_selected": ["pressio_rel_hpa", "pressio_abs_hpa"],
+      "status": "SEMANTICS_UNRESOLVED"
+    },
+    "rain": {
+      "panel": {
+        "id": 1,
+        "title": "Valors Actuals",
+        "ref_id": "E",
+        "legend": "Pluja Acumulada 24h",
+        "reduce": "lastNotNull"
+      },
+      "metric": "xoic_I2CAT_pluja_acumulada",
+      "query": "xoic_I2CAT_pluja_acumulada{tag4=\"$sensor\"} - xoic_I2CAT_pluja_acumulada{tag4=\"$sensor\"} offset 1d",
+      "labels_filters": {
+        "tag4": "$sensor"
+      },
+      "sensor_binding": "Dashboard variable $sensor is substituted into tag4 in both operands.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "SWLXFBHvz"
+      },
+      "unit": null,
+      "transformations": [],
+      "post_query_expression": "Current cumulative metric minus the same cumulative metric at a 1 day offset.",
+      "counter_reset_handling": "NONE_IN_QUERY",
+      "counter_reset_observation": "No decrease was observed in the sampled raw counter for MLW01 or MLW02 during the seven-day check, but both counters were constant; reset behavior therefore remains unverified.",
+      "semantics": "SEMANTICS_UNRESOLVED: the query computes a rolling 24-hour difference of an accumulated metric. It is not a rate or intensity, but its unit and behavior across counter resets are not declared.",
+      "timestamp": "Timestamp returned for the evaluated Prometheus expression.",
+      "canonical_field": null,
+      "canonical_field_status": "SEMANTICS_UNRESOLVED",
+      "existing_candidates_not_selected": [
+        "taxa_pluja_mm_h",
+        "pluja_diaria_mm",
+        "pluja_event_mm",
+        "pluja_hora_mm",
+        "pluja_setmana_mm",
+        "pluja_mes_mm",
+        "pluja_any_mm"
+      ],
+      "status": "SEMANTICS_UNRESOLVED"
+    }
+  },
+  "availability_check": {
+    "range": {
+      "from": "2026-09-23T05:45:53.493Z",
+      "to": "2026-09-24T05:45:53.493Z",
+      "hours": 24
+    },
+    "requested_interval_seconds": 300,
+    "method": "One bounded range query per discovered variable and sensor; AVAILABLE requires at least one finite returned value, NOT_AVAILABLE means a successful empty result, and UNKNOWN is reserved for an indeterminate query.",
+    "coverage": {
+      "temperature_available": 29,
+      "humidity_available": 29,
+      "pressure_available": 27,
+      "rain_available": 27
+    },
+    "sensors": [
+      { "external_id": "Meteo-001-3100044", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-002-3100007", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-003-3100338", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-004-3100360", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-005-5310489", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-007-3100206", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-008-3100134", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-009-3100496", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-010-54000046", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-011-3300274", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-012-3300391", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-013-3300161", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-015-4000206", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-016-4000258", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-017-4000161", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-018-4000158", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-019-4000143", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-020-4000245", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-021-000070", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-022-00368", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-023-00386", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-024-00225", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-025-00279", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-026-", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-027-", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-028-300127", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "Meteo-029-", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "AVAILABLE", "rain": "AVAILABLE" },
+      { "external_id": "S31-119416", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "NOT_AVAILABLE", "rain": "NOT_AVAILABLE" },
+      { "external_id": "S31-99933", "temperature": "AVAILABLE", "humidity": "AVAILABLE", "pressure": "NOT_AVAILABLE", "rain": "NOT_AVAILABLE" }
+    ]
+  },
+  "real_samples": [
+    { "external_id": "Meteo-002-3100007", "mlw_code": "MLW01", "variable": "temperature", "timestamp": "2026-09-24T05:45:00.000Z", "value": 13, "unit": "celsius", "semantics": "Raw temperature sample." },
+    { "external_id": "Meteo-002-3100007", "mlw_code": "MLW01", "variable": "humidity", "timestamp": "2026-09-24T05:45:00.000Z", "value": 66, "unit": "percent_0_100", "semantics": "Relative humidity sample." },
+    { "external_id": "Meteo-002-3100007", "mlw_code": "MLW01", "variable": "pressure", "timestamp": "2026-09-24T05:45:00.000Z", "value": 871.8, "unit": null, "semantics": "SEMANTICS_UNRESOLVED" },
+    { "external_id": "Meteo-002-3100007", "mlw_code": "MLW01", "variable": "rain", "timestamp": "2026-09-24T05:45:00.000Z", "value": 0, "unit": null, "semantics": "Rolling 24-hour difference of xoic_I2CAT_pluja_acumulada; unit and reset behavior unresolved." },
+    { "external_id": "Meteo-013-3300161", "mlw_code": "MLW02", "variable": "temperature", "timestamp": "2026-09-24T05:35:00.000Z", "value": 12.6, "unit": "celsius", "semantics": "Raw temperature sample." },
+    { "external_id": "Meteo-013-3300161", "mlw_code": "MLW02", "variable": "humidity", "timestamp": "2026-09-24T05:35:00.000Z", "value": 64, "unit": "percent_0_100", "semantics": "Relative humidity sample." },
+    { "external_id": "Meteo-013-3300161", "mlw_code": "MLW02", "variable": "pressure", "timestamp": "2026-09-24T05:35:00.000Z", "value": 797.2, "unit": null, "semantics": "SEMANTICS_UNRESOLVED" },
+    { "external_id": "Meteo-013-3300161", "mlw_code": "MLW02", "variable": "rain", "timestamp": "2026-09-24T05:35:00.000Z", "value": 0, "unit": null, "semantics": "Rolling 24-hour difference of xoic_I2CAT_pluja_acumulada; unit and reset behavior unresolved." },
+    { "external_id": "Meteo-001-3100044", "mlw_code": "MLW28", "variable": "temperature", "timestamp": "2026-09-24T05:40:00.000Z", "value": 13.2, "unit": "celsius", "semantics": "Raw temperature sample." },
+    { "external_id": "Meteo-001-3100044", "mlw_code": "MLW28", "variable": "humidity", "timestamp": "2026-09-24T05:40:00.000Z", "value": 59, "unit": "percent_0_100", "semantics": "Relative humidity sample." },
+    { "external_id": "Meteo-001-3100044", "mlw_code": "MLW28", "variable": "pressure", "timestamp": "2026-09-24T05:40:00.000Z", "value": 868.1, "unit": null, "semantics": "SEMANTICS_UNRESOLVED" },
+    { "external_id": "Meteo-001-3100044", "mlw_code": "MLW28", "variable": "rain", "timestamp": "2026-09-24T05:40:00.000Z", "value": 0, "unit": null, "semantics": "Rolling 24-hour difference of xoic_I2CAT_pluja_acumulada; unit and reset behavior unresolved." }
+  ],
+  "timestamps": {
+    "observed_modal_cadence_seconds": 900,
+    "requested_query_interval_seconds": 300,
+    "latest_samples_within_each_reference_station": "Temperature, humidity, pressure and rain shared the same latest timestamp in each of MLW01, MLW02 and MLW28.",
+    "completeness": "MLW02 rain returned 93 finite points while its temperature, humidity and pressure returned 95 in the same range; alignment therefore cannot be assumed for every sample.",
+    "contract_for_h05": "Retain the timestamp of each returned variable and do not assume simultaneity solely from the common 15-minute modal cadence."
+  },
+  "unresolved": [
+    "Pressure has no declared unit and no evidence distinguishing absolute/local pressure from sea-level-corrected pressure.",
+    "Rain has no declared unit and the subtraction query contains no counter-reset handling; the sampled constant counters did not demonstrate reset behavior.",
+    "The Històric panel declares SWLXFBHvz at panel level but its generic target still declares zvICMyGDk; live direct metric verification succeeded on the validated SWLXFBHvz datasource."
+  ],
+  "notes": [
+    "No complete Grafana payload is stored.",
+    "No metric, unit or canonical mapping was inferred beyond dashboard configuration and returned series evidence.",
+    "No database, schema, backend, frontend or Grafana runtime configuration was modified."
+  ]
+}

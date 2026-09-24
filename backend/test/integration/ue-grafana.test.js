@@ -106,7 +106,10 @@ test('UE-T14 exposes fixed Grafana frames only to admin and never persists or re
       assert.equal(list.response.status, 200);
       assert.deepEqual(list.body.items, [{
         id: station.rows[0].public_id, name: 'Grafana sintètica', external_id: 'Meteo-901-9000001',
-        access_scope: 'INTERNAL_ONLY', fields: [{ id: 'temperature', unit: 'celsius' }], rain_enabled: false,
+        access_scope: 'INTERNAL_ONLY', fields: [
+          { id: 'temperature', unit: 'celsius' },
+          { id: 'humidity', unit: 'percent' },
+        ], rain_enabled: false,
       }]);
       const current = await request(base,
         `/api/v1/admin/grafana/stations/${station.rows[0].public_id}/current`, adminSession);
@@ -115,14 +118,17 @@ test('UE-T14 exposes fixed Grafana frames only to admin and never persists or re
       assert.equal(current.body.source.persistence, 'DISABLED');
       assert.equal(current.body.source.rain_enabled, false);
       assert.equal(current.body.series.length, 2);
-      assert.equal(current.body.series[0].points[0].value, 0);
-      assert.equal(current.body.series[0].points[1].quality, 'MISSING');
+      assert.equal(current.body.window.minutes, 30);
+      assert.equal(current.body.series[0].points[0].quality, 'OUT_OF_RANGE');
+      assert.equal(current.body.series[0].points[1].value, 0);
+      assert.equal(current.body.series[0].points[2].quality, 'MISSING');
       assert.deepEqual(current.body.warnings, ['INCONSISTENT_LENGTH', 'SOURCE_UNIT_UNDECLARED']);
       assert.equal(upstreamCalls.length, 1);
       assert.equal(upstreamCalls[0].url, 'https://grafana.commonscloud.coop/api/ds/query');
       const query = JSON.parse(upstreamCalls[0].options.body);
       assert.deepEqual(Object.keys(query), ['from', 'to', 'queries']);
       assert.equal(query.queries[0].expr, 'xoic_I2CAT_temperatura{tag4="Meteo-901-9000001"}');
+      assert.equal(query.queries[1].expr, 'xoic_I2CAT_humitat{tag4="Meteo-901-9000001"}');
 
       assert.deepEqual((await request(base, '/api/v1/stations')).body.items, []);
       assert.equal((await request(base, `/api/v1/stations/${station.rows[0].public_id}`)).response.status, 404);
