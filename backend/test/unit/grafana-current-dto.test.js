@@ -8,6 +8,7 @@ test('G05 current snapshot DTO allowlists canonical values, quality and controll
   const dto = currentSnapshotDto({
     item: {
       instant: '2026-09-23T11:40:00.000Z', temp_c: 21.9, humitat_pct: 64,
+      temp_min_24h_c: 10, temp_max_24h_c: 25, rain_24h: 0,
       upstream_payload: { secret: true }, datasource: 'SWLXFBHvz', invalid_number: '21.9',
     },
     source: {
@@ -16,7 +17,10 @@ test('G05 current snapshot DTO allowlists canonical values, quality and controll
       external_id: 'Meteo-001-3100044', query: 'PromQL',
       quality: {
         freshness: 'FRESH',
-        fields: { temp_c: 'VALID', humitat_pct: 'VALID', datasource: 'VALID', uvi: 'UNSAFE' },
+        fields: {
+          temp_c: 'VALID', humitat_pct: 'VALID', temp_min_24h_c: 'VALID',
+          temp_max_24h_c: 'VALID', rain_24h: 'VALID', datasource: 'VALID', uvi: 'UNSAFE',
+        },
         observed_at_by_field: {
           temp_c: '2026-09-23T11:40:00.000Z', humitat_pct: '2026-09-23T11:35:00.000Z',
           datasource: '2026-09-23T11:40:00.000Z', uvi: 'invalid',
@@ -27,17 +31,29 @@ test('G05 current snapshot DTO allowlists canonical values, quality and controll
           humitat_pct: { canonical: 'percent', source_unit: 'humidity', unit_basis: 'SOURCE_DECLARED' },
           datasource: { canonical: 'celsius', source_unit: 'C', unit_basis: 'SOURCE_DECLARED' },
         },
+        aggregates: {
+          temp_min_24h_c: { window_hours: 24, evaluated_at: '2026-09-23T11:48:00.000Z', reduction: 'lastNotNull', quality: 'VALID' },
+          temp_max_24h_c: { window_hours: 24, evaluated_at: '2026-09-23T11:48:00.000Z', reduction: 'lastNotNull', quality: 'VALID' },
+          rain_24h: { window_hours: 24, evaluated_at: '2026-09-23T11:48:00.000Z', reduction: 'lastNotNull', quality: 'VALID', query: 'secret' },
+          datasource: { window_hours: 24, evaluated_at: '2026-09-23T11:48:00.000Z', reduction: 'lastNotNull', quality: 'VALID' },
+        },
       },
     },
   });
 
   assert.deepEqual(dto, {
-    item: { instant: '2026-09-23T11:40:00.000Z', temp_c: 21.9, humitat_pct: 64 },
+    item: {
+      instant: '2026-09-23T11:40:00.000Z', temp_c: 21.9, humitat_pct: 64,
+      temp_min_24h_c: 10, temp_max_24h_c: 25, rain_24h: 0,
+    },
     source: {
       freshness: 'FRESH', observed_at: '2026-09-23T11:40:00.000Z',
       fetched_at: '2026-09-23T11:48:46.898Z', error: 'PROVIDER_ERROR',
       quality: {
-        freshness: 'FRESH', fields: { temp_c: 'VALID', humitat_pct: 'VALID' },
+        freshness: 'FRESH', fields: {
+          temp_c: 'VALID', humitat_pct: 'VALID', temp_min_24h_c: 'VALID',
+          temp_max_24h_c: 'VALID', rain_24h: 'VALID',
+        },
         observed_at_by_field: {
           temp_c: '2026-09-23T11:40:00.000Z', humitat_pct: '2026-09-23T11:35:00.000Z',
         },
@@ -45,6 +61,11 @@ test('G05 current snapshot DTO allowlists canonical values, quality and controll
         units: {
           temp_c: { canonical: 'celsius', source_unit: null, unit_basis: 'QUERY_CONTRACT' },
           humitat_pct: { canonical: 'percent', source_unit: 'humidity', unit_basis: 'SOURCE_DECLARED' },
+        },
+        aggregates: {
+          temp_min_24h_c: { window_hours: 24, evaluated_at: '2026-09-23T11:48:00.000Z', reduction: 'lastNotNull', quality: 'VALID' },
+          temp_max_24h_c: { window_hours: 24, evaluated_at: '2026-09-23T11:48:00.000Z', reduction: 'lastNotNull', quality: 'VALID' },
+          rain_24h: { window_hours: 24, evaluated_at: '2026-09-23T11:48:00.000Z', reduction: 'lastNotNull', quality: 'VALID' },
         },
       },
     },

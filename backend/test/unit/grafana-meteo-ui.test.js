@@ -111,3 +111,14 @@ test('H07 keeps the selected station name when its current snapshot has no data'
   assert.match(screen, /La font no respon i ara mateix no hi ha cap lectura disponible\./);
   assert.match(screen, /if \(ui\.cards\) ui\.cards\.replaceChildren\(\)/);
 });
+
+test('H09A renders 24 h aggregates and hides unsupported pressure by capability', () => {
+  const screen = fs.readFileSync(SCREEN_PATH, 'utf8');
+  assert.match(screen, /temp_min_24h_c/);
+  assert.match(screen, /temp_max_24h_c/);
+  assert.match(screen, /Màx\. 24 h:/);
+  assert.match(screen, /Mín\. 24 h:/);
+  assert.match(screen, /title: "Pluja acumulada 24 h"/);
+  assert.match(screen, /pRel == null && pAbs == null \? null : card/);
+  assert.doesNotMatch(screen, /grafana\.commonscloud\.coop|\/admin\/grafana\//i);
+});

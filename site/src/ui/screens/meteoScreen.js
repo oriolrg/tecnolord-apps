@@ -192,6 +192,12 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
     const rainEvent = currentNumber(r0.pluja_event_mm ?? r0.rain_event_mm);
     const rainMonth = currentNumber(r0.pluja_mes_mm ?? r0.rain_month_mm);
     const rainYear = currentNumber(r0.pluja_any_mm ?? r0.rain_year_mm);
+    const hasRain24h = Object.prototype.hasOwnProperty.call(r0, "rain_24h");
+    const rain24h = currentNumber(r0.rain_24h);
+    const hasTemperature24h = Object.prototype.hasOwnProperty.call(r0, "temp_min_24h_c")
+      || Object.prototype.hasOwnProperty.call(r0, "temp_max_24h_c");
+    const tempMin24h = currentNumber(r0.temp_min_24h_c);
+    const tempMax24h = currentNumber(r0.temp_max_24h_c);
 
     const wind = currentNumber(r0.vent_ms ?? r0.wind_speed_ms);
     const gust = currentNumber(r0.vent_rafega_ms ?? r0.wind_gust_ms);
@@ -245,8 +251,9 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
       tMax = tMax == null ? t : Math.max(tMax, t);
     }
 
-    const extremesHtml =
-      (tMin == null && tMax == null)
+    const extremesHtml = hasTemperature24h
+      ? ` · <span class="temp-max">Màx. 24 h: ${tempMax24h == null ? "—" : fmt1(tempMax24h)} °C</span> · <span class="temp-min">Mín. 24 h: ${tempMin24h == null ? "—" : fmt1(tempMin24h)} °C</span>`
+      : (tMin == null && tMax == null)
         ? ""
         : ` · <span class="temp-max">Màx: ${tMax == null ? "—" : fmt1(tMax)} °C</span> · <span class="temp-min">Mín: ${tMin == null ? "—" : fmt1(tMin)} °C</span>`;
 
@@ -320,23 +327,30 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
 
     const monthInlineTxt = (rainMonth == null || Number.isNaN(rainMonth)) ? "—" : fmt1(rainMonth);
 
-    const cRain = card({
-      title: "Pluja",
-      value: rainMainValue,
-      unit: rainMainUnit,
-      subHtml: `
-        <div class="meta-row">
-          <span>Dia: <strong>${dayTxt} mm</strong></span>
-          <span class="dot-sep">·</span>
-          <span>Mes: <strong>${monthInlineTxt} mm</strong></span>
-        </div>
-        ${moreHtml}
-      `,
-    });
+    const cRain = hasRain24h
+      ? card({
+        title: "Pluja acumulada 24 h",
+        value: rain24h == null ? "—" : fmt1(rain24h),
+        unit: "",
+        subHtml: "",
+      })
+      : card({
+        title: "Pluja",
+        value: rainMainValue,
+        unit: rainMainUnit,
+        subHtml: `
+          <div class="meta-row">
+            <span>Dia: <strong>${dayTxt} mm</strong></span>
+            <span class="dot-sep">·</span>
+            <span>Mes: <strong>${monthInlineTxt} mm</strong></span>
+          </div>
+          ${moreHtml}
+        `,
+      });
 
 
     // 4) Pressió
-    const cPress = card({
+    const cPress = pRel == null && pAbs == null ? null : card({
       title: "Pressió (rel.)",
       value: fmt1(pRel),
       unit: "hPa",
@@ -363,6 +377,7 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
     });
 
     function attachChart(cardEl, id) {
+      if (!cardEl) return null;
       const sub = cardEl.querySelector(".sub");
       if (!sub) return null;
 
@@ -381,7 +396,7 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
 
     // Charts a les cards que toquen (vent i UV no en tenen ara)
     const cvTemp = attachChart(cTemp, "chart-temp");
-    const cvRain = attachChart(cRain, "chart-rain");
+    const cvRain = hasRain24h ? null : attachChart(cRain, "chart-rain");
     const cvPress = attachChart(cPress, "chart-press");
     const cvHum = attachChart(cHum, "chart-hum");
 

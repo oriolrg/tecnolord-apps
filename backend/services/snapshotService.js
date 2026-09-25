@@ -4,6 +4,7 @@ const { fetchEcowittConnector, kmhToMs, numberOrNull } = require('./ecowittServi
 const { freshnessAt } = require('./sourceCadence');
 
 const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
+const AGGREGATE_FIELDS = new Set(['temp_min_24h_c', 'temp_max_24h_c', 'rain_24h']);
 
 function resolveNow(clock) {
   const read = typeof clock === 'function' ? clock : clock?.now?.bind(clock);
@@ -23,6 +24,7 @@ const FIELD_RULES = Object.freeze({
   pluja_any_mm: [0, 100000], vent_ms: [0, 150], vent_rafega_ms: [0, 150],
   vent_direccio_graus: [0, 360], pressio_rel_hpa: [800, 1200],
   pressio_abs_hpa: [500, 1200], bateria_pct: [0, 100],
+  temp_min_24h_c: [-80, 70], temp_max_24h_c: [-80, 70], rain_24h: [-1_000_000, 1_000_000],
 });
 
 function field(value, name, convert = numberOrNull) {
@@ -103,6 +105,7 @@ function mergeGrafanaSnapshot(existing, normalized) {
   const fields = {};
   const observedAtByField = {};
   const units = {};
+  const aggregates = {};
 
   for (const name of Object.keys(FIELD_RULES)) {
     const oldValue = existingValues[name];
@@ -110,6 +113,22 @@ function mergeGrafanaSnapshot(existing, normalized) {
     const oldValid = typeof oldValue === 'number' && Number.isFinite(oldValue);
     const newValid = incomingQuality.fields?.[name] === 'VALID'
       && typeof newValue === 'number' && Number.isFinite(newValue);
+    if (AGGREGATE_FIELDS.has(name)) {
+      values[name] = newValid ? newValue : null;
+      fields[name] = newValid ? 'VALID' : (incomingQuality.fields?.[name] || 'MISSING');
+      const metadata = incomingQuality.aggregates?.[name];
+      const evaluatedAt = validInstant(metadata?.evaluated_at);
+      if (evaluatedAt) {
+        aggregates[name] = {
+          window_hours: 24,
+          evaluated_at: evaluatedAt,
+          reduction: 'lastNotNull',
+          quality: fields[name],
+        };
+      }
+      if (incomingQuality.units?.[name]) units[name] = incomingQuality.units[name];
+      continue;
+    }
     const oldTime = validInstant(existingTimes[name]) || (oldValid ? validInstant(existing?.observed_at) : null);
     const newTime = validInstant(incomingTimes[name]) || (newValid ? validInstant(normalized?.observedAt) : null);
     const useNew = newValid && (!oldValid || !oldTime || (newTime && newTime > oldTime));
@@ -136,6 +155,7 @@ function mergeGrafanaSnapshot(existing, normalized) {
   const quality = {
     fields,
     observed_at_by_field: observedAtByField,
+    aggregates,
     warnings: Array.isArray(incomingQuality.warnings) ? incomingQuality.warnings : [],
     units,
   };
@@ -143,7 +163,10 @@ function mergeGrafanaSnapshot(existing, normalized) {
   const fieldNames = Object.keys(FIELD_RULES);
   const valuesChanged = fieldNames.some((name) => existingValues[name] !== values[name]);
   const timestampsChanged = fieldNames.some((name) => (
-    validInstant(existingTimes[name]) !== validInstant(observedAtByField[name])
+    AGGREGATE_FIELDS.has(name)
+      ? validInstant(existingQuality.aggregates?.[name]?.evaluated_at)
+        !== validInstant(aggregates[name]?.evaluated_at)
+      : validInstant(existingTimes[name]) !== validInstant(observedAtByField[name])
   ));
   const changed = !existing || previousObservedAt !== observedAt.toISOString()
     || valuesChanged || timestampsChanged;

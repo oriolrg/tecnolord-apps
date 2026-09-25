@@ -15,6 +15,7 @@ const CANONICAL_SNAPSHOT_FIELDS = Object.freeze([
   'taxa_pluja_mm_h', 'pluja_diaria_mm', 'pluja_event_mm', 'pluja_hora_mm',
   'pluja_setmana_mm', 'pluja_mes_mm', 'pluja_any_mm', 'vent_ms', 'vent_rafega_ms',
   'vent_direccio_graus', 'pressio_rel_hpa', 'pressio_abs_hpa', 'bateria_pct',
+  'temp_min_24h_c', 'temp_max_24h_c', 'rain_24h',
 ]);
 const SNAPSHOT_METRICS = Object.freeze([
   Object.freeze({
@@ -26,6 +27,27 @@ const SNAPSHOT_METRICS = Object.freeze([
     refId: 'B', canonicalField: 'humitat_pct', metric: 'xoic_I2CAT_humitat',
     name: 'Humitat relativa', unit: 'percent', minimum: 0, maximum: 100,
     sourceUnits: Object.freeze(['humidity', 'percent', 'percentunit', '%']),
+  }),
+  Object.freeze({
+    refId: 'C', canonicalField: 'temp_min_24h_c', metric: 'xoic_I2CAT_temperatura',
+    expression: (externalId) => `min_over_time(xoic_I2CAT_temperatura{tag4="${externalId}"}[24h])`,
+    name: 'Mínima 24h', unit: 'celsius', minimum: -80, maximum: 70,
+    sourceUnits: Object.freeze(['celsius', '°C', 'C', 'celcius']),
+    aggregate: Object.freeze({ windowHours: 24, reduction: 'lastNotNull' }),
+  }),
+  Object.freeze({
+    refId: 'D', canonicalField: 'temp_max_24h_c', metric: 'xoic_I2CAT_temperatura',
+    expression: (externalId) => `max_over_time(xoic_I2CAT_temperatura{tag4="${externalId}"}[24h])`,
+    name: 'Màxima 24h', unit: 'celsius', minimum: -80, maximum: 70,
+    sourceUnits: Object.freeze(['celsius', '°C', 'C', 'celcius']),
+    aggregate: Object.freeze({ windowHours: 24, reduction: 'lastNotNull' }),
+  }),
+  Object.freeze({
+    refId: 'E', canonicalField: 'rain_24h', metric: 'xoic_I2CAT_pluja_acumulada',
+    expression: (externalId) => `xoic_I2CAT_pluja_acumulada{tag4="${externalId}"} - xoic_I2CAT_pluja_acumulada{tag4="${externalId}"} offset 1d`,
+    name: 'Pluja Acumulada 24h', unit: null, minimum: -1_000_000, maximum: 1_000_000,
+    sourceUnits: Object.freeze([]),
+    aggregate: Object.freeze({ windowHours: 24, reduction: 'lastNotNull' }),
   }),
 ]);
 
@@ -45,7 +67,9 @@ function buildGrafanaQuery(externalId, from, to) {
     from: String(from), to: String(to),
     queries: SNAPSHOT_METRICS.map((metric) => ({
       refId: metric.refId, datasource: { type: 'prometheus', uid: DATASOURCE_UID }, datasourceId: 11,
-      editorMode: 'code', expr: `${metric.metric}{tag4="${externalId}"}`,
+      editorMode: 'code', expr: metric.expression
+        ? metric.expression(externalId)
+        : `${metric.metric}{tag4="${externalId}"}`,
       instant: false, range: true, intervalMs: INTERVAL_MS, maxDataPoints: MAX_POINTS,
     })),
   };
@@ -58,6 +82,9 @@ function safeName(value, fallback) {
 
 function sourceUnit(field, metric) {
   const value = field?.config?.unit;
+  if (metric.unit === null) return value == null || value === ''
+    ? { unit: null, basis: 'QUERY_CONTRACT' }
+    : null;
   if (value == null || value === '') return { unit: null, basis: 'QUERY_CONTRACT' };
   if (metric.sourceUnits.includes(value)) return { unit: value, basis: 'SOURCE_DECLARED' };
   return null;
@@ -72,6 +99,9 @@ function normalizeGrafanaMetric(payload, { externalId, from, to } = {}, metric =
     return { ok: false, error: 'QUERY_ERROR' };
   }
   if (!Array.isArray(result.frames) || result.frames.length === 0) return { ok: false, error: 'EMPTY_DATA' };
+  if (metric.aggregate && result.frames.every((frame) => Array.isArray(frame?.schema?.fields)
+      && frame.schema.fields.length === 0 && Array.isArray(frame?.data?.values)
+      && frame.data.values.length === 0)) return { ok: false, error: 'EMPTY_DATA' };
   const warnings = new Set();
   const series = [];
   let mismatchedSensor = false;
@@ -163,6 +193,7 @@ function normalizeGrafanaSnapshot(payload, options = {}) {
   const fields = Object.fromEntries(CANONICAL_SNAPSHOT_FIELDS.map((field) => [field, 'MISSING']));
   const observedAtByField = {};
   const units = {};
+  const aggregates = {};
   const warnings = new Set();
   const errors = [];
 
@@ -181,6 +212,14 @@ function normalizeGrafanaSnapshot(payload, options = {}) {
       if (error === 'EMPTY_DATA' && normalized.warnings?.includes('INVALID_TIMESTAMP')) error = 'INVALID_TIMESTAMP';
       errors.push(error);
       fields[metric.canonicalField] = ['EMPTY_DATA', 'QUERY_ERROR'].includes(error) ? 'MISSING' : 'INVALID';
+      if (metric.aggregate) {
+        aggregates[metric.canonicalField] = {
+          window_hours: metric.aggregate.windowHours,
+          evaluated_at: new Date(options.to).toISOString(),
+          reduction: metric.aggregate.reduction,
+          quality: fields[metric.canonicalField],
+        };
+      }
       continue;
     }
 
@@ -218,10 +257,32 @@ function normalizeGrafanaSnapshot(payload, options = {}) {
     const selected = byTimestamp.get(observedAtText);
     values[metric.canonicalField] = selected.value;
     fields[metric.canonicalField] = 'VALID';
-    observedAtByField[metric.canonicalField] = observedAtText;
-    units[metric.canonicalField] = {
-      canonical: metric.unit, source_unit: selected.source_unit, unit_basis: selected.unit_basis,
-    };
+    if (metric.aggregate) {
+      aggregates[metric.canonicalField] = {
+        window_hours: metric.aggregate.windowHours,
+        evaluated_at: observedAtText,
+        reduction: metric.aggregate.reduction,
+        quality: 'VALID',
+      };
+    } else {
+      observedAtByField[metric.canonicalField] = observedAtText;
+    }
+    if (metric.unit) {
+      units[metric.canonicalField] = {
+        canonical: metric.unit, source_unit: selected.source_unit, unit_basis: selected.unit_basis,
+      };
+    }
+  }
+
+  if (fields.temp_min_24h_c === 'VALID' && fields.temp_max_24h_c === 'VALID'
+      && values.temp_min_24h_c > values.temp_max_24h_c) {
+    values.temp_min_24h_c = null;
+    values.temp_max_24h_c = null;
+    fields.temp_min_24h_c = 'INVALID';
+    fields.temp_max_24h_c = 'INVALID';
+    aggregates.temp_min_24h_c.quality = 'INVALID';
+    aggregates.temp_max_24h_c.quality = 'INVALID';
+    warnings.add('INCONSISTENT_AGGREGATES');
   }
 
   const validTimestamps = Object.values(observedAtByField).sort();
@@ -238,6 +299,7 @@ function normalizeGrafanaSnapshot(payload, options = {}) {
     quality: {
       fields,
       observed_at_by_field: observedAtByField,
+      aggregates,
       warnings: [...warnings].sort(),
       units,
     },
@@ -314,8 +376,11 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
       access_scope: 'INTERNAL_ONLY', fields: [
         { id: 'temperature', unit: 'celsius' },
         { id: 'humidity', unit: 'percent' },
+        { id: 'temperature_min_24h', unit: 'celsius' },
+        { id: 'temperature_max_24h', unit: 'celsius' },
+        { id: 'rain_24h', unit: null },
       ],
-      rain_enabled: false,
+      rain_enabled: true,
     }));
   }
 
@@ -343,7 +408,7 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
         source: {
           namespace: 'GRAFANA', external_id: binding.rows[0].external_id,
           access_scope: 'INTERNAL_ONLY', datasource_uid: DATASOURCE_UID,
-          persistence: 'DISABLED', rain_enabled: false,
+          persistence: 'DISABLED', rain_enabled: true,
         },
         window: {
           from: new Date(fetched.from).toISOString(),

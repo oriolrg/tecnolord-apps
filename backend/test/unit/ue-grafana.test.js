@@ -47,6 +47,23 @@ function humidityPayload(times, values, { sensor = SENSOR, unit } = {}) {
   };
 }
 
+function aggregatePayload(refId, name, times, values, { sensor = SENSOR, unit } = {}) {
+  return {
+    results: {
+      [refId]: {
+        status: 200,
+        frames: [{
+          schema: { fields: [
+            { name: 'Time', type: 'time' },
+            { name, type: 'number', labels: { tag4: sensor }, config: unit ? { unit } : {} },
+          ] },
+          data: { values: [times, values] },
+        }],
+      },
+    },
+  };
+}
+
 function multivariable(temperature, humidity) {
   return { results: { ...(temperature?.results || {}), ...(humidity?.results || {}) } };
 }
@@ -67,10 +84,10 @@ function adapter(fetch, enabled = true) {
   });
 }
 
-test('H05A builds fixed temperature and humidity queries without client-controlled endpoint or PromQL', () => {
+test('H09A builds current and dashboard 24 h queries from the selected binding', () => {
   const body = buildGrafanaQuery(SENSOR, FROM, TO);
   assert.equal(GRAFANA_ENDPOINT, 'https://grafana.commonscloud.coop/api/ds/query');
-  assert.equal(body.queries.length, 2);
+  assert.equal(body.queries.length, 5);
   assert.equal(body.queries[0].datasource.uid, DATASOURCE_UID);
   assert.equal(body.queries[0].expr, `xoic_I2CAT_temperatura{tag4="${SENSOR}"}`);
   assert.equal(body.queries[0].intervalMs, 300000);
@@ -78,6 +95,9 @@ test('H05A builds fixed temperature and humidity queries without client-controll
   assert.equal(body.queries[1].datasource.uid, DATASOURCE_UID);
   assert.equal(body.queries[1].expr, `xoic_I2CAT_humitat{tag4="${SENSOR}"}`);
   assert.equal(body.queries[1].intervalMs, 300000);
+  assert.equal(body.queries[2].expr, `min_over_time(xoic_I2CAT_temperatura{tag4="${SENSOR}"}[24h])`);
+  assert.equal(body.queries[3].expr, `max_over_time(xoic_I2CAT_temperatura{tag4="${SENSOR}"}[24h])`);
+  assert.equal(body.queries[4].expr, `xoic_I2CAT_pluja_acumulada{tag4="${SENSOR}"} - xoic_I2CAT_pluja_acumulada{tag4="${SENSOR}"} offset 1d`);
   assert.equal(TO - FROM, 30 * 60 * 1000);
   assert.equal(buildGrafanaQuery('unknown', FROM, TO), null);
   assert.equal(buildGrafanaQuery(SENSOR, FROM, TO + 1), null);
@@ -86,10 +106,72 @@ test('H05A builds fixed temperature and humidity queries without client-controll
 test('H06 builds the same bounded queries for literal partial and S31 identifiers', () => {
   for (const externalId of ['Meteo-026-', 'Meteo-027-', 'Meteo-029-', 'S31-119416', 'S31-99933']) {
     const body = buildGrafanaQuery(externalId, FROM, TO);
-    assert.equal(body.queries.length, 2);
+    assert.equal(body.queries.length, 5);
     assert.equal(body.queries[0].expr, `xoic_I2CAT_temperatura{tag4="${externalId}"}`);
     assert.equal(body.queries[1].expr, `xoic_I2CAT_humitat{tag4="${externalId}"}`);
+    assert.equal(body.queries.every((query) => [...query.expr.matchAll(/tag4="([^"]+)"/g)]
+      .every((match) => match[1] === externalId)), true);
   }
+});
+
+test('H09A keeps three station bindings distinct and never falls back to the MLW28 sensor', () => {
+  const bindings = ['Meteo-002-3100007', 'Meteo-013-3300161', 'Meteo-001-3100044'];
+  const queries = bindings.map((externalId) => buildGrafanaQuery(externalId, FROM, TO));
+  for (let index = 0; index < bindings.length; index += 1) {
+    const sensors = queries[index].queries.flatMap((query) => [...query.expr.matchAll(/tag4="([^"]+)"/g)]
+      .map((match) => match[1]));
+    assert.equal(sensors.length >= 5, true);
+    assert.deepEqual([...new Set(sensors)], [bindings[index]]);
+  }
+  assert.equal(queries[0].queries.some((query) => query.expr.includes(bindings[2])), false);
+  assert.equal(queries[1].queries.some((query) => query.expr.includes(bindings[2])), false);
+});
+
+test('H09A normalizes dashboard 24 h aggregates without changing the current observation time', () => {
+  const input = { results: {
+    ...payload([TO - 60_000], [12], { unit: 'celsius' }).results,
+    ...humidityPayload([TO - 120_000], [55], { unit: 'humidity' }).results,
+    ...aggregatePayload('C', 'Mínima 24h', [TO], [0], { unit: 'celsius' }).results,
+    ...aggregatePayload('D', 'Màxima 24h', [TO], [19], { unit: 'celsius' }).results,
+    ...aggregatePayload('E', 'Pluja Acumulada 24h', [TO], [0]).results,
+  } };
+  const result = normalizeGrafanaSnapshot(input, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(result.ok, true);
+  assert.equal(result.observedAt.toISOString(), new Date(TO - 60_000).toISOString());
+  assert.equal(result.values.temp_c, 12);
+  assert.equal(result.values.humitat_pct, 55);
+  assert.equal(result.values.temp_min_24h_c, 0);
+  assert.equal(result.values.temp_max_24h_c, 19);
+  assert.equal(result.values.rain_24h, 0);
+  assert.deepEqual(result.quality.aggregates.rain_24h, {
+    window_hours: 24, evaluated_at: new Date(TO).toISOString(),
+    reduction: 'lastNotNull', quality: 'VALID',
+  });
+  assert.equal('rain_24h' in result.quality.observed_at_by_field, false);
+});
+
+test('H09A isolates absent aggregates and rejects an inverted temperature range', () => {
+  const missingRain = { results: {
+    ...payload([TO], [12]).results,
+    ...humidityPayload([TO], [55]).results,
+    ...aggregatePayload('C', 'Mínima 24h', [TO], [4]).results,
+    ...aggregatePayload('D', 'Màxima 24h', [TO], [18]).results,
+    E: { status: 200, frames: [{ schema: { fields: [] }, data: { values: [] } }] },
+  } };
+  const partial = normalizeGrafanaSnapshot(missingRain, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(partial.ok, true);
+  assert.equal(partial.values.rain_24h, null);
+  assert.equal(partial.quality.fields.rain_24h, 'MISSING');
+  assert.equal(partial.values.temp_min_24h_c, 4);
+
+  const inverted = structuredClone(missingRain);
+  inverted.results.C = aggregatePayload('C', 'Mínima 24h', [TO], [20]).results.C;
+  inverted.results.D = aggregatePayload('D', 'Màxima 24h', [TO], [10]).results.D;
+  const invalid = normalizeGrafanaSnapshot(inverted, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(invalid.ok, true);
+  assert.equal(invalid.values.temp_min_24h_c, null);
+  assert.equal(invalid.values.temp_max_24h_c, null);
+  assert.ok(invalid.quality.warnings.includes('INCONSISTENT_AGGREGATES'));
 });
 
 test('UE-T14 normalizes multiple frames, preserves zero/null and rejects inconsistent lengths', () => {

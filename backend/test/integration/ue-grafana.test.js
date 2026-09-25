@@ -109,14 +109,17 @@ test('UE-T14 exposes fixed Grafana frames only to admin and never persists or re
         access_scope: 'INTERNAL_ONLY', fields: [
           { id: 'temperature', unit: 'celsius' },
           { id: 'humidity', unit: 'percent' },
-        ], rain_enabled: false,
+          { id: 'temperature_min_24h', unit: 'celsius' },
+          { id: 'temperature_max_24h', unit: 'celsius' },
+          { id: 'rain_24h', unit: null },
+        ], rain_enabled: true,
       }]);
       const current = await request(base,
         `/api/v1/admin/grafana/stations/${station.rows[0].public_id}/current`, adminSession);
       assert.equal(current.response.status, 200, JSON.stringify(current.body));
       assert.equal(current.body.source.access_scope, 'INTERNAL_ONLY');
       assert.equal(current.body.source.persistence, 'DISABLED');
-      assert.equal(current.body.source.rain_enabled, false);
+      assert.equal(current.body.source.rain_enabled, true);
       assert.equal(current.body.series.length, 2);
       assert.equal(current.body.window.minutes, 30);
       assert.equal(current.body.series[0].points[0].quality, 'OUT_OF_RANGE');

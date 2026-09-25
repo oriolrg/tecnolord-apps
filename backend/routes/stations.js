@@ -12,12 +12,17 @@ const MEASUREMENT_FIELD_NAMES = Object.freeze([
   'pluja_setmana_mm', 'pluja_mes_mm', 'pluja_any_mm', 'vent_ms', 'vent_rafega_ms',
   'vent_direccio_graus', 'pressio_rel_hpa', 'pressio_abs_hpa', 'bateria_pct',
 ]);
+const CURRENT_FIELD_NAMES = Object.freeze([
+  ...MEASUREMENT_FIELD_NAMES, 'temp_min_24h_c', 'temp_max_24h_c', 'rain_24h',
+]);
+const AGGREGATE_FIELD_NAMES = Object.freeze(['temp_min_24h_c', 'temp_max_24h_c', 'rain_24h']);
 const MEASUREMENT_FIELDS = `m.instant,${MEASUREMENT_FIELD_NAMES.map((field) => `m.${field}`).join(',')}`;
 const FRESHNESS_STATES = new Set(['FRESH', 'STALE', 'OBSOLETE', 'UNKNOWN']);
 const FIELD_QUALITY_STATES = new Set(['VALID', 'MISSING', 'INVALID', 'OUT_OF_RANGE']);
 const QUALITY_WARNINGS = new Set([
   'INVALID_FRAME_SCHEMA', 'INCONSISTENT_LENGTH', 'SENSOR_MISMATCH', 'UNSUPPORTED_UNIT',
   'SOURCE_UNIT_UNDECLARED', 'FUTURE_TIMESTAMP', 'INVALID_TIMESTAMP',
+  'INCONSISTENT_AGGREGATES',
 ]);
 const SOURCE_ERRORS = new Set([
   'AUTH_REQUIRED', 'RATE_LIMITED', 'PROVIDER_UNAVAILABLE', 'TIMEOUT', 'INVALID_JSON',
@@ -37,7 +42,7 @@ function sanitizedQuality(value) {
   const result = {};
   if (FRESHNESS_STATES.has(value.freshness)) result.freshness = value.freshness;
   if (value.fields && typeof value.fields === 'object' && !Array.isArray(value.fields)) {
-    result.fields = Object.fromEntries(MEASUREMENT_FIELD_NAMES
+    result.fields = Object.fromEntries(CURRENT_FIELD_NAMES
       .filter((field) => FIELD_QUALITY_STATES.has(value.fields[field]))
       .map((field) => [field, value.fields[field]]));
   }
@@ -46,13 +51,13 @@ function sanitizedQuality(value) {
   }
   if (value.observed_at_by_field && typeof value.observed_at_by_field === 'object'
       && !Array.isArray(value.observed_at_by_field)) {
-    result.observed_at_by_field = Object.fromEntries(MEASUREMENT_FIELD_NAMES
+    result.observed_at_by_field = Object.fromEntries(CURRENT_FIELD_NAMES
       .map((field) => [field, sanitizedTimestamp(value.observed_at_by_field[field])])
       .filter(([, timestamp]) => timestamp !== null));
   }
   if (value.units && typeof value.units === 'object' && !Array.isArray(value.units)) {
     const units = {};
-    for (const field of MEASUREMENT_FIELD_NAMES) {
+    for (const field of CURRENT_FIELD_NAMES) {
       const unit = value.units[field];
       if (!unit || typeof unit !== 'object' || Array.isArray(unit)) continue;
       const canonical = ['celsius', 'percent'].includes(unit.canonical) ? unit.canonical : undefined;
@@ -66,6 +71,18 @@ function sanitizedQuality(value) {
     }
     result.units = units;
   }
+  if (value.aggregates && typeof value.aggregates === 'object' && !Array.isArray(value.aggregates)) {
+    result.aggregates = Object.fromEntries(AGGREGATE_FIELD_NAMES.map((field) => {
+      const aggregate = value.aggregates[field];
+      const evaluatedAt = sanitizedTimestamp(aggregate?.evaluated_at);
+      if (!aggregate || aggregate.window_hours !== 24 || aggregate.reduction !== 'lastNotNull'
+          || !FIELD_QUALITY_STATES.has(aggregate.quality) || !evaluatedAt) return null;
+      return [field, {
+        window_hours: 24, evaluated_at: evaluatedAt,
+        reduction: 'lastNotNull', quality: aggregate.quality,
+      }];
+    }).filter(Boolean));
+  }
   return result;
 }
 
@@ -74,7 +91,7 @@ function currentSnapshotDto(snapshot) {
   let item = null;
   if (snapshot.item && typeof snapshot.item === 'object' && !Array.isArray(snapshot.item)) {
     item = { instant: sanitizedTimestamp(snapshot.item.instant) };
-    for (const field of MEASUREMENT_FIELD_NAMES) {
+    for (const field of CURRENT_FIELD_NAMES) {
       if (!(field in snapshot.item)) continue;
       const value = snapshot.item[field];
       item[field] = value === null || (typeof value === 'number' && Number.isFinite(value)) ? value : null;

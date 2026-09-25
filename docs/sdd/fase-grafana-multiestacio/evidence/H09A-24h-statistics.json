@@ -1,0 +1,157 @@
+{
+  "task": "H09A",
+  "created_at": "2026-09-24",
+  "scope": "local Grafana 24 h statistics only",
+  "status": "PASS",
+  "baseline": [
+    "STATE.md",
+    "evidence/H08-final-gate.json"
+  ],
+  "dashboard_contract": {
+    "dashboard_version": 46,
+    "current_panel": "Valors Actuals",
+    "extremes_panel": "Extrems Temperatures ",
+    "reduction": "lastNotNull",
+    "request_window_minutes": 30,
+    "interval_seconds": 300,
+    "max_data_points": 20,
+    "queries": {
+      "temp_c": "xoic_I2CAT_temperatura{tag4=\"$sensor\"}",
+      "humitat_pct": "xoic_I2CAT_humitat{tag4=\"$sensor\"}",
+      "temp_min_24h_c": "min_over_time(xoic_I2CAT_temperatura{tag4=\"$sensor\"}[24h])",
+      "temp_max_24h_c": "max_over_time(xoic_I2CAT_temperatura{tag4=\"$sensor\"}[24h])",
+      "rain_24h": "xoic_I2CAT_pluja_acumulada{tag4=\"$sensor\"} - xoic_I2CAT_pluja_acumulada{tag4=\"$sensor\"} offset 1d"
+    },
+    "binding_rule": "At runtime $sensor is replaced only by the selected station binding external_id.",
+    "functional_sensor_hardcoded": false,
+    "temperature_unit": "celsius",
+    "rain_label_source": "Pluja Acumulada 24h",
+    "rain_unit_declared_by_dashboard": false,
+    "rain_reset_handling": "The dashboard subtracts the value offset 1d directly and defines no counter-reset correction; MeteoLord preserves that exact behavior. A reset can therefore produce a negative result.",
+    "pressure_queried": false
+  },
+  "api_contract": {
+    "ordinary_current_api": true,
+    "fields": [
+      "temp_c",
+      "humitat_pct",
+      "temp_min_24h_c",
+      "temp_max_24h_c",
+      "rain_24h"
+    ],
+    "aggregate_metadata": {
+      "window_hours": 24,
+      "reduction": "lastNotNull",
+      "separate_evaluated_at": true
+    },
+    "current_observation_timestamp_overwritten_by_aggregate": false,
+    "internal_grafana_metadata_exposed": false,
+    "legacy_admin_endpoint_added": false
+  },
+  "multi_station_validation": {
+    "validated_at": "2026-09-24T18:46:00+02:00",
+    "direct_grafana_compared_with_ordinary_api": true,
+    "all_fields_match": true,
+    "distinct_bindings": true,
+    "stations": [
+      {
+        "station": "MLW01 / Can Pernals",
+        "external_id": "Meteo-002-3100007",
+        "current_observed_at": "2026-09-24T16:35:00.000Z",
+        "temp_c": 21.3,
+        "temp_min_24h_c": 12.4,
+        "temp_max_24h_c": 25.6,
+        "humitat_pct": 40,
+        "rain_24h": null,
+        "rain_quality": "MISSING",
+        "result": "PASS"
+      },
+      {
+        "station": "MLW02 / Forat Bòfia",
+        "external_id": "Meteo-013-3300161",
+        "current_observed_at": "2026-09-24T16:35:00.000Z",
+        "temp_c": 15.8,
+        "temp_min_24h_c": 11.5,
+        "temp_max_24h_c": 18.2,
+        "humitat_pct": 49,
+        "rain_24h": 0,
+        "rain_quality": "VALID",
+        "result": "PASS"
+      },
+      {
+        "station": "MLW28 / Granja Vaques ca l'Andal",
+        "external_id": "Meteo-001-3100044",
+        "current_observed_at": "2026-09-24T16:40:00.000Z",
+        "temp_c": 20.5,
+        "temp_min_24h_c": 12.5,
+        "temp_max_24h_c": 23.7,
+        "humitat_pct": 43,
+        "rain_24h": 0,
+        "rain_quality": "VALID",
+        "result": "PASS"
+      }
+    ]
+  },
+  "ui": {
+    "real_browser": true,
+    "sequence": [
+      "MLW01",
+      "MLW02",
+      "MLW28",
+      "Ecowitt"
+    ],
+    "temperature_current_visible": true,
+    "temperature_min_24h_visible": true,
+    "temperature_max_24h_visible": true,
+    "humidity_visible": true,
+    "rain_24h_label": "Pluja acumulada 24 h",
+    "missing_aggregate_rendered_as_dash": true,
+    "zero_aggregate_rendered_as_value": true,
+    "grafana_pressure_visible": false,
+    "browser_errors": 0
+  },
+  "network": {
+    "browser_direct_grafana_requests": 0,
+    "browser_legacy_grafana_api_requests": 0,
+    "ordinary_current_api_only": true
+  },
+  "persistence_invariants": {
+    "schema_changed": false,
+    "migration_added": false,
+    "grafana_measures": 0,
+    "grafana_history_policies": 0,
+    "history_enabled": false
+  },
+  "tests": {
+    "focused_files_passed": 5,
+    "full_suite": {
+      "pass": 308,
+      "fail": 0,
+      "skip": 0,
+      "total": 308
+    },
+    "binding_distinction": "PASS",
+    "zero_and_missing_aggregates": "PASS",
+    "min_max_consistency": "PASS",
+    "current_aggregate_timestamp_separation": "PASS",
+    "javascript_syntax": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "ecowitt_regression": {
+    "result": "PASS",
+    "station": "Meteo Synthetic 01",
+    "temp_c": 18.5,
+    "humitat_pct": 51,
+    "daily_extremes_preserved": true,
+    "legacy_rain_card_preserved": true,
+    "pressure_card_visible": true,
+    "pressure_relative_hpa": 1012.4,
+    "pressure_absolute_hpa": 1001.7
+  },
+  "cleanup": {
+    "temporary_admin_session_deleted": true,
+    "temporary_backend_removed": true
+  },
+  "production_touched": false,
+  "h09b_started": false
+}
