@@ -1,0 +1,272 @@
+{
+  "task": "H10",
+  "created_at": "2026-09-25T11:29:48+02:00",
+  "scope": "local release gate only",
+  "status": "PASS",
+  "release_decision": "H10 PASS — RELEASE CANDIDATE LOCAL",
+  "baseline": [
+    "STATE.md",
+    "evidence/H08-final-gate.json",
+    "evidence/H09A-24h-statistics.json",
+    "evidence/H09B-topographic-map.json"
+  ],
+  "git": {
+    "candidate_head": "1b5e7864da297e408ea09249cfdabb03e14950c2",
+    "branch": "main",
+    "diff_check": "PASS",
+    "functional_untracked_files": 0,
+    "untracked_non_runtime_files": [
+      "AGENTS.md",
+      "docs/sdd/fase-grafana-multiestacio/tasks/H07.md"
+    ],
+    "reproducible_from_git": true,
+    "baseline_consolidation": {
+      "h09a_commit": "85f26c1",
+      "release_blocker_fix_commits": ["3c9a897", "1b5e786"]
+    }
+  },
+  "config_readiness": {
+    "validation": "PASS",
+    "required_variables": [
+      "METEOLORD_ENV",
+      "METEOLORD_PROVIDER_MODE",
+      "METEOLORD_ALLOW_SYNTHETIC",
+      "METEOLORD_EXTERNAL_NETWORK",
+      "METEOLORD_GRAFANA_INTERNAL_ENABLED",
+      "METEOLORD_GRAFANA_INTERVAL_SECONDS",
+      "DB_HOST",
+      "DB_PORT",
+      "DB_NAME",
+      "DB_USER",
+      "DB_PASSWORD",
+      "INGEST_API_KEY"
+    ],
+    "optional_or_feature_scoped_variables": [
+      "METEOLORD_CONNECTOR_KEYS",
+      "METEOLORD_LOCAL_MAIL_OUTBOX",
+      "POSTGRES_HOST",
+      "POSTGRES_PORT",
+      "POSTGRES_DB",
+      "POSTGRES_USER",
+      "POSTGRES_PASSWORD",
+      "PORT"
+    ],
+    "local_grafana_enabled": true,
+    "local_grafana_cadence_seconds": 300,
+    "scheduler_added": false,
+    "database_internal_url": "db:5432/meteolord_local",
+    "backend_internal_port": 8080,
+    "host_gate_port": 8090,
+    "frontend_base_path": "/meteo/",
+    "map_path": "/meteo/mapa/",
+    "map_style": "/meteo/map-assets/style.real.json",
+    "map_provider": "OpenStreetMap raster",
+    "required_map_assets": [
+      "maplibre-gl.mjs",
+      "maplibre-gl-worker.mjs",
+      "maplibre-gl.css",
+      "style.real.json"
+    ],
+    "secrets_recorded": false,
+    "local_example_present": true,
+    "local_compose_present": true
+  },
+  "build": {
+    "source": "git archive 1b5e7864da297e408ea09249cfdabb03e14950c2",
+    "frontend_static_assets": "PASS",
+    "backend_image": "meteolord-h10-rc:1b5e786",
+    "backend_image_digest": "sha256:a9ca4a6f9625431aa77b0f401c6461e24a75e1cfb11f5556706d80fc40918f5c",
+    "dockerfile": "backend/Dockerfile.local",
+    "compose_config": "PASS",
+    "map_assets": "PASS",
+    "temporary_prior_test_artifacts_used": false
+  },
+  "tests": {
+    "pass": 309,
+    "fail": 0,
+    "skip": 0,
+    "total": 309,
+    "coverage_lines_percent": 95.55,
+    "coverage_branches_percent": 83.52,
+    "coverage_functions_percent": 92.05,
+    "focused_map_session_tests": {
+      "pass": 30,
+      "fail": 0,
+      "skip": 0
+    },
+    "javascript_syntax": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "catalog": {
+    "grafana_stations": 29,
+    "grafana_bindings": 29,
+    "validated_bindings": 29,
+    "admin_private": 29,
+    "distinct_external_ids": 29,
+    "distinct_station_ids": 29,
+    "duplicate_groups": 0,
+    "high_coordinates": 10,
+    "selector_grafana": 29,
+    "selector_duplicates": 0
+  },
+  "smoke": {
+    "manual_refresh": {
+      "stations": 30,
+      "updated": 29,
+      "upstream_errors": ["INVALID_FRAMES"],
+      "scheduler_used": false
+    },
+    "grafana": [
+      { "station": "MLW01", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "rain_24h": "MISSING", "pressure": false, "result": "PASS" },
+      { "station": "MLW02", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "rain_24h": 0, "pressure": false, "result": "PASS" },
+      { "station": "MLW28", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "rain_24h": 0, "pressure": false, "result": "PASS" },
+      { "station": "Meteo-026- / MLW26", "freshness": "OBSOLETE", "error": "INVALID_FRAMES", "last_good_fail_closed": true, "pressure": false, "result": "PASS_FAIL_CLOSED" },
+      { "station": "S31-99933", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "rain_24h": "MISSING", "pressure": false, "result": "PASS" },
+      { "station": "S31-119416", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "rain_24h": "MISSING", "pressure": false, "result": "PASS" }
+    ],
+    "binding_specific_statistics": "PASS_FROM_H09A_BASELINE_AND_CURRENT_MULTI_STATION_SMOKE",
+    "ecowitt": {
+      "connector_station": "Cabrera",
+      "refresh": "PASS",
+      "current": "PASS",
+      "humidity": "PASS",
+      "relative_pressure": "PASS",
+      "absolute_pressure": "PASS",
+      "public_ui_station": "Meteo Synthetic 01",
+      "daily_extremes": "PASS",
+      "rain_card": "PASS",
+      "existing_history_rows": 5,
+      "result": "PASS"
+    }
+  },
+  "ui": {
+    "real_browser": true,
+    "sequence": ["MLW01", "MLW02", "MLW28", "S31-119416", "S31-99933", "Ecowitt", "MLW28"],
+    "rapid_switch": "PASS",
+    "late_response_rendered": false,
+    "residual_station_data": false,
+    "grafana_pressure_visible": false,
+    "ecowitt_pressure_visible": true,
+    "logout": "PASS",
+    "browser_errors": 0
+  },
+  "map": {
+    "provider": "OpenStreetMap raster",
+    "contour_lines_claimed": false,
+    "style": "/meteo/map-assets/style.real.json",
+    "admin": {
+      "grafana_high": 10,
+      "public_estimations": 6,
+      "total": 16,
+      "basemap_visible": true,
+      "tiles_200": 18,
+      "zoom": "PASS",
+      "pan": "PASS",
+      "selection": "PASS",
+      "console_errors": 0,
+      "failed_requests": 0
+    },
+    "public": {
+      "public_points": 6,
+      "private_grafana": 0,
+      "basemap_visible": true,
+      "tiles_200": 18,
+      "protected_requests_made": 0,
+      "console_errors": 0,
+      "failed_requests": 0
+    }
+  },
+  "permissions": {
+    "superadmin_admin_catalog_status": 200,
+    "superadmin_private_current_status": 200,
+    "superadmin_admin_map_status": 200,
+    "foreign_user_admin_catalog_status": 403,
+    "foreign_user_private_current_status": 404,
+    "foreign_user_admin_map_status": 403,
+    "visitor_admin_catalog_status": 401,
+    "visitor_private_current_status": 404,
+    "visitor_admin_map_status": 401,
+    "public_map_private_grafana": 0,
+    "session_map_contract": "visitor empty; USER own; SUPERADMIN all"
+  },
+  "network": {
+    "browser_direct_grafana_requests": 0,
+    "browser_legacy_grafana_api_requests": 0,
+    "osm_runtime_dependency": true,
+    "api_responses_scanned": 10,
+    "grafana_host_exposed": false,
+    "promql_exposed": false,
+    "datasource_uid_exposed": false,
+    "external_id_exposed": false,
+    "secrets_exposed": false,
+    "internal_traces_exposed": false
+  },
+  "persistence": {
+    "grafana_bindings": 29,
+    "grafana_current_snapshots": 29,
+    "grafana_measures": 0,
+    "grafana_history_policies": 0,
+    "existing_meteo_history_rows": 5,
+    "existing_hydro_rows": 4,
+    "schema_changed": false,
+    "migration_added": false
+  },
+  "restart": {
+    "database_container_restarted": true,
+    "release_backend_restarted": true,
+    "volumes_removed": false,
+    "database_volume": "meteolord-ue20260918_db_data",
+    "health_status": 200,
+    "catalog_preserved": true,
+    "snapshots_preserved": true,
+    "meteo_history_preserved": true,
+    "hydro_preserved": true,
+    "meteo_route_status": 200,
+    "map_route_status": 200,
+    "map_style_status": 200,
+    "public_catalog_status": 200
+  },
+  "release_blocker_fixed": {
+    "symptom": "The public map requested protected private-map endpoints and Chrome reported expected 401 responses as console errors.",
+    "correction": "A session-scoped map collection now returns an empty collection to visitors, owned stations to USER and all private stations to SUPERADMIN; protected admin and owner endpoints remain protected.",
+    "functional_scope_added": false,
+    "permissions_changed": false,
+    "validation": "PASS"
+  },
+  "preproduction_inventory": {
+    "services": ["reverse proxy/Caddy", "MeteoLord backend", "PostgreSQL/PostGIS"],
+    "internal_ports": { "backend": 8080, "database": 5432 },
+    "external_ports": [80, 443],
+    "persistent_volumes": ["PostgreSQL data", "Caddy data/certificates"],
+    "database": "PostgreSQL/PostGIS with current migrations applied by a controlled preproduction procedure",
+    "variables": "local inventory above must be translated to preproduction secrets and service names; no local synthetic secret may be reused",
+    "caddy_routing": ["/meteo/* to MeteoLord frontend/backend", "/api/* to MeteoLord backend", "/health to MeteoLord backend"],
+    "subdomain": "required before deployment; not selected by H10",
+    "https": "required with valid certificate before exposure",
+    "grafana_outbound": "server-side HTTPS required",
+    "osm_outbound": "browser HTTPS to tile.openstreetmap.org required by current map",
+    "assets": ["versioned site assets", "MapLibre module/worker/CSS", "real OSM style"],
+    "deployment_executed": false
+  },
+  "known_risks": [
+    "Grafana pressure remains unsupported because its semantics are unresolved.",
+    "Grafana rain_24h inherits the dashboard subtraction and counter-reset semantics and has no invented unit.",
+    "Some station locations remain unresolved and are intentionally absent from the map.",
+    "Some upstream sensors can return INVALID_FRAMES or temporarily stale data; the UI fails closed.",
+    "OpenStreetMap raster is an external runtime dependency and its tile policy must be respected.",
+    "The clean image build reports two moderate npm audit findings that require dependency triage before preproduction.",
+    "The clean image build reports an engine warning for a transitive package requiring Node 22 while the pinned runtime is Node 20; build and all tests pass, but the runtime image should be reviewed before preproduction.",
+    "Preproduction subdomain, Caddy file, certificate and secret injection are inventory items, not implemented by H10."
+  ],
+  "cleanup": {
+    "temporary_sessions_deleted": true,
+    "temporary_user_deleted": true,
+    "temporary_release_container_removed": true,
+    "database_volume_preserved": true,
+    "production_accessed": false
+  },
+  "production_touched": false,
+  "h05c_started": false,
+  "productive_phase_started": false,
+  "blocking_defects": []
+}

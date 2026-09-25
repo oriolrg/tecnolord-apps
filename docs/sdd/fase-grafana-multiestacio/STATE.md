@@ -219,6 +219,21 @@ Evidència:
 - cap coordenada, estació, permís, dada meteorològica ni API modificats;
 - suite completa: 309 PASS, 0 FAIL, 0 SKIP; sintaxi i `git diff --check` PASS.
 
+H10 PASS — release candidate local validada.
+
+Evidència:
+- `evidence/H10-release-candidate.json`;
+- candidat funcional `1b5e7864da297e408ea09249cfdabb03e14950c2`, construït des de `git archive` sense fitxers funcionals fora de Git;
+- build net de backend i assets frontend/mapa PASS;
+- suite completa: 309 PASS, 0 FAIL, 0 SKIP, cobertura de línies 95,55 %;
+- smoke real PASS per MLW01, MLW02, MLW28, Meteo-026-, S31-99933, S31-119416 i Ecowitt;
+- selector SUPERADMIN amb 29 Grafana i 0 duplicats, canvi ràpid i retorn Ecowitt/Grafana PASS;
+- mapa OpenStreetMap raster PASS: 10 Grafana HIGH per admin, 0 Grafana privades i 6 punts al públic, consola i requests crítics a zero;
+- corregides les consultes privades innecessàries del mapa públic mitjançant una col·lecció acotada per sessió, sense relaxar `/me` ni `/admin`;
+- permisos SUPERADMIN/USER/visitant, absència d'exposició Grafana i invariants de persistència PASS;
+- reinici controlat de PostgreSQL i de l'RC local PASS, sense eliminar volums: 29 bindings, 29 snapshots, 0 mesures Grafana, 0 polítiques Grafana, 5 mesures meteo i 4 lectures hidro preservades;
+- inventari de preproducció i riscos registrat, sense desplegament ni accés a producció.
+
 Ordre:
 
 H01 discovery sensors Grafana
@@ -231,10 +246,11 @@ H07 API/UI/mapa
 H08 gate multiestació
 H09A estadístiques 24 h Grafana
 H09B capa base del mapa local
+H10 release candidate local
 
 ## Següent tasca
 
-H09B completada en local. H10 no iniciada i cap fase productiva iniciada.
+H10 completada en local. El candidat pot iniciar una tasca separada de preparació de preproducció quan sigui autoritzada. Cap fase productiva iniciada.
 
 H05C continua bloquejada per pressió i pluja fins a obtenir contractes de font suficients (no iniciada).
 
