@@ -22,6 +22,7 @@ const VALID_LOCAL = Object.freeze({
   EXTERNAL_LINKS_ENABLED: false,
   ENVIRONMENT: 'local',
   SYNTHETIC_DATA: true,
+  MAP_ACCESS_SCOPE: 'PUBLIC',
 });
 
 let moduleSequence = 0;
@@ -63,6 +64,7 @@ test('frontend config resolves the valid local schema and same-origin API paths'
   assert.equal(module.CONFIG.analyticsEnabled, false);
   assert.equal(module.CONFIG.externalLinksEnabled, false);
   assert.equal(module.CONFIG.syntheticData, true);
+  assert.equal(module.CONFIG.mapAccessScope, 'PUBLIC');
   assert.equal(Object.isFrozen(module.CONFIG), true);
 });
 
@@ -85,6 +87,7 @@ test('frontend rejects incomplete, external and unsafe local runtime values', as
     { ...VALID_LOCAL, EXTERNAL_LINKS_ENABLED: true },
     { ...VALID_LOCAL, MAP_TILE_URL: 'https://tiles.invalid/{z}/{x}/{y}' },
     { ...VALID_LOCAL, UNAPPROVED_KEY: true },
+    { ...VALID_LOCAL, MAP_ACCESS_SCOPE: 'ADMIN' },
     Object.fromEntries(Object.entries(VALID_LOCAL).filter(([key]) => key !== 'API_BASE')),
   ];
 
@@ -115,6 +118,7 @@ test('production runtime keeps characterized analytics and external links enable
         EXTERNAL_LINKS_ENABLED: true,
         ENVIRONMENT: 'production',
         SYNTHETIC_DATA: false,
+        MAP_ACCESS_SCOPE: 'PUBLIC',
       },
     },
   });

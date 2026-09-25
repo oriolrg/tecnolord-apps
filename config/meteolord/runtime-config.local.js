@@ -10,6 +10,7 @@
     EXTERNAL_LINKS_ENABLED: false,
     ENVIRONMENT: 'local',
     SYNTHETIC_DATA: true,
+    MAP_ACCESS_SCOPE: 'PUBLIC',
   });
 
   Object.defineProperty(window, '__METEOLORD_CONFIG', {

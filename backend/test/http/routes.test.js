@@ -326,6 +326,7 @@ test('/meteo/mapa/ selects the existing real style runtime and constrained tile 
     assert.equal(response.headers.get('cache-control'), 'no-store, max-age=0');
     assert.equal(source, expected);
     assert.match(source, /SYNTHETIC_DATA: false/);
+    assert.match(source, /MAP_ACCESS_SCOPE: 'PUBLIC'/);
     assert.match(LOCAL_REAL_MAP_CSP, /img-src[^;]*https:\/\/tile\.openstreetmap\.org/);
     assert.match(LOCAL_REAL_MAP_CSP, /connect-src[^;]*https:\/\/tile\.openstreetmap\.org/);
     assert.doesNotMatch(LOCAL_REAL_MAP_CSP, /script-src[^;]*'unsafe-inline'/);

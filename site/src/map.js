@@ -288,13 +288,19 @@ async function refresh({ fit = false } = {}) {
   $('#status').textContent = 'Carregant estacions…';
   try {
     const query = filtersQuery();
+    const ownMapRequest = config.mapAccessScope !== 'PUBLIC'
+      ? fetch(`${config.apiBase}/v1/me/map?${query}`, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
+        .then((response) => response.ok ? response.json() : EMPTY)
+      : Promise.resolve(EMPTY);
+    const adminMapRequest = config.mapAccessScope === 'SUPERADMIN'
+      ? fetch(`${config.apiBase}/v1/admin/map?${query}`, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
+        .then((response) => response.ok ? response.json() : EMPTY)
+      : Promise.resolve(EMPTY);
     const [result, summary, ownMap, adminMap] = await Promise.all([
       api(`stations?${query}`, controller.signal),
       api(`summary?${query}`, controller.signal),
-      fetch(`${config.apiBase}/v1/me/map?${query}`, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
-        .then((response) => response.ok ? response.json() : EMPTY),
-      fetch(`${config.apiBase}/v1/admin/map?${query}`, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
-        .then((response) => response.ok ? response.json() : EMPTY),
+      ownMapRequest,
+      adminMapRequest,
     ]);
     const check = await api('catalog-version', controller.signal);
     if (epoch !== generation) return;

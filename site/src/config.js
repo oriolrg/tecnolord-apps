@@ -16,6 +16,7 @@ const REQUIRED_RUNTIME_KEYS = Object.freeze([
   "EXTERNAL_LINKS_ENABLED",
   "ENVIRONMENT",
   "SYNTHETIC_DATA",
+  "MAP_ACCESS_SCOPE",
 ]);
 
 function fail(reason) {
@@ -50,6 +51,9 @@ export function resolveRuntimeConfig(runtimeConfig) {
   if (typeof runtimeConfig.ANALYTICS_ENABLED !== "boolean") fail("ANALYTICS_ENABLED must be boolean");
   if (typeof runtimeConfig.EXTERNAL_LINKS_ENABLED !== "boolean") fail("EXTERNAL_LINKS_ENABLED must be boolean");
   if (typeof runtimeConfig.SYNTHETIC_DATA !== "boolean") fail("SYNTHETIC_DATA must be boolean");
+  if (!["PUBLIC", "USER", "SUPERADMIN"].includes(runtimeConfig.MAP_ACCESS_SCOPE)) {
+    fail("MAP_ACCESS_SCOPE must be PUBLIC, USER or SUPERADMIN");
+  }
 
   if (environment === "local") {
     if (runtimeConfig.MAP_TILE_URL !== "") fail("MAP_TILE_URL must be empty in local");
@@ -68,6 +72,7 @@ export function resolveRuntimeConfig(runtimeConfig) {
     externalLinksEnabled: runtimeConfig.EXTERNAL_LINKS_ENABLED,
     environment,
     syntheticData: runtimeConfig.SYNTHETIC_DATA,
+    mapAccessScope: runtimeConfig.MAP_ACCESS_SCOPE,
     meteoEndpoint: `${apiBase}/v1/mesures/darreres`,
     hidroEndpoint: `${apiBase}/v1/hidro/darreres`,
     previEndpoint: `${apiBase}/v1/previ/48h`,
