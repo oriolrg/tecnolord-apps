@@ -1,0 +1,63 @@
+{
+  "task": "PR03",
+  "status": "PASS — RESTORE VERIFICAT",
+  "source_backup": "/home/deploy/backups/meteo/meteo-20260925T101137Z.dump",
+  "target_database": "meteo_restore_test",
+  "target_template": "template0",
+  "production_database": "meteo",
+  "production_database_modified": false,
+  "restore": {
+    "tool": "pg_restore",
+    "options": ["--no-owner", "--no-acl", "--exit-on-error", "--single-transaction"],
+    "completed_without_errors": true
+  },
+  "verified_counts": {
+    "meteo.estacions": 1,
+    "meteo.mesures": 94095,
+    "meteo.mesures_bak_ytd": 61942,
+    "meteo.estacions_hidro": 3,
+    "meteo.lectures_hidro": 246234,
+    "meteo.forecast_run": 5933,
+    "meteo.forecast_hourly": 284784,
+    "auth.usuaris": 1,
+    "auth.aplicacions": 1,
+    "meteo.membres_estacio": 1,
+    "public.measurement": 18
+  },
+  "verified_ranges": {
+    "meteo.mesures": {
+      "first": "2023-05-09 06:00:03+00",
+      "last": "2026-09-25 10:00:03+00"
+    },
+    "meteo.mesures_bak_ytd": {
+      "first": "2023-05-09 06:00:03+00",
+      "last": "2025-10-20 12:15:03+00"
+    },
+    "meteo.lectures_hidro": {
+      "first": "2023-05-09 06:00:03+00",
+      "last": "2026-09-25 09:50:00+00"
+    },
+    "meteo.forecast_run": {
+      "first": "2026-01-07 09:04:34.704+00",
+      "last": "2026-09-25 10:10:02.262+00"
+    },
+    "meteo.forecast_hourly": {
+      "first": "2026-01-07 09:00:00+00",
+      "last": "2026-09-27 09:00:00+00",
+      "future_timestamp_expected": true
+    },
+    "public.measurement": {
+      "first": "2025-10-16 08:39:38.744+00",
+      "last": "2025-10-16 11:15:02.902+00"
+    }
+  },
+  "collation": {
+    "production": {"registered": "2.41", "runtime": "2.31", "mismatch": true},
+    "restore": {"registered": "2.31", "runtime": "2.31", "mismatch": false},
+    "production_refresh_executed": false
+  },
+  "baseline_pristine": true,
+  "must_not_modify": true,
+  "future_migration_target": "meteo_beta",
+  "sensitive_values_in_evidence": 0
+}

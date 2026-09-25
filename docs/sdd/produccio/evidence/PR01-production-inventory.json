@@ -1,0 +1,204 @@
+{
+  "task": "PR01",
+  "status": "PASS — INVENTARI READ-ONLY COMPLET",
+  "application_baseline": "321b8a5",
+  "production_changed": false,
+  "server": {
+    "hostname": "ubuntu-s-1vcpu-2gb-ams3-01",
+    "os": "Ubuntu 24.04.3 LTS",
+    "architecture": "x86_64",
+    "kernel": "6.8",
+    "observed_uptime_days_approx": 227,
+    "memory_gib": 1.9,
+    "swap_gib": 0,
+    "root_disk_gb": 48,
+    "root_used_gb_approx": 29,
+    "root_free_gb_approx": 19,
+    "note": "Resource values are the PR01 observation, not permanent capacity values."
+  },
+  "docker": {
+    "version": "29.1.3",
+    "compose_version": "v5.0.1",
+    "project": "tecnolord-apps",
+    "working_directory": "/home/deploy/tecnolord-apps",
+    "compose_file": "/home/deploy/tecnolord-apps/docker-compose.yml",
+    "services": [
+      "db",
+      "biblioteca_web",
+      "orientatrack",
+      "pap_backend",
+      "backend",
+      "entrenador_personal_web",
+      "opos_web",
+      "umami_db",
+      "umami",
+      "caddy"
+    ],
+    "relevant_containers": [
+      "tecnolord-apps-db-1",
+      "tecnolord-apps-backend-1",
+      "tecnolord-apps-caddy-1"
+    ],
+    "volumes": [
+      "tecnolord-apps_pgdata",
+      "tecnolord-apps_caddy_data",
+      "tecnolord-apps_caddy_config",
+      "tecnolord-apps_umami_pgdata"
+    ],
+    "postgres_volume": {
+      "name": "tecnolord-apps_pgdata",
+      "observed_size_mb_approx": 310
+    }
+  },
+  "postgresql": {
+    "container": "tecnolord-apps-db-1",
+    "image": "postgis/postgis:16-3.4",
+    "server_version": "16.4",
+    "database": "meteo",
+    "database_size_mb_approx": 207,
+    "service_role": "meteo",
+    "active_extensions": ["plpgsql"],
+    "postgis_extension_active": false,
+    "schemas": ["auth", "biblioteca", "hidro", "legacy", "meteo", "public"],
+    "collation": {
+      "registered_version": "2.41",
+      "runtime_version": "2.31",
+      "warning": "collation version mismatch",
+      "corrected_in_production": false
+    }
+  },
+  "data": {
+    "meteo": {
+      "station": {
+        "id": 1,
+        "code": "home",
+        "name": "Casa",
+        "provider": "ecowitt",
+        "active": true
+      },
+      "measurements": {
+        "relation": "meteo.mesures",
+        "rows": 94095,
+        "first": "2023-05-09 06:00:03+00",
+        "last_in_backup": "2026-09-25 10:00:03+00"
+      },
+      "internal_backup": {
+        "relation": "meteo.mesures_bak_ytd",
+        "rows": 61942,
+        "first": "2023-05-09 06:00:03+00",
+        "last": "2025-10-20 12:15:03+00",
+        "counting_note": "COUNT(*) is authoritative; pg_stat_user_tables initially estimated approximately zero rows."
+      }
+    },
+    "hydrology": {
+      "stations_relation": "meteo.estacions_hidro",
+      "station_count": 3,
+      "stations": [
+        {"name": "Cardener", "code": "251116-005", "type": "riu", "reading_count": 83248},
+        {"name": "Valls", "code": "251116-004", "type": "riu", "reading_count": 69438},
+        {"name": "La Llosa del Cavall", "code": "081419-003", "type": "panta", "reading_count": 93548}
+      ],
+      "readings": {
+        "relation": "meteo.lectures_hidro",
+        "rows": 246234,
+        "first": "2023-05-09 06:00:03+00",
+        "last_in_backup": "2026-09-25 09:50:00+00",
+        "critical_migration_invariant": true
+      }
+    },
+    "forecast": {
+      "runs": {
+        "relation": "meteo.forecast_run",
+        "rows": 5933,
+        "first": "2026-01-07 09:04:34.704+00",
+        "last": "2026-09-25 10:10:02.262+00",
+        "source": "open-meteo",
+        "model": "icon_global",
+        "station_code": "home"
+      },
+      "hourly": {
+        "relation": "meteo.forecast_hourly",
+        "rows": 284784,
+        "first": "2026-01-07 09:00:00+00",
+        "last": "2026-09-27 09:00:00+00",
+        "future_timestamp_expected": true,
+        "future_timestamp_reason": "valid_time represents forecast hours"
+      }
+    },
+    "auth_counts": {
+      "auth.usuaris": 1,
+      "auth.aplicacions": 1,
+      "auth.membres_app": 0,
+      "meteo.membres_estacio": 1
+    },
+    "legacy": {
+      "relation": "public.measurement",
+      "rows": 18,
+      "first": "2025-10-16 08:39:38.744+00",
+      "last": "2025-10-16 11:15:02.902+00",
+      "preserve_until_explicit_decision": true
+    }
+  },
+  "views_to_preserve": [
+    "meteo.ml_station_daily",
+    "meteo.ml_station_daily_shifted",
+    "meteo.ml_training_daily",
+    "meteo.ml_training_hourly",
+    "meteo.pluja_any_v",
+    "meteo.pluja_dia_v",
+    "meteo.pluja_diaria_v"
+  ],
+  "git": {
+    "repository": "/home/deploy/tecnolord-apps",
+    "branch": "main",
+    "head": "5fbbd54f56aca0773c76e770e9f606ce88576252",
+    "head_message": "biblioteca: remove admin bootstrap password from web runtime",
+    "working_tree_clean": false,
+    "observed_changes": [
+      "biblioteca/prisma/migrations/20260822000000_init/migration.sql",
+      "logs/cron.log"
+    ],
+    "changes_modified_or_cleaned_by_pr01": false
+  },
+  "runtime": {
+    "caddy": "2.10.2",
+    "node": "20.20.0",
+    "npm": "10.8.2",
+    "backend_code_bind_mount": false,
+    "backend_runs_image_code": true,
+    "caddy_site_bind_mount": "/home/deploy/tecnolord-apps/site:/srv",
+    "deployment_note": "Frontend and backend use different deployment mechanisms."
+  },
+  "caddy": {
+    "domains": [
+      "tecnolord.cat",
+      "www.tecnolord.cat",
+      "entrenador.tecnolord.cat",
+      "stats.tecnolord.cat"
+    ],
+    "current_meteo_path": "/meteo",
+    "current_meteo_delivery": "static files with relevant APIs proxied to backend",
+    "beta_domain": "meteo-beta.tecnolord.cat",
+    "beta_domain_present": false,
+    "collision_detected": false
+  },
+  "writers": [
+    {"name": "Ecowitt", "schedule": "minutes 0,15,30,45", "script": "scripts/pull-ecowitt.sh"},
+    {"name": "forecast", "schedule": "minute 10 each hour", "script": "scripts/pull-previ.sh"},
+    {"name": "alerts", "schedule": "approximately every 5 minutes", "script": "scripts/alerts.sh"}
+  ],
+  "root_crontab_present": false,
+  "configuration": {
+    "files_present": [".env", ".env.backup"],
+    "values_copied_to_evidence": false,
+    "compose_config_missing_interactive_variables": true,
+    "global_compose_up_without_review_forbidden": true
+  },
+  "migration_inventory": {
+    "meteolord_sql_files": ["backend/db/init.sql", "backend/db/003-esquema-ca.sql"],
+    "consolidated_meteolord_framework_identified": false,
+    "biblioteca_ledger": "biblioteca._prisma_migrations",
+    "biblioteca_ledger_is_not_meteolord_ledger": true
+  },
+  "sensitive_values_in_evidence": 0
+}
