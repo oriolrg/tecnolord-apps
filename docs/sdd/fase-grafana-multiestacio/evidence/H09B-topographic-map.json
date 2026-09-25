@@ -1,0 +1,143 @@
+{
+  "task": "H09B",
+  "created_at": "2026-09-25",
+  "scope": "local topographic base correction only",
+  "status": "PASS",
+  "baseline": [
+    "STATE.md",
+    "evidence/H08-final-gate.json",
+    "evidence/H09A-24h-statistics.json"
+  ],
+  "initial_symptom": {
+    "url": "http://127.0.0.1:8088/meteo/mapa/",
+    "description": "MapLibre and weather markers loaded over a uniform background, with no geographic base visible.",
+    "map_ready": true,
+    "admin_catalog_count": 10,
+    "combined_station_count": 16,
+    "console_errors": 0,
+    "failed_requests": 0
+  },
+  "root_cause": {
+    "runtime_synthetic_data": true,
+    "active_style": "/meteo/map-assets/style.json",
+    "active_source": "pmtiles:///meteo/map-assets/map-a-synthetic.pmtiles",
+    "pmtiles_bounds": [-174, -60, -162, -49],
+    "admin_station_bounds": [1.5338145, 41.9896011, 1.6531418, 42.2101316],
+    "diagnosis": "The valid synthetic PMTiles asset covers an invented South Pacific territory. fitMap moved the viewport to the real local stations in Catalonia, where none of its vector layers had geometry.",
+    "excluded_causes": [
+      "asset 404",
+      "PMTiles Range handling",
+      "invalid MIME",
+      "MapLibre worker failure",
+      "CORS failure",
+      "missing style source/layer",
+      "layer visibility or opacity"
+    ]
+  },
+  "requests_before": [
+    {
+      "path": "/meteo/map-assets/style.json",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8"
+    },
+    {
+      "path": "/meteo/map-assets/map-a-synthetic.pmtiles",
+      "status": 206,
+      "content_type": "application/octet-stream",
+      "content_range": "bytes 0-126/2942"
+    },
+    {
+      "path": "/meteo/map-assets/maplibre-gl-worker.mjs",
+      "status": 200,
+      "content_type": "application/javascript; charset=utf-8"
+    }
+  ],
+  "correction": {
+    "existing_design_reused": true,
+    "style": "/meteo/map-assets/style.real.json",
+    "source": "openstreetmap",
+    "source_type": "raster",
+    "layer": "openstreetmap",
+    "runtime_selection": "/meteo/runtime-config.js?map=1",
+    "scope_isolated_to_map": true,
+    "application_runtime_preserved": true,
+    "csp": "Only the real local map document permits https://tile.openstreetmap.org for img-src and connect-src.",
+    "synthetic_preview_preserved": true
+  },
+  "requests_after": {
+    "style": {
+      "path": "/meteo/map-assets/style.real.json",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "maplibre_worker": {
+      "path": "/meteo/map-assets/maplibre-gl-worker.mjs",
+      "status": 200,
+      "content_type": "application/javascript; charset=utf-8"
+    },
+    "tiles": {
+      "host": "tile.openstreetmap.org",
+      "observed_statuses": [200],
+      "content_type": "image/png"
+    },
+    "critical_404": 0,
+    "http_500": 0,
+    "cors_errors": 0,
+    "direct_grafana_requests": 0
+  },
+  "browser_admin": {
+    "real_browser": true,
+    "topographic_base_visible": true,
+    "map_ready": true,
+    "style_name": "MeteoLord · mapa local real",
+    "source_ids": ["openstreetmap", "stations"],
+    "base_layer_ids": ["openstreetmap"],
+    "zoom": "PASS",
+    "pan": "PASS",
+    "selected_station": "Apartaments Casafont",
+    "selected_station_dialog": "PASS",
+    "high_grafana_markers": 10,
+    "public_estimation_markers": 6,
+    "rendered_markers_after_zoom_pan": 16,
+    "markers_above_base": true,
+    "console_errors": 0,
+    "failed_map_requests": 0
+  },
+  "browser_public": {
+    "topographic_base_visible": true,
+    "public_markers": 6,
+    "private_grafana_markers": 0,
+    "failed_map_requests": 0
+  },
+  "meteo_regression": {
+    "result": "PASS",
+    "runtime_isolated_from_map": true,
+    "selected_station": "Can Pernals",
+    "card_count": 5,
+    "page_errors": 0,
+    "direct_grafana_requests": 0,
+    "h09a_contract_changed": false
+  },
+  "tests": {
+    "pass": 309,
+    "fail": 0,
+    "skip": 0,
+    "total": 309,
+    "coverage_lines_percent": 95.55,
+    "javascript_syntax": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "data_invariants": {
+    "coordinates_changed": false,
+    "stations_changed": false,
+    "permissions_changed": false,
+    "weather_data_changed": false,
+    "grafana_history_enabled": false
+  },
+  "cleanup": {
+    "temporary_admin_session_deleted": true,
+    "temporary_backend_removed": true
+  },
+  "production_touched": false,
+  "h10_started": false
+}

@@ -1,6 +1,6 @@
 # STATE — Grafana multiestació
 
-Actualitzat: 2026-09-24
+Actualitzat: 2026-09-25
 
 ## Baseline validada
 
@@ -191,6 +191,34 @@ Evidència:
 - regressió Ecowitt completa PASS, incloent refresh, snapshot, API, UI, frescor i històric existent;
 - suite completa: 302 PASS, 0 FAIL, 0 SKIP; sintaxi i `git diff --check` PASS.
 
+H09A PASS — estadístiques Grafana de 24 h integrades en local.
+
+Evidència:
+- `evidence/H09A-24h-statistics.json`;
+- contracte del dashboard Grafana versió 46 reproduït per temperatura i humitat actuals, mínima 24 h, màxima 24 h i `Pluja Acumulada 24h`;
+- totes les queries funcionals utilitzen l'`external_id` del binding seleccionat, sense cap sensor fix;
+- comparació directa Grafana/API PASS per MLW01, MLW02 i MLW28 amb tres bindings diferents;
+- timestamps de l'observació actual separats del moment d'avaluació dels agregats de 24 h;
+- pluja absent mostrada com `—` i zero conservat com a valor vàlid;
+- semàntica de pluja preservada exactament com `current - offset 1d`, sense correcció de resets ni unitat inventada;
+- pressió Grafana no consultada ni mostrada; pressió Ecowitt preservada;
+- 0 mesures Grafana i 0 polítiques d'històric;
+- navegador real PASS, sense peticions directes a Grafana ni a `/admin/grafana/...`;
+- suite completa: 308 PASS, 0 FAIL, 0 SKIP; regressió Ecowitt PASS.
+
+H09B PASS — capa base del mapa local corregida i verificada.
+
+Evidència:
+- `evidence/H09B-topographic-map.json`;
+- causa arrel demostrada amb navegador abans del canvi: el PMTiles sintètic vàlid cobria el Pacífic sud i no intersectava el viewport de les estacions reals a Catalunya;
+- el mapa amb catàleg real reutilitza `style.real.json` i la source raster OpenStreetMap ja previstes pel projecte;
+- runtime i CSP reals limitats a `/meteo/mapa/`; la pantalla Meteo i la previsualització sintètica conserven els seus contractes;
+- style i worker locals `200`, tiles observats `200 image/png`, 0 errors CORS, 0 assets crítics fallits i 0 peticions directes a Grafana;
+- navegador SUPERADMIN PASS: base visible, zoom, pan, selecció d'estació i 10 ubicacions HIGH per sobre de la base;
+- navegador públic PASS: base visible, 6 punts públics/estimacions i 0 estacions Grafana privades;
+- cap coordenada, estació, permís, dada meteorològica ni API modificats;
+- suite completa: 309 PASS, 0 FAIL, 0 SKIP; sintaxi i `git diff --check` PASS.
+
 Ordre:
 
 H01 discovery sensors Grafana
@@ -201,10 +229,12 @@ H05 snapshot multivariable
 H06 import/reconciliació
 H07 API/UI/mapa
 H08 gate multiestació
+H09A estadístiques 24 h Grafana
+H09B capa base del mapa local
 
 ## Següent tasca
 
-Fase Grafana multiestació completada. Cap fase productiva iniciada.
+H09B completada en local. H10 no iniciada i cap fase productiva iniciada.
 
 H05C continua bloquejada per pressió i pluja fins a obtenir contractes de font suficients (no iniciada).
 

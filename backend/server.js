@@ -56,6 +56,9 @@ const { makeEcowittService } = require('./services/ecowittService');
 const FRONTEND_DIR = path.resolve(__dirname, '../site');
 const REAL_CLOCK = Object.freeze({ now: () => new Date() });
 const LOCAL_FRONTEND_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+const LOCAL_REAL_MAP_CSP = LOCAL_FRONTEND_CSP
+  .replace("img-src 'self' data:;", "img-src 'self' data: https://tile.openstreetmap.org;")
+  .replace("connect-src 'self';", "connect-src 'self' https://tile.openstreetmap.org;");
 
 function runtimeMode(environment) {
   return environment.METEOLORD_ENV
@@ -217,6 +220,7 @@ function createApp({
   const runtime = createRuntime({ pool, httpClient, clock, logger: appLogger, environment });
   const app = express();
   const mode = runtimeMode(environment);
+  const syntheticMap = mapPublicStations !== undefined;
   if (identityMailAdapter !== undefined
       && (!['local', 'test'].includes(mode) || typeof identityMailAdapter !== 'function')) {
     throw new TypeError('Injected identity mail adapter is allowed only in local/test');
@@ -231,7 +235,8 @@ function createApp({
   // Middlewares
   app.use((_req, res, next) => {
     if (['local', 'test'].includes(mode)) {
-      res.setHeader('Content-Security-Policy', LOCAL_FRONTEND_CSP);
+      const realMapDocument = !syntheticMap && _req.path.startsWith('/meteo/mapa');
+      res.setHeader('Content-Security-Policy', realMapDocument ? LOCAL_REAL_MAP_CSP : LOCAL_FRONTEND_CSP);
     }
     next();
   });
@@ -360,9 +365,10 @@ function createApp({
   }
 
   // Frontend local: les rutes API es registren abans dels estàtics.
-  app.get('/meteo/runtime-config.js', (_req, res) => {
+  app.get('/meteo/runtime-config.js', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.sendFile(path.join(FRONTEND_DIR, 'runtime-config.js'));
+    res.sendFile(path.join(FRONTEND_DIR,
+      !syntheticMap && req.query.map === '1' ? 'runtime-config.real-local.js' : 'runtime-config.js'));
   });
   app.use(mapAssets);
   app.use('/meteo', express.static(FRONTEND_DIR));
@@ -387,6 +393,7 @@ if (require.main === module) {
 
 module.exports = {
   LOCAL_FRONTEND_CSP,
+  LOCAL_REAL_MAP_CSP,
   createApp,
   createRuntime,
   redactRequestUrl,

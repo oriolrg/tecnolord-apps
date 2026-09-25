@@ -6,7 +6,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-const { LOCAL_FRONTEND_CSP, createApp, redactRequestUrl } = require('../../server');
+const {
+  LOCAL_FRONTEND_CSP, LOCAL_REAL_MAP_CSP, createApp, redactRequestUrl,
+} = require('../../server');
 const { createPool } = require('../../db/pool');
 const { DEFAULT_DB_TIMEOUT_MS, checkDatabase } = require('../../routes/health');
 const { createFixedClock } = require('../helpers/clock');
@@ -295,7 +297,7 @@ test('/meteo/ serves the local frontend without making an external request', asy
   });
 });
 
-test('/meteo/runtime-config.js is served verbatim, no-store and with the approved local CSP', async () => {
+test('/meteo/runtime-config.js preserves the application runtime outside the map', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/meteo/runtime-config.js`);
     const source = await response.text();
@@ -305,8 +307,29 @@ test('/meteo/runtime-config.js is served verbatim, no-store and with the approve
     assert.equal(response.headers.get('cache-control'), 'no-store, max-age=0');
     assert.equal(response.headers.get('content-security-policy'), LOCAL_FRONTEND_CSP);
     assert.equal(source, expected);
-    assert.doesNotMatch(LOCAL_FRONTEND_CSP, /script-src[^;]*'unsafe-inline'/);
-    assert.match(LOCAL_FRONTEND_CSP, /style-src 'self' 'unsafe-inline'/);
+    assert.match(source, /SYNTHETIC_DATA: true/);
+  });
+});
+
+test('/meteo/mapa/ selects the existing real style runtime and constrained tile CSP', async () => {
+  await withServer(async (baseUrl) => {
+    const documentResponse = await fetch(`${baseUrl}/meteo/mapa/`);
+    const html = await documentResponse.text();
+    const response = await fetch(`${baseUrl}/meteo/runtime-config.js?map=1`);
+    const source = await response.text();
+    const expected = fs.readFileSync(path.resolve(__dirname, '../../../site/runtime-config.real-local.js'), 'utf8');
+
+    assert.equal(documentResponse.status, 200);
+    assert.equal(documentResponse.headers.get('content-security-policy'), LOCAL_REAL_MAP_CSP);
+    assert.match(html, /runtime-config\.js\?map=1/);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store, max-age=0');
+    assert.equal(source, expected);
+    assert.match(source, /SYNTHETIC_DATA: false/);
+    assert.match(LOCAL_REAL_MAP_CSP, /img-src[^;]*https:\/\/tile\.openstreetmap\.org/);
+    assert.match(LOCAL_REAL_MAP_CSP, /connect-src[^;]*https:\/\/tile\.openstreetmap\.org/);
+    assert.doesNotMatch(LOCAL_REAL_MAP_CSP, /script-src[^;]*'unsafe-inline'/);
+    assert.match(LOCAL_REAL_MAP_CSP, /style-src 'self' 'unsafe-inline'/);
   });
 });
 
