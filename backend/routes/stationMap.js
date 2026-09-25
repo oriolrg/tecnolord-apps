@@ -77,6 +77,14 @@ function makeStationMapRouter({ identityService, stationLocations, estimations, 
     res.setHeader('X-Catalog-Version', version);
     res.json({ catalog_version: version });
   }));
+  router.get('/api/v1/map/session-stations', safe(async (req, res) => {
+    const session = await current(req);
+    if (!session) return res.json({ type: 'FeatureCollection', features: [] });
+    const all = session.user.role === 'SUPERADMIN';
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Vary', 'Cookie');
+    return res.json(await stationLocations.privateCollection(session.user, all));
+  }));
   router.get('/api/v1/map/stations/:id', safe(async (req, res) => {
     const station = await stationLocations.publicStation(req.params.id);
     const estimation = !station && estimations?.current ? await estimations.current(req.params.id) : null;

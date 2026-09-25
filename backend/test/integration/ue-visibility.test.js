@@ -158,6 +158,14 @@ test('UE-T08 keeps exact locations private and revokes every public map surface 
       assert.equal(adminMap.body.features.length, 2);
       assert.ok(adminMap.body.features.every((feature) => feature.properties.access_scope === 'ADMIN'));
       assert.equal((await json(base, '/api/v1/admin/map', b)).response.status, 403);
+      const visitorSessionMap = await json(base, '/api/v1/map/session-stations');
+      const ownerSessionMap = await json(base, '/api/v1/map/session-stations', a);
+      const adminSessionMap = await json(base, '/api/v1/map/session-stations', admin);
+      assert.equal(visitorSessionMap.response.status, 200);
+      assert.deepEqual(visitorSessionMap.body.features, []);
+      assert.deepEqual(ownerSessionMap.body, ownerMapA.body);
+      assert.deepEqual(adminSessionMap.body, adminMap.body);
+      assert.match(adminSessionMap.response.headers.get('vary'), /Cookie/);
 
       const sitemap = await json(base, '/api/v1/map/sitemap');
       assert.equal(sitemap.body.ids.includes(stationA.id), true);

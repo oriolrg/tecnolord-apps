@@ -6,7 +6,6 @@
 // ──────────────────────────────────────────────────────────
 
 const express = require('express');
-const fs = require('fs/promises');
 const { mapAssets } = require('./middleware/mapAssets');
 const cors = require('cors');
 const path = require('path');
@@ -35,7 +34,7 @@ const { makeImportsRouter } = require('./routes/imports');
 const { makeGrafanaRouter } = require('./routes/grafana');
 const { makeEstimationsRouter } = require('./routes/estimations');
 const { makeStationHistoryRouter } = require('./routes/stationHistory');
-const { makeIdentityService, readSessionToken } = require('./services/identityService');
+const { makeIdentityService } = require('./services/identityService');
 const { makeStationCatalogService } = require('./services/stationCatalogService');
 const { makeConnectorRegistryService } = require('./services/connectorRegistryService');
 const { makeSnapshotService } = require('./services/snapshotService');
@@ -366,24 +365,10 @@ function createApp({
   }
 
   // Frontend local: les rutes API es registren abans dels estàtics.
-  app.get('/meteo/runtime-config.js', async (req, res, next) => {
+  app.get('/meteo/runtime-config.js', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    const realMap = !syntheticMap && req.query.map === '1';
-    if (!realMap) {
-      res.sendFile(path.join(FRONTEND_DIR, 'runtime-config.js'));
-      return;
-    }
-    try {
-      const token = readSessionToken(req);
-      const session = token ? await identityService.current(token) : null;
-      const scope = session?.user?.role === 'SUPERADMIN'
-        ? 'SUPERADMIN' : session ? 'USER' : 'PUBLIC';
-      const source = await fs.readFile(path.join(FRONTEND_DIR, 'runtime-config.real-local.js'), 'utf8');
-      res.type('application/javascript').send(source.replace(
-        "MAP_ACCESS_SCOPE: 'PUBLIC'",
-        `MAP_ACCESS_SCOPE: '${scope}'`,
-      ));
-    } catch (error) { next(error); }
+    res.sendFile(path.join(FRONTEND_DIR,
+      !syntheticMap && req.query.map === '1' ? 'runtime-config.real-local.js' : 'runtime-config.js'));
   });
   app.use(mapAssets);
   app.use('/meteo', express.static(FRONTEND_DIR));

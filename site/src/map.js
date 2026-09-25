@@ -288,26 +288,19 @@ async function refresh({ fit = false } = {}) {
   $('#status').textContent = 'Carregant estacions…';
   try {
     const query = filtersQuery();
-    const ownMapRequest = config.mapAccessScope !== 'PUBLIC'
-      ? fetch(`${config.apiBase}/v1/me/map?${query}`, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
-        .then((response) => response.ok ? response.json() : EMPTY)
-      : Promise.resolve(EMPTY);
-    const adminMapRequest = config.mapAccessScope === 'SUPERADMIN'
-      ? fetch(`${config.apiBase}/v1/admin/map?${query}`, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
-        .then((response) => response.ok ? response.json() : EMPTY)
-      : Promise.resolve(EMPTY);
-    const [result, summary, ownMap, adminMap] = await Promise.all([
+    const [result, summary, sessionMap] = await Promise.all([
       api(`stations?${query}`, controller.signal),
       api(`summary?${query}`, controller.signal),
-      ownMapRequest,
-      adminMapRequest,
+      fetch(`${config.apiBase}/v1/map/session-stations`, {
+        credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+      }).then((response) => response.ok ? response.json() : EMPTY),
     ]);
     const check = await api('catalog-version', controller.signal);
     if (epoch !== generation) return;
     if (check.value.catalog_version !== result.version || summary.version !== result.version
       || summary.value.count !== result.value.features.length) throw new Error('unverified');
     if (catalogVersion && catalogVersion !== result.version && dialog.open) dialog.close();
-    const privateCollection = adminMap.features.length ? adminMap : ownMap;
+    const privateCollection = sessionMap;
     privateById = new Map(privateCollection.features.map((feature) => [feature.properties.public_station_id, feature]));
     collection = { type: 'FeatureCollection', features: [
       ...result.value.features.filter((feature) => !privateById.has(feature.properties.public_station_id)),

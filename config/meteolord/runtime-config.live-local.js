@@ -9,7 +9,6 @@
       EXTERNAL_LINKS_ENABLED: false,
       ENVIRONMENT: 'local',
       SYNTHETIC_DATA: false,
-      MAP_ACCESS_SCOPE: 'PUBLIC',
     }),
     writable: false,
     configurable: false,
