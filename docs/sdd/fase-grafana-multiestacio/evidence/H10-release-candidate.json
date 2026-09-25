@@ -1,6 +1,7 @@
 {
   "task": "H10",
   "created_at": "2026-09-25T11:29:48+02:00",
+  "updated_at": "2026-09-25T11:46:00+02:00",
   "scope": "local release gate only",
   "status": "PASS",
   "release_decision": "H10 PASS — RELEASE CANDIDATE LOCAL",
@@ -52,7 +53,18 @@
       "PORT"
     ],
     "local_grafana_enabled": true,
-    "local_grafana_cadence_seconds": 300,
+    "local_grafana_cadence_seconds": 900,
+    "grafana_query_resolution_seconds": 300,
+    "cadence_correction": {
+      "h10_observed_effective_seconds": 300,
+      "h10_observation_was_correct": true,
+      "cause": "A pre-existing ignored local.env override set METEOLORD_GRAFANA_INTERVAL_SECONDS=300.",
+      "corrected_effective_source_cadence_seconds": 900,
+      "query_resolution_unchanged_seconds": 300,
+      "default_source_cadence_unchanged_seconds": 900,
+      "tracked_source_changed": false,
+      "production_changed": false
+    },
     "scheduler_added": false,
     "database_internal_url": "db:5432/meteolord_local",
     "backend_internal_port": 8080,
@@ -91,6 +103,15 @@
     "coverage_functions_percent": 92.05,
     "focused_map_session_tests": {
       "pass": 30,
+      "fail": 0,
+      "skip": 0
+    },
+    "post_h10_cadence_freshness_tests": {
+      "files": [
+        "backend/test/unit/source-cadence.test.js",
+        "backend/test/unit/ue-grafana.test.js"
+      ],
+      "pass": 2,
       "fail": 0,
       "skip": 0
     },
@@ -225,6 +246,24 @@
     "map_route_status": 200,
     "map_style_status": 200,
     "public_catalog_status": 200
+  },
+  "post_h10_cadence_verification": {
+    "scope": "ignored local configuration correction only",
+    "backend_recreated_to_reload_env_file": true,
+    "database_restarted": false,
+    "effective_source_cadence_seconds": 900,
+    "query_resolution_seconds": 300,
+    "health_status": 200,
+    "freshness_thresholds_seconds": {
+      "fresh_max": 1800,
+      "stale_max": 7200
+    },
+    "stations": [
+      { "station": "MLW01", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "freshness": "FRESH", "freshness_coherent": true, "result": "PASS" },
+      { "station": "MLW02", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "rain_24h": 0, "freshness": "FRESH", "freshness_coherent": true, "result": "PASS" },
+      { "station": "MLW28", "current": true, "humidity": true, "min_24h": true, "max_24h": true, "rain_24h": 0, "freshness": "FRESH", "freshness_coherent": true, "result": "PASS" },
+      { "station": "Cabrera", "source": "ECOWITT", "current": true, "humidity": true, "relative_pressure": true, "absolute_pressure": true, "freshness": "FRESH", "freshness_coherent": true, "result": "PASS" }
+    ]
   },
   "release_blocker_fixed": {
     "symptom": "The public map requested protected private-map endpoints and Chrome reported expected 401 responses as console errors.",

@@ -233,6 +233,8 @@ Evidència:
 - permisos SUPERADMIN/USER/visitant, absència d'exposició Grafana i invariants de persistència PASS;
 - reinici controlat de PostgreSQL i de l'RC local PASS, sense eliminar volums: 29 bindings, 29 snapshots, 0 mesures Grafana, 0 polítiques Grafana, 5 mesures meteo i 4 lectures hidro preservades;
 - inventari de preproducció i riscos registrat, sense desplegament ni accés a producció.
+- correcció posterior al gate: H10 havia observat correctament `300 s` efectius, però provenien d'un override antic al `local.env` ignorat; l'RC definitiu usa `900 s` de source/freshness cadence i manté `300 s` de query resolution;
+- després de recrear només el backend: MLW01, MLW02, MLW28, Ecowitt, frescor i health `200` PASS; proves dirigides de cadence/freshness: 2 PASS, 0 FAIL.
 
 Ordre:
 
