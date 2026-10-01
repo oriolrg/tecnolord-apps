@@ -32,6 +32,7 @@ logs/
 *.sql
 !backend/db/migrations/
 !backend/db/migrations/*.sql
+!backend/db/prod-migrations/*.sql
 
 # Devcontainer
 .devcontainer/*.local*
