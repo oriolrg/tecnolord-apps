@@ -59,9 +59,35 @@ PostgreSQL/PostGIS física dins l'entorn descartable.
 | `20261003_220226` | PASS | complet | Runner V4: totes les etapes, proves i safety gates superades. |
 
 Els tres intents fallits es conserven com a evidència de l'enduriment del
-runner. No s'ha autoritzat ni executat cleanup dels entorns físics i les seves
-evidències. PROD-01 queda tancat per reproduïbilitat i auditoria i no forma part
-del runbook normal; executar-lo de nou sobre `meteo` continua prohibit.
+runner.
+
+### Cleanup operatiu posterior — COMPLETED
+
+Després del commit de tancament `6146e1b`, s'ha executat el cleanup guardat i
+limitat exclusivament als recursos descartables PROD-01 següents:
+
+- contenidors `meteolord-prod01-dryrun-20261002_223602`,
+  `meteolord-prod01-dryrun-20261003_080833`,
+  `meteolord-prod01-dryrun-20261003_175050` i
+  `meteolord-prod01-dryrun-20261003_220226`;
+- volums `meteolord_prod01_dryrun_20261002_223602`,
+  `meteolord_prod01_dryrun_20261003_080833`,
+  `meteolord_prod01_dryrun_20261003_175050` i
+  `meteolord_prod01_dryrun_20261003_220226`;
+- directoris de socket runtime externs
+  `/home/deploy/prod01-sockets/20261003_175050` i
+  `/home/deploy/prod01-sockets/20261003_220226`.
+
+La verificació final va confirmar zero contenidors
+`meteolord-prod01-dryrun-*` i zero volums `meteolord_prod01_dryrun_*`. Les bases
+productives `meteo`, `meteo_restore_test` i `postgres` es conserven, i els
+contenidors productius continuen en execució. No s'ha fet `docker prune` ni cap
+cleanup global. Els directoris d'evidències es preserven i els backups
+continuen protegits.
+
+PROD-01 queda tancat per reproduïbilitat i auditoria i no forma part del
+runbook normal; executar-lo de nou sobre `meteo` continua prohibit. L'avís de
+collation es manté diferit i no s'ha executat `REFRESH COLLATION VERSION`.
 
 ## Objectiu i abast
 

@@ -34,8 +34,8 @@ El dry-run físic V4 `20261003_220226`, sobre el target descartable
 `meteo_prod_dryrun_20261003_220226`, va completar RESTORE, PRE-CUTOVER, APPLY,
 VERIFY, postflight, tests i final safety. L'inventari, l'ID del contenidor i els
 mounts productius van quedar invariants; no hi va haver connexions a targets
-productius ni ordres de cleanup. El delta disposable va ser exactament el
-baseline `postgres`, `template_postgis` més el target del run.
+productius ni ordres de cleanup durant el dry-run. El delta disposable va ser
+exactament el baseline `postgres`, `template_postgis` més el target del run.
 
 La traçabilitat conserva els tres intents d'enduriment anteriors:
 
@@ -45,10 +45,19 @@ La traçabilitat conserva els tres intents d'enduriment anteriors:
    incomplet;
 4. `20261003_220226`: PASS complet amb runner V4.
 
-Els entorns i les evidències es mantenen sense cleanup. PROD-01 queda només com
-a artefacte de reproduïbilitat i auditoria; no forma part del runbook normal i
-no es pot executar sobre `meteo`. La suite general d'integració no formava part
-del dry-run aïllat perquè crea bases temporals alienes al seu contracte.
+**Cleanup operatiu PROD-01: COMPLETED.** Després del commit `6146e1b` s'han
+eliminat exclusivament els quatre contenidors i quatre volums descartables dels
+runs PROD-01, més els directoris externs de socket dels runs `20261003_175050`
+i `20261003_220226`. La verificació final confirma zero contenidors
+`meteolord-prod01-dryrun-*` i zero volums `meteolord_prod01_dryrun_*`, amb
+`meteo`, `meteo_restore_test`, `postgres` i els contenidors productius
+preservats. No s'ha fet prune ni cleanup global; les evidències i els backups
+es conserven.
+
+PROD-01 queda només com a artefacte de reproduïbilitat i auditoria; no forma
+part del runbook normal i no es pot executar sobre `meteo`. La suite general
+d'integració no formava part del dry-run aïllat perquè crea bases temporals
+alienes al seu contracte.
 
 ## Fora de l'abast del PASS
 
