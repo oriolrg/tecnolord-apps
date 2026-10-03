@@ -33,6 +33,7 @@ logs/
 !backend/db/migrations/
 !backend/db/migrations/*.sql
 !backend/db/prod-migrations/*.sql
+!scripts/prod/prod-01-postflight.sql
 
 # Devcontainer
 .devcontainer/*.local*

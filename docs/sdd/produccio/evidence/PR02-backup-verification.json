@@ -1,0 +1,33 @@
+{
+  "task": "PR02",
+  "status": "PASS — BACKUP CREAT I ESTRUCTURALMENT VALIDAT",
+  "production_database": "meteo",
+  "production_database_modified": false,
+  "artifact": {
+    "path": "/home/deploy/backups/meteo/meteo-20260925T101137Z.dump",
+    "format": "PostgreSQL CUSTOM (-Fc)",
+    "pg_dump_version": "16.4",
+    "database_version": "16.4",
+    "observed_size_mb_approx": 8.9,
+    "sha256": "0da4e0402aec92348632b334d41fb88dfe5e286f56f7c5af4b36696daf8a7f8b",
+    "toc_entries_declared": 169,
+    "useful_objects_counted": 164
+  },
+  "coverage": [
+    "schemas",
+    "tables",
+    "table data",
+    "sequences",
+    "sequence state",
+    "constraints",
+    "foreign keys",
+    "views",
+    "other database objects"
+  ],
+  "database_scope": ["meteo", "auth", "biblioteca", "legacy/public", "other included schemas"],
+  "partial_meteo_only_backup": false,
+  "structurally_validated": true,
+  "same_droplet_risk": true,
+  "off_droplet_copy_required_before_cutover": true,
+  "sensitive_values_in_evidence": 0
+}

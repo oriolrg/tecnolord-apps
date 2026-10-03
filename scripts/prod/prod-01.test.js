@@ -90,20 +90,30 @@ function fakeClient({ mutation, lockAcquired = true, commitFailure = false, shar
   return {client,state};
 }
 
-test('target allowlist rejects wrong and partial-beta targets; production requires three explicit guards', () => {
+test('historical target allowlist accepts only a timestamped dry-run clone', () => {
   assert.equal(assertTarget(TARGET),TARGET);
-  for (const value of [undefined,'','meteo_restore_test','meteo_beta','postgres','template0','template1','other']) {
+  for (const value of [undefined,'','meteo','meteo_restore_test','meteo_beta','postgres','template0','template1',
+    'other','meteo_prod_dryrun_20260930','meteo_prod_dryrun_20260930_21160',
+    'meteo_prod_dryrun_20260930_211605_extra','METEO_prod_dryrun_20260930_211605']) {
     assert.throws(() => assertTarget(value));
   }
-  assert.throws(() => assertTarget('meteo'));
-  for (const forbidden of ['meteo_restore_test','meteo_beta','postgres','template0','template1']) {
-    assert.throws(() => assertTarget(forbidden,{production:true,environment:{
-      ALLOW_PRODUCTION:'PROD-01-APPLY-meteo',PRODUCTION_CONFIRM_TARGET:'meteo'}}));
-  }
-  assert.throws(() => assertTarget('meteo',{production:true,environment:{ALLOW_PRODUCTION:'PROD-01-APPLY-meteo'}}));
-  assert.equal(assertTarget('meteo',{production:true,environment:{ALLOW_PRODUCTION:'PROD-01-APPLY-meteo',
-    PRODUCTION_CONFIRM_TARGET:'meteo'}}),'meteo');
   assert.throws(() => parseArgs(['--apply','--out-dir','/tmp/prod01'],{}));
+});
+
+test('removed production flags and environment cannot authorize meteo', () => {
+  const oldProductionEnvironment = {
+    TARGET_DB:'meteo',
+    ALLOW_PRODUCTION:'PROD-01-APPLY-meteo',
+    PRODUCTION_CONFIRM_TARGET:'meteo',
+  };
+  assert.throws(() => assertTarget('meteo', {production:true,environment:oldProductionEnvironment}),
+    /Forbidden PROD-01 target/);
+  assert.throws(() => parseArgs(['--apply','--out-dir','/tmp/prod01'],oldProductionEnvironment),
+    /Forbidden PROD-01 target/);
+  assert.throws(() => parseArgs(['--apply','--production','--out-dir','/tmp/prod01'],oldProductionEnvironment),
+    /Unknown argument: --production/);
+  assert.throws(() => parseArgs(['--apply','--production','--out-dir','/tmp/prod01'],{
+    ...oldProductionEnvironment,TARGET_DB:TARGET}),/Unknown argument: --production/);
 });
 
 test('current_database guard rejects a connection to a different database', async () => {

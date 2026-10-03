@@ -1,0 +1,116 @@
+{
+  "task": "PR04",
+  "evidence": "READ-ONLY fingerprint completed",
+  "collector": "pr04-readonly-fingerprint.sh",
+  "source": "DigitalOcean Web Console manual execution",
+  "evidence_scope": "user_reported_complete_run_summary",
+  "raw_console_output_available": false,
+  "target_database": "meteo_restore_test",
+  "collector_complete": true,
+  "markers": {
+    "begin": "PR04_FINGERPRINT_V1_BEGIN",
+    "end": "PR04_FINGERPRINT_V1_END"
+  },
+  "execution": {
+    "transaction_read_only": "on",
+    "transaction_isolation": "repeatable read",
+    "errors": 0,
+    "json_records": 793
+  },
+  "database": {
+    "postgresql": "16.4",
+    "collation_recorded": "2.31",
+    "collation_actual": "2.31"
+  },
+  "pr03_invariants": {
+    "matches": 12,
+    "expected": 12,
+    "all_match": true
+  },
+  "rc_relations": {
+    "rc_new_absent": {
+      "auth": 4,
+      "meteo": 14,
+      "total": 18
+    },
+    "legacy_required_or_preserved_present": true
+  },
+  "rc_columns": {
+    "auth.usuaris": {
+      "absent": [
+        "account_status",
+        "application_role",
+        "email_verified_at",
+        "approved_at"
+      ],
+      "legacy_columns_present": true
+    },
+    "meteo.estacions": {
+      "absent": [
+        "public_id",
+        "owner_id",
+        "management_kind",
+        "lifecycle",
+        "visibility",
+        "revision",
+        "description"
+      ],
+      "legacy_columns_present": true
+    }
+  },
+  "rc_views": {
+    "expected_absent": 5,
+    "all_absent": true
+  },
+  "preservation_objects": {
+    "biblioteca._prisma_migrations": "PRESENT",
+    "meteo.forecast_feedback": "PRESENT",
+    "meteo.mesures_bak_ytd": "PRESENT",
+    "public.measurement": "PRESENT",
+    "meteo_local.schema_migrations": "ABSENT"
+  },
+  "preflight": {
+    "checks_passed": [
+      "duplicate_station_codes",
+      "duplicate_casefolded_user_emails",
+      "blank_station_codes",
+      "blank_user_emails",
+      "orphan_meteo_mesures_station",
+      "orphan_station_memberships",
+      "orphan_application_memberships",
+      "orphan_hydro_readings",
+      "orphan_forecast_hourly_runs",
+      "forecast_run_station_code_without_legacy_station",
+      "forecast_hours_out_of_range",
+      "duplicate_measure_station_instant",
+      "duplicate_hydro_station_instant"
+    ],
+    "all_reported_checks_pass": true
+  },
+  "legacy_station": {
+    "row_count": 1,
+    "active": true,
+    "coordinate_columns_present": true,
+    "partial_coordinate_pairs": 0,
+    "out_of_range_coordinates": 0,
+    "creator_reference_valid": true,
+    "copy_creator_to_owner_id": false
+  },
+  "legacy_auth": {
+    "active_users": 1,
+    "passwd_hash_is_null": true,
+    "create_password_or_credential": false
+  },
+  "postgis": {
+    "installed_in_restore": false,
+    "required_before_geometry_migration": true,
+    "restore_or_production_activation_authorized": false,
+    "beta_only_activation_required": true
+  },
+  "immutability": {
+    "meteo_restore_test_modified": false,
+    "meteo_modified": false,
+    "pr05_executed": false
+  },
+  "sensitive_values_in_evidence": 0
+}

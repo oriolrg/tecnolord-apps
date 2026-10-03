@@ -33,30 +33,24 @@ const LEGACY_TABLES = [
   'meteo.forecast_hourly', 'public.measurement', 'biblioteca._prisma_migrations',
 ];
 
-function assertTarget(target, { production = false, environment = process.env } = {}) {
+function assertTarget(target) {
   if (!target) throw new Error('TARGET_DB is required');
-  if (DRY_RUN.test(target)) {
-    if (production) throw new Error('Production flag is invalid for dry-run target');
-    return target;
-  }
-  if (target === 'meteo' && production
-      && environment.ALLOW_PRODUCTION === 'PROD-01-APPLY-meteo'
-      && environment.PRODUCTION_CONFIRM_TARGET === 'meteo') return target;
-  throw new Error(`Forbidden PROD-01 target: ${target}`);
+  if (!DRY_RUN.test(target)) throw new Error(`Forbidden PROD-01 target: ${target}`);
+  return target;
 }
 
 function parseArgs(argv, environment = process.env) {
   const command = argv[0];
   if (!['--apply','--verify'].includes(command)) throw new Error('Use --apply or --verify');
-  const options = { command, target: environment.TARGET_DB, production: argv.includes('--production') };
+  const options = { command, target: environment.TARGET_DB };
   for (let i=1; i<argv.length; i+=1) {
     if (argv[i] === '--out-dir' || argv[i] === '--pre') {
       const key = argv[i] === '--out-dir' ? 'outDir' : 'prePath';
       options[key] = argv[++i];
       if (!options[key]) throw new Error(`${key} path is required`);
-    } else if (argv[i] !== '--production') throw new Error(`Unknown argument: ${argv[i]}`);
+    } else throw new Error(`Unknown argument: ${argv[i]}`);
   }
-  assertTarget(options.target, { production: options.production, environment });
+  assertTarget(options.target);
   if (!options.outDir || (command === '--verify' && !options.prePath)) throw new Error('Output directory and VERIFY PRE path are required');
   return options;
 }
