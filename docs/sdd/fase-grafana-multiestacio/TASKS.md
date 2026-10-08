@@ -1,6 +1,6 @@
 # TASKS — Continuació Grafana multiestació
 
-Actualitzat: 2026-10-04. H01–H10 continuen PASS. Aquest fitxer només ordena la
+Actualitzat: 2026-10-08. H01–H10 continuen PASS. Aquest fitxer només ordena la
 continuació posterior al checkpoint productiu de 2026-10-01.
 
 ## Inventari
@@ -9,7 +9,7 @@ continuació posterior al checkpoint productiu de 2026-10-01.
 
 - H01–H10: discovery, mapping, ubicacions, mètriques, snapshots, importació,
   API/UI/mapa local, estadístiques 24 h, basemap i release candidate.
-- Refresh Grafana periòdic operatiu cada cinc minuts mitjançant
+- Refresh Grafana periòdic operatiu cada quinze minuts mitjançant
   `scripts/refresh-stations.sh` i cron, amb fallades aïllades per estació.
 
 ### EXISTING_BLOCKED
@@ -22,7 +22,7 @@ continuació posterior al checkpoint productiu de 2026-10-01.
 - H11A/H11B: visibilitat individual per estació.
 - H12A/H12B: política de refresh-if-stale/sota demanda sobre el scheduler
   periòdic ja operatiu.
-- H13A/H13B: discovery i integració de vent.
+- H13A/H13B: PASS local; encara no formen part de producció `321b8a5`.
 - H14: mapa productiu coherent amb permisos.
 - Administració/activació productiva de polítiques d'històric configurables
   per estació: PENDING, encara sense tasca seqüenciada i sense cap política
@@ -82,7 +82,7 @@ per defecte, sense històric i sense consultes directes del navegador.
 - **Estat:** READY després d'H11A; no modifica el cron operatiu.
 - **Objectiu:** decidir si una lectura pot provocar refresh quan el snapshot és
   stale o sota demanda, sense una consulta upstream per cada render.
-- **Motivació:** el refresh periòdic cada cinc minuts ja és operatiu, però la
+- **Motivació:** el refresh periòdic cada quinze minuts ja és operatiu, però la
   lectura normal no implementa refresh-if-stale ni una acció sota demanda.
 - **Dependències:** contracte de cadence/freshness (900 s modal, amb fonts
   observades de 600/1200 s), leases existents i H11A per autorització.
@@ -103,7 +103,7 @@ per defecte, sense històric i sense consultes directes del navegador.
 
 - **Estat:** BLOCKED per H12A i H11B.
 - **Objectiu:** implementar la política complementària aprovada exclusivament
-  al backend, sense substituir el cron de cinc minuts.
+  al backend, sense substituir el cron de quinze minuts.
 - **Dependències:** H12A PASS i policy d'accés H11B.
 - **Fitxers probables:** serveis de snapshot/Grafana, rutes current, config i
   tests de concurrència.
@@ -118,32 +118,25 @@ per defecte, sense històric i sense consultes directes del navegador.
 
 ## H13A — Discovery real de vent Grafana
 
-- **Estat:** READY; independent d'H12B.
-- **Objectiu:** demostrar sèrie/camp, unitat, timestamp i disponibilitat de
-  velocitat i direcció del vent.
+- **Estat:** PASS local; independent d'H12B.
+- **Objectiu assolit:** s'han acreditat sèrie/camp, unitat, timestamp i
+  disponibilitat de velocitat, ràfega i direcció del vent.
 - **Dependències:** H04/H05A i accés Grafana backend ja validat.
-- **Fitxers probables:** només evidència i documentació.
-- **Implementació prevista:** discovery acotat sobre diverses estacions,
-  incloent sensor sense vent, zero, null i unitat inesperada.
-- **Tests:** comparació font/evidència; cap mapping en aquesta tasca.
-- **PASS:** contracte demostrable per cada camp o resultat BLOCKED explícit.
-- **Riscos/reversió:** N/A; tasca read-only, sense inventar mètriques/unitats.
-- **Evidència:** inventari sanejat H13A.
+- **Resultat:** `xoic_I2CAT_velocitat_vent` i
+  `xoic_I2CAT_maxim_cop_aire` són km/h; `xoic_I2CAT_direccio_vent` són graus.
+- **Evidència:** contracte acreditat d'H13A, sense canvi productiu.
 
 ## H13B — Integrar vent canònic
 
-- **Estat:** BLOCKED per H13A.
-- **Objectiu:** mapar vent demostrat als camps canònics que ja usa Ecowitt.
-- **Dependències:** H13A PASS per almenys un camp.
-- **Fitxers probables:** adaptador Grafana, snapshot, DTO/API i targeta vent.
-- **Implementació prevista:** reutilitzar model existent; absència és `null`
-  i 0 és vàlid; no crear un model paral·lel.
-- **Tests:** velocitat, direcció, 0, null, sensor absent, unitat inesperada,
-  timestamp, selecció entre estacions i regressió Ecowitt.
-- **PASS:** binding real per estació, UI sense dades heretades i cap canvi
-  d'històric.
-- **Riscos/reversió:** desactivar mappings nous i conservar snapshot anterior.
-- **Evidència:** QA H13B amb comparació directa.
+- **Estat:** PASS local; no desplegada a producció.
+- **Objectiu assolit:** el vent acreditat es mapeja als camps canònics que ja
+  usa Ecowitt, sense widget ni model paral·lel.
+- **Implementació:** velocitat i ràfega de km/h a m/s; direcció en graus;
+  absència, `null`, valor invàlid o unitat inesperada s'aïllen al camp afectat.
+- **Tests:** conversió, direcció, zero, `null`, camps absents, unitat
+  inesperada, timestamps per camp, capabilities, API i regressió Ecowitt.
+- **Producció:** la baseline `321b8a5` no incorpora H13B; qualsevol desplegament
+  requereix una tasca i autorització separades.
 
 ## H14 — Mapa productiu segons permisos i ubicacions acreditades
 
@@ -166,7 +159,6 @@ per defecte, sense històric i sense consultes directes del navegador.
 ## Ordre dins la fase
 
 `H11A → H11B → (H12A → H12B)` i `H11B → H14`.
-`H13A → H13B` pot avançar en paral·lel després del checkpoint. H05C continua
-fora d'aquest camí fins que aparegui evidència nova. L'activació productiva de
-polítiques d'històric continua fora de la seqüència fins que rebi una tasca i
-autorització explícites.
+`H13A → H13B` està completat localment. H05C continua fora d'aquest camí fins
+que aparegui evidència nova. L'activació productiva de polítiques d'històric
+continua fora de la seqüència fins que rebi una tasca i autorització explícites.

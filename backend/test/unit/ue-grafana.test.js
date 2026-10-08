@@ -64,6 +64,23 @@ function aggregatePayload(refId, name, times, values, { sensor = SENSOR, unit } 
   };
 }
 
+function windPayload(refId, name, times, values, { sensor = SENSOR, unit } = {}) {
+  return {
+    results: {
+      [refId]: {
+        status: 200,
+        frames: [{
+          schema: { fields: [
+            { name: 'Time', type: 'time' },
+            { name, type: 'number', labels: { tag4: sensor }, config: unit ? { unit } : {} },
+          ] },
+          data: { values: [times, values] },
+        }],
+      },
+    },
+  };
+}
+
 function multivariable(temperature, humidity) {
   return { results: { ...(temperature?.results || {}), ...(humidity?.results || {}) } };
 }
@@ -84,10 +101,10 @@ function adapter(fetch, enabled = true) {
   });
 }
 
-test('H09A builds current and dashboard 24 h queries from the selected binding', () => {
+test('H13B builds wind queries from the selected binding with the current and 24 h metrics', () => {
   const body = buildGrafanaQuery(SENSOR, FROM, TO);
   assert.equal(GRAFANA_ENDPOINT, 'https://grafana.commonscloud.coop/api/ds/query');
-  assert.equal(body.queries.length, 5);
+  assert.equal(body.queries.length, 8);
   assert.equal(body.queries[0].datasource.uid, DATASOURCE_UID);
   assert.equal(body.queries[0].expr, `xoic_I2CAT_temperatura{tag4="${SENSOR}"}`);
   assert.equal(body.queries[0].intervalMs, 300000);
@@ -98,6 +115,9 @@ test('H09A builds current and dashboard 24 h queries from the selected binding',
   assert.equal(body.queries[2].expr, `min_over_time(xoic_I2CAT_temperatura{tag4="${SENSOR}"}[24h])`);
   assert.equal(body.queries[3].expr, `max_over_time(xoic_I2CAT_temperatura{tag4="${SENSOR}"}[24h])`);
   assert.equal(body.queries[4].expr, `xoic_I2CAT_pluja_acumulada{tag4="${SENSOR}"} - xoic_I2CAT_pluja_acumulada{tag4="${SENSOR}"} offset 1d`);
+  assert.equal(body.queries[5].expr, `xoic_I2CAT_velocitat_vent{tag4="${SENSOR}"}`);
+  assert.equal(body.queries[6].expr, `xoic_I2CAT_maxim_cop_aire{tag4="${SENSOR}"}`);
+  assert.equal(body.queries[7].expr, `xoic_I2CAT_direccio_vent{tag4="${SENSOR}"}`);
   assert.equal(TO - FROM, 30 * 60 * 1000);
   assert.equal(buildGrafanaQuery('unknown', FROM, TO), null);
   assert.equal(buildGrafanaQuery(SENSOR, FROM, TO + 1), null);
@@ -106,7 +126,7 @@ test('H09A builds current and dashboard 24 h queries from the selected binding',
 test('H06 builds the same bounded queries for literal partial and S31 identifiers', () => {
   for (const externalId of ['Meteo-026-', 'Meteo-027-', 'Meteo-029-', 'S31-119416', 'S31-99933']) {
     const body = buildGrafanaQuery(externalId, FROM, TO);
-    assert.equal(body.queries.length, 5);
+    assert.equal(body.queries.length, 8);
     assert.equal(body.queries[0].expr, `xoic_I2CAT_temperatura{tag4="${externalId}"}`);
     assert.equal(body.queries[1].expr, `xoic_I2CAT_humitat{tag4="${externalId}"}`);
     assert.equal(body.queries.every((query) => [...query.expr.matchAll(/tag4="([^"]+)"/g)]
@@ -418,4 +438,129 @@ test('H05A supports partial series and isolates variable failures', () => {
   assert.equal(result.values.humitat_pct, null);
   assert.equal(result.quality.fields.humitat_pct, 'INVALID');
   assert.ok(result.quality.warnings.includes('FUTURE_TIMESTAMP'));
+});
+
+test('H13B normalizes Grafana speed and gust from km/h to m/s and preserves direction degrees', () => {
+  const input = { results: {
+    ...payload([TO], [12]).results,
+    ...windPayload('F', 'Velocitat del vent', [TO - 120_000], [36]).results,
+    ...windPayload('G', 'Ràfega de vent', [TO - 60_000], [72]).results,
+    ...windPayload('H', 'Direcció del vent', [TO - 180_000], [54]).results,
+  } };
+  const result = normalizeGrafanaSnapshot(input, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(result.ok, true);
+  assert.equal(result.values.temp_c, 12);
+  assert.equal(result.values.vent_ms, 10);
+  assert.equal(result.values.vent_rafega_ms, 20);
+  assert.equal(result.values.vent_direccio_graus, 54);
+  assert.deepEqual(result.quality.units.vent_ms, {
+    canonical: 'metres_per_second', source_unit: 'km/h', unit_basis: 'QUERY_CONTRACT',
+  });
+  assert.deepEqual(result.quality.units.vent_direccio_graus, {
+    canonical: 'degrees', source_unit: 'degrees', unit_basis: 'QUERY_CONTRACT',
+  });
+  assert.deepEqual(result.quality.observed_at_by_field, {
+    temp_c: new Date(TO).toISOString(),
+    vent_ms: new Date(TO - 120_000).toISOString(),
+    vent_rafega_ms: new Date(TO - 60_000).toISOString(),
+    vent_direccio_graus: new Date(TO - 180_000).toISOString(),
+  });
+});
+
+test('H13B isolates each missing Grafana wind field without losing other weather data', () => {
+  const base = { results: {
+    ...payload([TO], [12]).results,
+    ...humidityPayload([TO], [65]).results,
+    ...windPayload('F', 'Velocitat del vent', [TO], [36]).results,
+    ...windPayload('G', 'Ràfega de vent', [TO], [72]).results,
+    ...windPayload('H', 'Direcció del vent', [TO], [54]).results,
+  } };
+  for (const missing of ['F', 'G', 'H']) {
+    const input = structuredClone(base);
+    delete input.results[missing];
+    const result = normalizeGrafanaSnapshot(input, { externalId: SENSOR, from: FROM, to: TO });
+    assert.equal(result.ok, true);
+    assert.equal(result.values.temp_c, 12);
+    assert.equal(result.values.humitat_pct, 65);
+    assert.equal(result.values[{ F: 'vent_ms', G: 'vent_rafega_ms', H: 'vent_direccio_graus' }[missing]], null);
+    assert.equal(result.quality.fields[{ F: 'vent_ms', G: 'vent_rafega_ms', H: 'vent_direccio_graus' }[missing]], 'MISSING');
+  }
+});
+
+test('H13B accepts no Grafana wind and rejects only an invalid wind value', () => {
+  const noWind = normalizeGrafanaSnapshot(payload([TO], [12]), {
+    externalId: SENSOR, from: FROM, to: TO,
+  });
+  assert.equal(noWind.ok, true);
+  assert.equal(noWind.values.temp_c, 12);
+  assert.equal(noWind.values.vent_ms, null);
+  assert.equal(noWind.values.vent_rafega_ms, null);
+  assert.equal(noWind.values.vent_direccio_graus, null);
+
+  const invalidWind = { results: {
+    ...payload([TO], [12]).results,
+    ...windPayload('F', 'Velocitat del vent', [TO], ['36']).results,
+    ...windPayload('G', 'Ràfega de vent', [TO], [72]).results,
+    ...windPayload('H', 'Direcció del vent', [TO], [54]).results,
+  } };
+  const result = normalizeGrafanaSnapshot(invalidWind, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(result.ok, true);
+  assert.equal(result.values.temp_c, 12);
+  assert.equal(result.values.vent_ms, null);
+  assert.equal(result.quality.fields.vent_ms, 'INVALID');
+  assert.equal(result.values.vent_rafega_ms, 20);
+  assert.equal(result.values.vent_direccio_graus, 54);
+});
+
+test('H13B preserves zero wind, isolates null wind and rejects an unexpected source unit', () => {
+  const zeroWind = { results: {
+    ...payload([TO], [12]).results,
+    ...windPayload('F', 'Velocitat del vent', [TO], [0]).results,
+    ...windPayload('G', 'Ràfega de vent', [TO], [0]).results,
+    ...windPayload('H', 'Direcció del vent', [TO], [0]).results,
+  } };
+  const zero = normalizeGrafanaSnapshot(zeroWind, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(zero.ok, true);
+  assert.equal(zero.values.vent_ms, 0);
+  assert.equal(zero.values.vent_rafega_ms, 0);
+  assert.equal(zero.quality.fields.vent_ms, 'VALID');
+  assert.equal(zero.quality.fields.vent_rafega_ms, 'VALID');
+
+  const nullWind = { results: {
+    ...payload([TO], [12]).results,
+    ...windPayload('F', 'Velocitat del vent', [TO], [null]).results,
+    ...windPayload('G', 'Ràfega de vent', [TO], [72]).results,
+  } };
+  const nullResult = normalizeGrafanaSnapshot(nullWind, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(nullResult.ok, true);
+  assert.equal(nullResult.values.temp_c, 12);
+  assert.equal(nullResult.values.vent_ms, null);
+  assert.equal(nullResult.quality.fields.vent_ms, 'MISSING');
+  assert.equal(nullResult.values.vent_rafega_ms, 20);
+
+  const unexpectedUnit = { results: {
+    ...payload([TO], [12]).results,
+    ...windPayload('F', 'Velocitat del vent', [TO], [36], { unit: 'mph' }).results,
+    ...windPayload('G', 'Ràfega de vent', [TO], [72]).results,
+  } };
+  const invalidUnit = normalizeGrafanaSnapshot(unexpectedUnit, { externalId: SENSOR, from: FROM, to: TO });
+  assert.equal(invalidUnit.ok, true);
+  assert.equal(invalidUnit.values.temp_c, 12);
+  assert.equal(invalidUnit.values.vent_ms, null);
+  assert.equal(invalidUnit.quality.fields.vent_ms, 'INVALID');
+  assert.equal(invalidUnit.values.vent_rafega_ms, 20);
+  assert.ok(invalidUnit.quality.warnings.includes('UNSUPPORTED_UNIT'));
+});
+
+test('H13B lists the wind capabilities of the current Grafana contract', async () => {
+  const service = makeGrafanaAdapterService({
+    enabled: true, fetch: async () => { throw new Error('must not fetch'); }, clock: () => new Date(TO),
+    pool: { async query() { return { rows: [{ public_id: ID, nom: 'Grafana sintètica', external_id: SENSOR }] }; } },
+  });
+  const [station] = await service.list();
+  assert.deepEqual(station.fields.slice(-3), [
+    { id: 'wind_speed', unit: 'metres_per_second' },
+    { id: 'wind_gust', unit: 'metres_per_second' },
+    { id: 'wind_direction', unit: 'degrees' },
+  ]);
 });

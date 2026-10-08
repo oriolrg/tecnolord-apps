@@ -1,6 +1,6 @@
 # DECISIONS — Continuació Grafana multiestació
 
-Actualitzat: 2026-10-04.
+Actualitzat: 2026-10-08.
 
 ## Decisions vigents
 
@@ -11,7 +11,7 @@ Actualitzat: 2026-10-04.
   política Grafana.
 - La cadència source/freshness de referència és 900 s i la resolució de query
   és 300 s. Aquests valors no creen per si sols un scheduler; el refresh
-  periòdic operatiu cada cinc minuts és una decisió d'operació separada.
+  periòdic operatiu cada quinze minuts és una decisió d'operació separada.
 - Una estació Grafana nova continua PRIVATE/interna per defecte.
 - Una font sense dada vàlida conserva identitat i últim snapshot bo, però mai
   rep dades d'una altra estació.
@@ -30,7 +30,7 @@ històric. Fins llavors, totes les Grafana continuen restringides.
 
 ### H-D02 — Política de refresh complementari
 
-**PARTIAL; es completa a H12A.** El scheduler periòdic cada cinc minuts ja és
+**PARTIAL; es completa a H12A.** El scheduler periòdic cada quinze minuts ja és
 operatiu i no es reobre en aquesta decisió. Continua obert si s'afegeix
 refresh-if-stale/sota demanda a les lectures, i amb quina política. H12A ha de
 fixar minimum interval, lease/dedupe, errors, 429, timeout i fallback sense
@@ -38,8 +38,15 @@ duplicar consultes ni convertir snapshots en històric.
 
 ### H-D03 — Vent Grafana
 
-**OPEN tècnica; es resol a H13A.** No hi ha encara noms de mètrica, unitats ni
-disponibilitat demostrats. Cap mapping queda autoritzat.
+**RESOLTA localment per H13A/H13B.** Les mètriques acreditades són
+`xoic_I2CAT_velocitat_vent` → `vent_ms`,
+`xoic_I2CAT_maxim_cop_aire` → `vent_rafega_ms` i
+`xoic_I2CAT_direccio_vent` → `vent_direccio_graus`, sempre filtrades pel
+binding `tag4` de l'estació. Velocitat i ràfega provenen de km/h i es divideixen
+per 3,6; la direcció és en graus. Si Grafana no declara unitat al frame, la
+metadada es conserva com `QUERY_CONTRACT`, mai com `SOURCE_DECLARED`.
+
+La resolució és local: producció continua a `321b8a5` i no incorpora H13B.
 
 ### H-D04 — Publicació del mapa
 

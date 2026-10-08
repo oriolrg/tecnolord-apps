@@ -49,6 +49,23 @@ const SNAPSHOT_METRICS = Object.freeze([
     sourceUnits: Object.freeze([]),
     aggregate: Object.freeze({ windowHours: 24, reduction: 'lastNotNull' }),
   }),
+  Object.freeze({
+    refId: 'F', canonicalField: 'vent_ms', metric: 'xoic_I2CAT_velocitat_vent',
+    name: 'Velocitat del vent', unit: 'metres_per_second', minimum: 0, maximum: 150,
+    sourceUnits: Object.freeze(['km/h', 'kmh', 'kph']), querySourceUnit: 'km/h',
+    transform: (value) => value / 3.6,
+  }),
+  Object.freeze({
+    refId: 'G', canonicalField: 'vent_rafega_ms', metric: 'xoic_I2CAT_maxim_cop_aire',
+    name: 'Ràfega de vent', unit: 'metres_per_second', minimum: 0, maximum: 150,
+    sourceUnits: Object.freeze(['km/h', 'kmh', 'kph']), querySourceUnit: 'km/h',
+    transform: (value) => value / 3.6,
+  }),
+  Object.freeze({
+    refId: 'H', canonicalField: 'vent_direccio_graus', metric: 'xoic_I2CAT_direccio_vent',
+    name: 'Direcció del vent', unit: 'degrees', minimum: 0, maximum: 360,
+    sourceUnits: Object.freeze(['degree', 'degrees', 'deg', '°']), querySourceUnit: 'degrees',
+  }),
 ]);
 
 function resolveNow(clock) {
@@ -85,7 +102,7 @@ function sourceUnit(field, metric) {
   if (metric.unit === null) return value == null || value === ''
     ? { unit: null, basis: 'QUERY_CONTRACT' }
     : null;
-  if (value == null || value === '') return { unit: null, basis: 'QUERY_CONTRACT' };
+  if (value == null || value === '') return { unit: metric.querySourceUnit || null, basis: 'QUERY_CONTRACT' };
   if (metric.sourceUnits.includes(value)) return { unit: value, basis: 'SOURCE_DECLARED' };
   return null;
 }
@@ -142,8 +159,12 @@ function normalizeGrafanaMetric(payload, { externalId, from, to } = {}, metric =
         let value = null; let quality = 'MISSING';
         if (raw !== null && raw !== undefined) {
           if (typeof raw !== 'number' || !Number.isFinite(raw)) quality = 'INVALID';
-          else if (raw < metric.minimum || raw > metric.maximum) quality = 'OUT_OF_RANGE';
-          else { value = raw; quality = 'VALID'; }
+          else {
+            const normalizedValue = metric.transform ? metric.transform(raw) : raw;
+            if (!Number.isFinite(normalizedValue)) quality = 'INVALID';
+            else if (normalizedValue < metric.minimum || normalizedValue > metric.maximum) quality = 'OUT_OF_RANGE';
+            else { value = normalizedValue; quality = 'VALID'; }
+          }
         }
         points.push({ observed_at: new Date(timestamp).toISOString(), value, quality });
       }
@@ -379,6 +400,9 @@ function makeGrafanaAdapterService({ pool, fetch: fetchImpl, clock, enabled = fa
         { id: 'temperature_min_24h', unit: 'celsius' },
         { id: 'temperature_max_24h', unit: 'celsius' },
         { id: 'rain_24h', unit: null },
+        { id: 'wind_speed', unit: 'metres_per_second' },
+        { id: 'wind_gust', unit: 'metres_per_second' },
+        { id: 'wind_direction', unit: 'degrees' },
       ],
       rain_enabled: true,
     }));

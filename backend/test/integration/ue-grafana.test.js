@@ -112,6 +112,9 @@ test('UE-T14 exposes fixed Grafana frames only to admin and never persists or re
           { id: 'temperature_min_24h', unit: 'celsius' },
           { id: 'temperature_max_24h', unit: 'celsius' },
           { id: 'rain_24h', unit: null },
+          { id: 'wind_speed', unit: 'metres_per_second' },
+          { id: 'wind_gust', unit: 'metres_per_second' },
+          { id: 'wind_direction', unit: 'degrees' },
         ], rain_enabled: true,
       }]);
       const current = await request(base,

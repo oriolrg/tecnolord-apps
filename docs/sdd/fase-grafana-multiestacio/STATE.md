@@ -1,6 +1,6 @@
 # STATE — Grafana multiestació
 
-Actualitzat: 2026-10-04
+Actualitzat: 2026-10-08
 
 ## Estat operatiu actual
 
@@ -13,7 +13,7 @@ Actualitzat: 2026-10-04
 El connector Grafana està actiu exclusivament al backend. El client no accedeix
 directament a Grafana; consumeix les dades meteorològiques per les API de
 MeteoLord i segons els permisos aplicables. El refresh periòdic s'executa cada
-cinc minuts amb `scripts/refresh-stations.sh` i cron `*/5 * * * *`.
+quinze minuts amb `scripts/refresh-stations.sh` i cron `*/15 * * * *`.
 
 Els snapshots current estan actius. L'històric Grafana continua desactivat: 0
 mesures Grafana persistides com a històric i 0 polítiques Grafana actives. Els
@@ -26,9 +26,12 @@ MLW28 conserva codi `MLW28`, nom `Granja Vaques ca l'Andal`, external ID
 `Meteo-001-3100044` i UUID
 `5da7eece-6954-413f-8e22-390fe4144830`.
 
-Continuen pendents el vent Grafana, el refresh-if-stale/sota demanda, el model
-final de visibilitat, el mapa final per permisos i l'administració productiva
-de polítiques d'històric per estació.
+El vent Grafana està implementat i validat localment: velocitat i ràfega es
+normalitzen de km/h a m/s i la direcció es conserva en graus amb el contracte
+canònic existent. Aquest canvi encara no forma part de producció, que manté la
+baseline immutable `321b8a5`. Continuen pendents el refresh-if-stale/sota
+demanda, el model final de visibilitat, el mapa final per permisos i
+l'administració productiva de polítiques d'històric per estació.
 
 ## Checkpoint productiu 2026-10-01
 
@@ -297,14 +300,28 @@ H08 gate multiestació
 H09A estadístiques 24 h Grafana
 H09B capa base del mapa local
 H10 release candidate local
+H13A discovery de vent Grafana local
+H13B integració de vent Grafana local
+
+H13A PASS local — les mètriques acreditades són
+`xoic_I2CAT_velocitat_vent`, `xoic_I2CAT_maxim_cop_aire` i
+`xoic_I2CAT_direccio_vent`; velocitat i ràfega són km/h i direcció són graus.
+
+H13B PASS local — l'adaptador Grafana les consulta amb el binding real de
+cadascuna de les estacions, normalitza velocitat/ràfega a m/s, conserva la
+direcció en graus i reutilitza el widget existent. Els camps absents, nuls,
+invàlids o amb unitat no acceptada queden aïllats. Les proves locals cobreixen
+conversió, zero, absència, nul, unitat inesperada, timestamps per camp, API i
+regressió Ecowitt. No hi ha desplegament ni canvi a la baseline productiva
+`321b8a5`.
 
 ## Següents tasques
 
 H01–H10 no es reobren. La continuació està definida a [TASKS.md](TASKS.md):
-H11A/H11B visibilitat, H12A/H12B refresh-if-stale/sota demanda, H13A/H13B vent
-i H14 mapa productiu. L'administració productiva de l'històric configurable
-continua pendent i no autoritza cap política Grafana. H05C continua bloquejada
-per pressió i pluja fins a obtenir contractes de font suficients.
+H11A/H11B visibilitat, H12A/H12B refresh-if-stale/sota demanda i H14 mapa
+productiu. L'administració productiva de l'històric configurable continua
+pendent i no autoritza cap política Grafana. H05C continua bloquejada per
+pressió i pluja fins a obtenir contractes de font suficients.
 
 ## Invariants
 

@@ -41,9 +41,9 @@ Current catalog:
 
 Grafana:
 - current snapshots enabled
-- periodic refresh every 5 minutes
+- periodic refresh every 15 minutes
 - no Grafana history enabled
-- wind integration pending
+- wind integration is validated locally but is not included in the production baseline
 
 PROD-01:
 - COMPLETED / HISTORICAL

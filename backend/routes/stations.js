@@ -60,10 +60,15 @@ function sanitizedQuality(value) {
     for (const field of CURRENT_FIELD_NAMES) {
       const unit = value.units[field];
       if (!unit || typeof unit !== 'object' || Array.isArray(unit)) continue;
-      const canonical = ['celsius', 'percent'].includes(unit.canonical) ? unit.canonical : undefined;
+      const canonical = ['celsius', 'percent', 'metres_per_second', 'degrees'].includes(unit.canonical)
+        ? unit.canonical : undefined;
       const allowedSourceUnits = canonical === 'percent'
         ? ['humidity', 'percent', 'percentunit', '%']
-        : ['celsius', '°C', 'C', 'celcius'];
+        : canonical === 'metres_per_second'
+          ? ['km/h', 'kmh', 'kph']
+          : canonical === 'degrees'
+            ? ['degree', 'degrees', 'deg', '°']
+            : ['celsius', '°C', 'C', 'celcius'];
       const sourceUnit = allowedSourceUnits.includes(unit.source_unit) ? unit.source_unit : null;
       const basis = ['SOURCE_DECLARED', 'QUERY_CONTRACT'].includes(unit.unit_basis)
         ? unit.unit_basis : undefined;
