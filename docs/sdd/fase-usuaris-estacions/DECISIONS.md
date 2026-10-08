@@ -1,6 +1,8 @@
 # Decisions de la fase
 
-Estat 2026-09-18: decisions de producte UE-D01 a UE-D05 resoltes. Les validacions tècniques o de drets indicades a les tasques corresponents no es consideren decisions de producte pendents.
+Estat reconciliat 2026-10-04: decisions de producte UE-D01 a UE-D05 resoltes.
+Les validacions tècniques o de drets indicades a les tasques corresponents no
+es consideren decisions de producte pendents.
 
 ## Producte i autoritzacions
 
@@ -11,6 +13,23 @@ Estat 2026-09-18: decisions de producte UE-D01 a UE-D05 resoltes. Les validacion
 | **UE-D03** | **El punt de referència d'Andorra serà Andorra la Vella.**                                                                                                                                                                                                                                                                                                                                             | UE-T15 pot completar les sis localitats previstes utilitzant Andorra la Vella com a punt geogràfic d'Andorra.                                                                                                                                                                                                                                                                                                                       |
 | **UE-D04** | **Grafana serà un connector intern de producció.** MeteoLord podrà obtenir dades meteorològiques de les estacions disponibles mitjançant Grafana des del backend i exposar aquestes dades meteorològiques a través del model i API propis de MeteoLord. Grafana no serà accessible directament des del client.                                                                                         | URLs, credencials, tokens, API i detalls interns de Grafana no s'exposaran al frontend. UE-T12 ha de validar accés, límits, unitats, estabilitat i comportament del connector. Abans de publicar dades procedents d'aquesta font s'han de validar els drets de reutilització/redistribució corresponents; ocultar Grafana darrere del backend no substitueix aquesta validació. UE-T14 continua condicionada al resultat del spike. |
 | **UE-D05** | **La persistència històrica s'activa individualment per estació i és administrada exclusivament per l'administrador.** No s'emmagatzemarà automàticament l'històric de totes les estacions. S'ha de poder conservar històric de l'estació actual de MeteoLord, de les estacions obtingudes mitjançant Grafana i de qualsevol altra estació que l'administrador decideixi incorporar a la persistència. | Per cada estació amb persistència activada, l'administrador configura individualment la periodicitat de captura/emmagatzematge i el temps de retenció. El sistema ha d'eliminar automàticament les dades que superin la retenció configurada. Les estacions sense persistència continuen funcionant amb dades actuals/snapshot. Els històrics existents s'han de preservar durant l'adaptació al nou model.                         |
+
+## Estat d'aplicació de les decisions
+
+- **OPERATIVE:** bootstrap SUPERADMIN i accés administratiu a totes les
+  estacions; exactament un SUPERADMIN actiu i aprovat.
+- **COMPLETED local / PARTIAL producció:** el backend implementa el flux
+  d'alta i verificació, però l'alta pública productiva respon HTTP 503 mentre
+  no hi hagi adaptador de correu real.
+- **DECIDED, productització pendent:** una estació d'usuari pot ser pública o
+  privada i l'administrador hi té accés; això no acredita encara tota
+  l'experiència productiva final de permisos i visibilitat.
+- **OPERATIVE:** Grafana és intern al backend. El client només rep dades
+  meteorològiques mitjançant les API pròpies de MeteoLord i mai accedeix
+  directament a l'API o credencials Grafana.
+- **COMPLETED local / PENDING producció:** existeix el model de polítiques
+  d'històric per estació, però no hi ha cap política Grafana activa ni
+  activació productiva implícita.
 
 ## Flux d'alta d'usuaris
 
@@ -155,3 +174,22 @@ Les decisions de producte estan resoltes, però continuen existint comprovacions
    * el transport de correu real serà requisit previ a la publicació, no d'aquesta fase local.
 
 Aquestes validacions no reobren UE-D01–UE-D05 tret que aparegui una incompatibilitat que exigeixi una nova decisió funcional.
+
+
+## Decisions obertes després del checkpoint
+
+### UE-OPEN-01 — Transport de correu productiu
+
+El flux UE-D01 continua adoptat i no es reobre. Resta **OPEN** l'elecció del
+transport productiu (SMTP o proveïdor equivalent), la seva configuració i el
+mecanisme de secrets. UE-T19 ha de separar el codi de l'operació productiva i
+no pot hardcodejar cap credencial ni usar `localMailOutbox` en producció. Fins
+que es resolgui, el registre públic productiu continua no operatiu amb HTTP
+503; la verificació d'email continua sent obligatòria.
+
+### UE-OPEN-02 — Accés per a qualsevol usuari autenticat
+
+UE-D02 continua vigent per PUBLIC/PRIVATE, propietari i administrador. Resta
+**OPEN** si les estacions ADMIN/Grafana autoritzades a qualsevol compte
+autenticat requereixen ampliar el model. La decisió autoritativa es prendrà a
+H11A i es registrarà com H-D01, sense duplicar policy entre mapa, API i Meteo.
