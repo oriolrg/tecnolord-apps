@@ -94,6 +94,23 @@ async function withServer(callback, { pool = createRoutePool() } = {}) {
   }
 }
 
+async function withProductionFrontend(callback) {
+  const app = createApp({
+    environment: { METEOLORD_ENV: 'production' },
+    accessLogStream: { write() {} },
+  });
+  const server = await new Promise((resolve) => {
+    const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
+  });
+  try {
+    await callback(`http://127.0.0.1:${server.address().port}`);
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+  }
+}
+
 test('/api/ping returns 200 without querying an unavailable database', async () => {
   let queryCount = 0;
   const unavailablePool = {
@@ -294,6 +311,8 @@ test('/meteo/ serves the local frontend without making an external request', asy
     assert.ok(html.indexOf('runtime-config.js') < html.indexOf('src/main.js'));
     assert.doesNotMatch(html, /https:\/\/stats\.tecnolord\.cat/);
     assert.doesNotMatch(html, /\sonerror\s*=/i);
+    assert.match(LOCAL_FRONTEND_CSP, /img-src[^;]*https:\/\/tile\.openstreetmap\.org/);
+    assert.match(LOCAL_FRONTEND_CSP, /connect-src[^;]*https:\/\/tile\.openstreetmap\.org/);
   });
 });
 
@@ -330,6 +349,14 @@ test('/meteo/mapa/ selects the existing real style runtime and constrained tile 
     assert.match(LOCAL_REAL_MAP_CSP, /connect-src[^;]*https:\/\/tile\.openstreetmap\.org/);
     assert.doesNotMatch(LOCAL_REAL_MAP_CSP, /script-src[^;]*'unsafe-inline'/);
     assert.match(LOCAL_REAL_MAP_CSP, /style-src 'self' 'unsafe-inline'/);
+  });
+});
+
+test('production does not receive the local OpenStreetMap CSP relaxation', async () => {
+  await withProductionFrontend(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/meteo/`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-security-policy'), null);
   });
 });
 

@@ -50,8 +50,11 @@ La resolució és local: producció continua a `321b8a5` i no incorpora H13B.
 
 ### H-D04 — Publicació del mapa
 
-**PENDING H-D01.** El mapa reutilitzarà H09B i les ubicacions H03. No es
-decidirà cap publicació d'una estació abans de tenir policy i drets coherents.
+**PARTIAL local; PENDING H-D01 per a producció.** H14-P1 reutilitza H09B i les
+ubicacions H03 dins de `/meteo`, conservant la policy actual del backend: mapa
+públic més geometries de sessió ja autoritzades. No decideix publicació ni
+afegeix accés autenticat. H14-P2 no habilitarà runtime/CSP productiu ni cap
+publicació d'una estació abans de tenir policy i drets coherents.
 
 ## Bloquejos conservats
 

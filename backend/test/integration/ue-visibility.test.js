@@ -167,6 +167,12 @@ test('UE-T08 keeps exact locations private and revokes every public map surface 
       assert.deepEqual(adminSessionMap.body, adminMap.body);
       assert.match(adminSessionMap.response.headers.get('vary'), /Cookie/);
 
+      await pool.query('DELETE FROM meteo.current_snapshots WHERE binding_id IN (SELECT id FROM meteo.source_bindings WHERE station_id=$1)', [ids.rows.find((row) => row.public_id === stationA.id).id]);
+      const publicWithoutSnapshot = await json(base, '/api/v1/map/stations');
+      const markerWithoutSnapshot = publicWithoutSnapshot.body.features.find((feature) => feature.properties.public_station_id === stationA.id);
+      assert.ok(markerWithoutSnapshot, 'a location-authorized station remains on the map without current data');
+      assert.equal(markerWithoutSnapshot.properties.sensors[0].fields.find((field) => field.field_id === 'temperature').current_value, null);
+
       const sitemap = await json(base, '/api/v1/map/sitemap');
       assert.equal(sitemap.body.ids.includes(stationA.id), true);
       assert.equal(sitemap.body.ids.length, 7);

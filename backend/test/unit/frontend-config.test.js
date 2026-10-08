@@ -10,6 +10,7 @@ const SITE_DIR = path.resolve(__dirname, '../../../site');
 const CONFIG_SOURCE = fs.readFileSync(path.join(SITE_DIR, 'src/config.js'), 'utf8');
 const ANALYTICS_SOURCE = fs.readFileSync(path.join(SITE_DIR, 'src/analytics.js'), 'utf8');
 const LOCAL_RUNTIME_PATH = path.join(SITE_DIR, 'runtime-config.js');
+const PRODUCTION_RUNTIME_PATH = path.join(SITE_DIR, 'runtime-config.production.js');
 const CANONICAL_LOCAL_RUNTIME_PATH = path.resolve(
   __dirname,
   '../../../config/meteolord/runtime-config.local.js'
@@ -50,6 +51,20 @@ test('local runtime config is an immutable exact override and matches its canoni
   assert.equal(descriptor.value.ENVIRONMENT, 'local');
   assert.equal(descriptor.value.ANALYTICS_ENABLED, false);
   assert.equal(descriptor.value.EXTERNAL_LINKS_ENABLED, false);
+});
+
+test('production runtime config is immutable and disables synthetic data', () => {
+  const sandbox = { window: {} };
+  vm.runInNewContext(fs.readFileSync(PRODUCTION_RUNTIME_PATH, 'utf8'), sandbox, { filename: 'runtime-config.production.js' });
+  const descriptor = Object.getOwnPropertyDescriptor(sandbox.window, '__METEOLORD_CONFIG');
+  assert.equal(descriptor.writable, false);
+  assert.equal(descriptor.configurable, false);
+  assert.equal(Object.isFrozen(descriptor.value), true);
+  assert.equal(descriptor.value.ENVIRONMENT, 'production');
+  assert.equal(descriptor.value.SYNTHETIC_DATA, false);
+  assert.equal(descriptor.value.API_BASE, '/api');
+  assert.equal(descriptor.value.ANALYTICS_ENABLED, true);
+  assert.equal(descriptor.value.EXTERNAL_LINKS_ENABLED, true);
 });
 
 test('frontend config resolves the valid local schema and same-origin API paths', async () => {

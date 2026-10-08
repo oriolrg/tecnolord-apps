@@ -69,6 +69,7 @@ function mapFeature(row, { exact = false, now = new Date() } = {}) {
   const properties = {
     public_station_id: row.public_id,
     public_name: row.nom,
+    resource_kind: 'STATION',
     geo_publication: exact ? 'EXACT' : 'APPROXIMATED',
     sensors,
     observed_at: row.observed_at ? new Date(row.observed_at).toISOString() : null,
@@ -179,7 +180,7 @@ function makeStationLocationService({ pool, clock } = {}) {
     FROM meteo.estacions e
     JOIN meteo.station_locations l ON l.station_id=e.id
     JOIN meteo.source_bindings b ON b.station_id=e.id AND b.binding_status='VALIDATED'
-    JOIN meteo.current_snapshots s ON s.binding_id=b.id
+    LEFT JOIN meteo.current_snapshots s ON s.binding_id=b.id
     CROSS JOIN meteo.map_catalog_state c
   `;
 

@@ -23,7 +23,8 @@ continuació posterior al checkpoint productiu de 2026-10-01.
 - H12A/H12B: política de refresh-if-stale/sota demanda sobre el scheduler
   periòdic ja operatiu.
 - H13A/H13B: PASS local; encara no formen part de producció `321b8a5`.
-- H14: mapa productiu coherent amb permisos.
+- H14: PARTIAL; H14-P1 és PASS local i H14-P2 continua pendent de policy i
+  runtime productiu.
 - Administració/activació productiva de polítiques d'històric configurables
   per estació: PENDING, encara sense tasca seqüenciada i sense cap política
   Grafana activa.
@@ -138,12 +139,18 @@ per defecte, sense històric i sense consultes directes del navegador.
 - **Producció:** la baseline `321b8a5` no incorpora H13B; qualsevol desplegament
   requereix una tasca i autorització separades.
 
-## H14 — Mapa productiu segons permisos i ubicacions acreditades
+## H14 — Mapa segons permisos i ubicacions acreditades
 
-- **Estat:** BLOCKED per H11B.
+- **Estat:** PARTIAL. H14-P1 PASS local; H14-P2 BLOCKED per H11B.
 - **Objectiu:** portar al producte el mapa ja existent, filtrat per policy,
   sense crear una segona implementació.
-- **Dependències:** H09B, H11B i evidència H03.
+- **H14-P1 assolit:** nucli compartit entre `/meteo/mapa/` i `/meteo`; una sola
+  selecció `store.stationId`; endpoints existents `/map/stations` i
+  `/map/session-stations`; cap branching de rol al client. `current_snapshot`
+  és opcional per a la presència d'una ubicació autoritzada al mapa. Les
+  estimacions romanen visibles al mapa complet però no seleccionables dins
+  `/meteo` fins que es decideixi el seu contracte d'identificadors.
+- **Dependències H14-P2:** H09B, H11B i evidència H03.
 - **Fitxers probables:** `/meteo/mapa/`, endpoints public/me/admin, policy i
   runtime config.
 - **Implementació prevista:** reutilitzar mapa/capes actuals; TecnoLord i
@@ -158,7 +165,7 @@ per defecte, sense històric i sense consultes directes del navegador.
 
 ## Ordre dins la fase
 
-`H11A → H11B → (H12A → H12B)` i `H11B → H14`.
+`H11A → H11B → (H12A → H12B)` i `H11B → H14-P2`.
 `H13A → H13B` està completat localment. H05C continua fora d'aquest camí fins
 que aparegui evidència nova. L'activació productiva de polítiques d'històric
 continua fora de la seqüència fins que rebi una tasca i autorització explícites.

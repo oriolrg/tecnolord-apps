@@ -315,10 +315,21 @@ conversió, zero, absència, nul, unitat inesperada, timestamps per camp, API i
 regressió Ecowitt. No hi ha desplegament ni canvi a la baseline productiva
 `321b8a5`.
 
+H14-P1 PASS local — el nucli del mapa existent s'ha reutilitzat dins de
+`/meteo`, sense endpoint, policy ni coordenada nova. Selector i marcador
+comparteixen `store.stationId`; el mapa només consulta les col·leccions
+autoritzades pública i de sessió, i no fa consultes `current` ni directes a
+Grafana. Una estació amb geometria autoritzada continua tenint marcador sense
+`current_snapshot`; una estació seleccionada sense geometria conserva la
+selecció sense marcador residual. Les estimacions no són seleccionables en
+aquesta integració perquè `estimation:<uuid>` continua fora d'abast. H14 global
+continua PARTIAL: H11B, runtime/CSP productiu i la publicació segons política
+romanen pendents. Producció continua a `321b8a5` sense aquest canvi.
+
 ## Següents tasques
 
 H01–H10 no es reobren. La continuació està definida a [TASKS.md](TASKS.md):
-H11A/H11B visibilitat, H12A/H12B refresh-if-stale/sota demanda i H14 mapa
+H11A/H11B visibilitat, H12A/H12B refresh-if-stale/sota demanda i H14-P2 mapa
 productiu. L'administració productiva de l'històric configurable continua
 pendent i no autoritza cap política Grafana. H05C continua bloquejada per
 pressió i pluja fins a obtenir contractes de font suficients.

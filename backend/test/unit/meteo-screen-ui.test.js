@@ -127,7 +127,8 @@ async function loadScreen(fetchStationCurrent, charts) {
       const fetchStationPreference = async () => ({});
       const setDefaultStation = async () => ({});
       const fetchStationCurrent = globalThis.__meteoScreenTest.fetchStationCurrent;`)
-    .replace('import { renderLineChart, buildDaySeries } from "../components/lineChart.js";', 'const { renderLineChart, buildDaySeries } = globalThis.__meteoScreenTest;');
+    .replace('import { renderLineChart, buildDaySeries } from "../components/lineChart.js";', 'const { renderLineChart, buildDaySeries } = globalThis.__meteoScreenTest;')
+    .replace('import { createStationMapCore, loadAuthorizedStationMap } from "../components/stationMapCore.js";', 'const createStationMapCore = async () => null; const loadAuthorizedStationMap = async () => ({ collection: { features: [] } });');
 
   const created = [];
   const priorDocument = global.document;
@@ -262,4 +263,46 @@ test('Meteo clears sequential station data and ignores an outdated deferred resp
   } finally {
     cleanup();
   }
+});
+
+test('H14-P1 synchronizes marker selection through the existing station selection flow exactly once', async () => {
+  const { module, cleanup } = await loadScreen(async () => snapshot('unused', {}), []);
+  const priorLocation = global.location;
+  const priorHistory = global.history;
+  global.location = new URL('http://localhost/meteo/?limit=48');
+  let replaced = '';
+  global.history = { replaceState(_state, _title, url) { replaced = url; } };
+  try {
+    const state = { stationId: '' };
+    const store = { set(patch) { Object.assign(state, patch); } };
+    const stationControl = { value: '' };
+    const selected = [];
+    let refreshes = 0;
+    await module.selectStation({
+      stationId: '11111111-1111-4111-8111-111111111111', store, stationControl,
+      map: { setSelectedStation(id) { selected.push(id); } }, updatePreferenceControls() {}, refresh() { refreshes += 1; },
+    });
+    assert.equal(state.stationId, '11111111-1111-4111-8111-111111111111');
+    assert.equal(stationControl.value, state.stationId);
+    assert.deepEqual(selected, [state.stationId]);
+    assert.match(String(replaced), /station_id=11111111-1111-4111-8111-111111111111/);
+    assert.equal(refreshes, 1);
+
+    await module.selectStation({ stationId: '', store, stationControl, map: { setSelectedStation(id) { selected.push(id); } }, refresh() { refreshes += 1; } });
+    assert.equal(state.stationId, '');
+    assert.equal(stationControl.value, '');
+    assert.deepEqual(selected, ['11111111-1111-4111-8111-111111111111', '']);
+    assert.equal(refreshes, 2);
+  } finally {
+    if (priorLocation === undefined) delete global.location; else global.location = priorLocation;
+    if (priorHistory === undefined) delete global.history; else global.history = priorHistory;
+    cleanup();
+  }
+});
+
+test('H14-P2 embeds the real map in local and production without changing the Meteo data runtime', () => {
+  const screen = fs.readFileSync(SCREEN_PATH, 'utf8');
+  assert.match(screen, /\['local', 'production'\]\.includes\(CONFIG\.environment\)/);
+  assert.match(screen, /config: CONFIG,\s*mapMode: "real",\s*allowProduction: true/);
+  assert.doesNotMatch(screen, /SYNTHETIC_DATA\s*[:=]\s*false/);
 });

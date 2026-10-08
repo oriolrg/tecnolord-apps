@@ -16,8 +16,15 @@ import {
   setDefaultStation,
 } from "../../services/meteoService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
+import { createStationMapCore, loadAuthorizedStationMap } from "../components/stationMapCore.js";
 
 function buildMeteoUI(root) {
+  const stationMap = ['local', 'production'].includes(CONFIG.environment) ? `
+      <section id="meteo-station-map-panel" class="meteo-station-map-panel" aria-labelledby="meteo-station-map-title">
+        <div class="meteo-station-map-heading"><div><p>VISTA D'ESTACIONS</p><h3 id="meteo-station-map-title">Mapa d'estacions accessibles</h3></div></div>
+        <div id="meteo-station-map" class="meteo-station-map" role="region" aria-label="Mapa interactiu d'estacions"></div>
+        <p id="meteo-station-map-status" class="meteo-station-map-status" role="status">Carregant mapa…</p>
+      </section>` : '';
   const externalResources = CONFIG.externalLinksEnabled ? `
       <div id="meteo-support" style="margin-top: 40px; margin-bottom: 20px; padding: 0 10px;">
         <div style="background: white; border-radius: 15px; padding: 20px; border: 1px solid #edf2f7; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -83,6 +90,7 @@ function buildMeteoUI(root) {
         <button id="meteo-back-global" type="button" class="secondary meteo-back-global" hidden>Torna a la vista pública</button>
       </div>
 
+      ${stationMap}
       <div class="grid" id="meteo-cards"></div>
 
       ${externalResources}
@@ -99,7 +107,21 @@ function buildMeteoUI(root) {
     clearDefault: $("#meteo-default-clear", root),
     preferenceStatus: $("#meteo-preference-status", root),
     backGlobal: $("#meteo-back-global", root),
+    map: $("#meteo-station-map", root),
+    mapStatus: $("#meteo-station-map-status", root),
   };
+}
+
+export function selectStation({ stationId, store, stationControl, map, updatePreferenceControls, refresh }) {
+  store.set({ stationId: stationId || "" });
+  const url = new URL(location.href);
+  if (stationId) url.searchParams.set("station_id", stationId);
+  else url.searchParams.delete("station_id");
+  history.replaceState(null, "", url);
+  if (stationControl) stationControl.value = stationId || "";
+  map?.setSelectedStation(stationId || "");
+  updatePreferenceControls?.();
+  return refresh?.();
 }
 
 export async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => true } = {}) {
@@ -524,15 +546,15 @@ export function initMeteoScreen(root, store) {
   let preferenceApplied = false;
   let stations = [];
   let session = null;
+  let stationMap = null;
+  let stationMapController = null;
+  let stationMapRevision = 0;
   let preference = { default_station: null, revision: 0, invalidated: false };
   let publicView = { station: null, card_ids: ['wind', 'temperature', 'rain', 'pressure', 'humidity', 'uv'], revision: 0 };
   const selectedFromUrl = new URL(location.href).searchParams.has("station_id");
 
   function clearSelectedStation() {
-    store.set({ stationId: "" });
-    const url = new URL(location.href);
-    url.searchParams.delete("station_id");
-    history.replaceState(null, "", url);
+    selectStation({ stationId: "", store, stationControl: ui.station, map: stationMap, updatePreferenceControls });
   }
 
   function runRefresh() {
@@ -544,6 +566,46 @@ export function initMeteoScreen(root, store) {
       signal: controller.signal,
       isCurrent: () => !disposed && revision === refreshRevision,
     });
+  }
+
+  function selectCurrentStation(stationId) {
+    return selectStation({
+      stationId, store, stationControl: ui.station, map: stationMap,
+      updatePreferenceControls, refresh: runRefresh,
+    });
+  }
+
+  async function refreshStationMap() {
+    if (!ui.map || !['local', 'production'].includes(CONFIG.environment)) return;
+    stationMapController?.abort();
+    const controller = new AbortController();
+    const revision = ++stationMapRevision;
+    stationMapController = controller;
+    try {
+      if (!stationMap) {
+        stationMap = await createStationMapCore({
+          container: ui.map,
+          config: CONFIG,
+          mapMode: "real",
+          allowProduction: true,
+          selectedStationId: store.get().stationId,
+          selectable: (station) => station.resource_kind === "STATION",
+          onStationSelect: selectCurrentStation,
+          onStatus: (message) => { if (ui.mapStatus) ui.mapStatus.textContent = message; },
+          onUnavailable: () => { if (ui.mapStatus) ui.mapStatus.textContent = "El mapa no està disponible en aquest entorn."; },
+        });
+      }
+      if (!stationMap || disposed || controller.signal.aborted || revision !== stationMapRevision) return;
+      const result = await loadAuthorizedStationMap({ apiBase: CONFIG.apiBase, signal: controller.signal });
+      if (disposed || controller.signal.aborted || revision !== stationMapRevision) return;
+      stationMap.setCollection(result.collection, { fit: true });
+      stationMap.setSelectedStation(store.get().stationId);
+      if (ui.mapStatus) ui.mapStatus.textContent = result.collection.features.length
+        ? "" : "No hi ha estacions accessibles amb coordenades autoritzades.";
+    } catch (error) {
+      if (error?.name === "AbortError" || disposed || revision !== stationMapRevision) return;
+      if (ui.mapStatus) ui.mapStatus.textContent = "No s’ha pogut carregar el mapa d’estacions.";
+    }
   }
 
   function renderStationOptions() {
@@ -638,6 +700,8 @@ export function initMeteoScreen(root, store) {
       }
       renderStationOptions();
       updatePreferenceControls();
+      stationMap?.setSelectedStation(store.get().stationId);
+      refreshStationMap();
       await runRefresh();
     } catch (error) {
       if (error?.name === "AbortError" || disposed || revision !== accessRevision) return;
@@ -654,13 +718,7 @@ export function initMeteoScreen(root, store) {
   }
 
   const onStationChange = () => {
-    store.set({ stationId: ui.station.value });
-    const url = new URL(location.href);
-    if (ui.station.value) url.searchParams.set("station_id", ui.station.value);
-    else url.searchParams.delete("station_id");
-    history.replaceState(null, "", url);
-    updatePreferenceControls();
-    runRefresh();
+    selectCurrentStation(ui.station.value);
   };
   ui.station?.addEventListener("change", onStationChange);
 
@@ -693,13 +751,8 @@ export function initMeteoScreen(root, store) {
     updatePreferenceControls();
   };
   const onBackGlobal = () => {
-    store.set({ stationId: "" });
-    const url = new URL(location.href);
-    url.searchParams.delete("station_id");
-    history.replaceState(null, "", url);
+    selectCurrentStation("");
     renderStationOptions();
-    updatePreferenceControls();
-    runRefresh();
   };
   ui.setDefault?.addEventListener("click", onSetDefault);
   ui.clearDefault?.addEventListener("click", onClearDefault);
@@ -720,6 +773,8 @@ export function initMeteoScreen(root, store) {
     disposed = true;
     accessController?.abort();
     refreshController?.abort();
+    stationMapController?.abort();
+    stationMap?.destroy();
     ui.station?.removeEventListener("change", onStationChange);
     ui.setDefault?.removeEventListener("click", onSetDefault);
     ui.clearDefault?.removeEventListener("click", onClearDefault);

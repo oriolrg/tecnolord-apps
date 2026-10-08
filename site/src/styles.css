@@ -745,12 +745,37 @@ th{
 .meteo-back-global:focus-visible{ outline:3px solid rgba(59,130,246,.35); outline-offset:2px; }
 .meteo-preference-status:empty{ display:none; }
 .meteo-back-global{ grid-column:2; justify-self:start; }
+.meteo-station-map-panel{
+  margin:0 0 16px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--card);
+}
+.meteo-station-map-heading{ padding:12px 14px 9px; border-bottom:1px solid var(--line); }
+.meteo-station-map-heading p{ margin:0 0 3px; color:var(--muted); font-size:.7rem; font-weight:800; letter-spacing:.08em; }
+.meteo-station-map-heading h3{ margin:0; font-size:1rem; }
+.meteo-station-map{ height:clamp(280px, 45vh, 440px); background:#e7eef0; }
+.meteo-station-map-status{ min-height:1.2em; margin:0; padding:8px 14px; color:var(--muted); font-size:.8rem; }
+.meteo-station-map-status:empty{ display:none; }
+.meteo-station-map .map-marker{
+  min-width:48px; min-height:38px; padding:5px 9px; border:2px solid #fff; border-radius:20px;
+  background:#1c6753; color:#fff; box-shadow:0 2px 8px #193b3b55; font-size:.8rem; font-weight:750;
+}
+.meteo-station-map .map-marker.cold{ background:#266b91; }
+.meteo-station-map .map-marker.warm{ background:#a3481c; }
+.meteo-station-map .map-marker.private{ background:#efe5ff; color:#5d2594; border-color:#8a52bd; }
+.meteo-station-map .map-marker.missing{ background:#5d6566; }
+.meteo-station-map .map-marker.cluster{ min-width:44px; min-height:44px; border-radius:50%; background:#123d39; }
+.meteo-station-map .map-marker.selected{ outline:3px solid #111827; outline-offset:3px; transform:translateY(-1px); }
+.meteo-station-map .map-marker:disabled{ cursor:default; opacity:.75; }
 @media (max-width: 520px){
   .meteo-station-picker{ grid-template-columns:1fr; }
   .meteo-station-picker span,
   .meteo-station-actions,
   .meteo-back-global{ grid-column:1; }
   .meteo-station-actions button{ width:100%; }
+  .meteo-station-map{ height:clamp(250px, 43svh, 360px); }
 }
 .card--wind .wind-block{
   display:flex;

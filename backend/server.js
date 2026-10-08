@@ -55,10 +55,11 @@ const { makeEcowittService } = require('./services/ecowittService');
 
 const FRONTEND_DIR = path.resolve(__dirname, '../site');
 const REAL_CLOCK = Object.freeze({ now: () => new Date() });
-const LOCAL_FRONTEND_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
-const LOCAL_REAL_MAP_CSP = LOCAL_FRONTEND_CSP
+const LOCAL_SYNTHETIC_FRONTEND_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+const LOCAL_FRONTEND_CSP = LOCAL_SYNTHETIC_FRONTEND_CSP
   .replace("img-src 'self' data:;", "img-src 'self' data: https://tile.openstreetmap.org;")
   .replace("connect-src 'self';", "connect-src 'self' https://tile.openstreetmap.org;");
+const LOCAL_REAL_MAP_CSP = LOCAL_FRONTEND_CSP;
 
 function runtimeMode(environment) {
   return environment.METEOLORD_ENV
@@ -394,6 +395,7 @@ if (require.main === module) {
 module.exports = {
   LOCAL_FRONTEND_CSP,
   LOCAL_REAL_MAP_CSP,
+  LOCAL_SYNTHETIC_FRONTEND_CSP,
   createApp,
   createRuntime,
   redactRequestUrl,

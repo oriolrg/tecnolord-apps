@@ -1,3 +1,5 @@
+import { createStationMapCore, loadAuthorizedStationMap } from './ui/components/stationMapCore.js';
+
 const $ = (selector) => document.querySelector(selector);
 const EMPTY = { type: 'FeatureCollection', features: [] };
 const statusLabels = { FRESCA: 'Dades recents', SENSE_DADES_RECENTS: 'Sense dades recents', OBSOLETA: 'Dada obsoleta', SOSPITOSA: 'Dada sospitosa · no fiable', EN_REVISIO: 'En revisió' };
@@ -21,8 +23,8 @@ function stationUrl(id) {
   url.searchParams.set('station', id);
   return `${url.pathname}${url.search}`;
 }
-let config, collection = EMPTY, privateById = new Map(), catalogVersion, map, engine, markers = new Map(), generation = 0, controller;
-let mapLoadTimer, selectedId = new URL(location.href).searchParams.get('station');
+let config, collection = EMPTY, privateById = new Map(), catalogVersion, mapCore, generation = 0, controller;
+let selectedId = new URL(location.href).searchParams.get('station');
 let directDetailPending = Boolean(selectedId);
 let polling = false;
 const dialog = $('#station-dialog');
@@ -72,24 +74,14 @@ function clearData() {
   updateMap(false);
 }
 function fitMap() {
-  if (!map || !collection.features.length) return;
-  const bounds = new engine.LngLatBounds();
-  collection.features.forEach((feature) => bounds.extend(feature.geometry.coordinates));
-  map.fitBounds(bounds, { padding: 65, maxZoom: 12, duration: 0 });
+  mapCore?.fit();
 }
 $('#fit-map').onclick = fitMap;
 function updateMap(fit = true) {
-  for (const marker of markers.values()) marker.remove();
-  markers.clear();
-  const source = map?.getSource('stations');
-  if (!source) return;
-  source.setData(collection);
-  if (fit) fitMap();
+  mapCore?.setCollection(collection, { fit });
 }
 function mapUnavailable() {
-  clearTimeout(mapLoadTimer);
-  if (map) { map.remove(); map = null; }
-  markers.clear();
+  mapCore?.destroy(); mapCore = null;
   $('#map').hidden = true;
   $('#map-status').textContent = 'El mapa no està disponible. Pots consultar totes les estacions, cercar-les i obrir les fitxes a la llista.';
   $('#fit-map').disabled = true;
@@ -105,78 +97,19 @@ function showCoincident(stations) {
   }
   content.append(options); if (!dialog.open) dialog.showModal();
 }
-function renderMarkers() {
-  if (!map?.getSource('stations') || !map.isSourceLoaded('stations')) return;
-  const visible = new Set();
-  for (const feature of map.querySourceFeatures('stations')) {
-    const props = feature.properties, cluster = Boolean(props.cluster);
-    const original = cluster ? null : collection.features.find((item) => item.properties.public_station_id === props.public_station_id);
-    const coordinates = original?.geometry.coordinates || feature.geometry.coordinates;
-    const id = cluster ? `cluster-${props.cluster_id}` : `point-${coordinates.join(',')}`;
-    if (visible.has(id)) continue;
-    visible.add(id);
-    if (markers.has(id)) continue;
-    const stations = cluster ? [] : collection.features.filter((item) => item.geometry.coordinates[0] === coordinates[0] && item.geometry.coordinates[1] === coordinates[1]).map((item) => item.properties);
-    const station = stations[0];
-    if (!cluster && !station) continue;
-    const value = temperature(station || { sensors: [] });
-    const button = node('button', cluster ? String(props.point_count) : stations.length > 1 ? `${stations.length} estacions` : formatted(value), 'map-marker');
-    button.type = 'button';
-    button.classList.add(cluster ? 'cluster' : station.access_scope ? 'private' : !Number.isFinite(value?.current_value) ? 'missing' : value.current_value < 10 ? 'cold' : value.current_value > 25 ? 'warm' : 'mild');
-    button.setAttribute('aria-label', cluster ? `Amplia el grup de ${props.point_count} estacions` : stations.length > 1 ? `Tria entre ${stations.length} estacions coincidents` : `${station.public_name}${station.resource_kind === 'ESTIMATION' ? ', Estimació' : ''}: ${formatted(value)}. ${stationStatus(station)}`);
-    button.onclick = async () => {
-      if (!cluster) return stations.length > 1 ? showCoincident(stations) : showSummary(station.public_station_id);
-      try {
-        const zoom = await map.getSource('stations').getClusterExpansionZoom(props.cluster_id);
-        map.easeTo({ center: coordinates, zoom, duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250 });
-      } catch { $('#map-status').textContent = 'Consulta les estacions del grup a la llista.'; }
-    };
-    markers.set(id, new engine.Marker({ element: button }).setLngLat(coordinates).addTo(map));
-  }
-  for (const [id, marker] of markers) if (!visible.has(id)) { marker.remove(); markers.delete(id); }
-}
 async function initMap() {
-  mapLoadTimer = setTimeout(mapUnavailable, config.syntheticData ? 8000 : 15000);
-  try {
-    engine = await import('/meteo/map-assets/maplibre-gl.mjs');
-    const workerResponse = await fetch('/meteo/map-assets/maplibre-gl-worker.mjs');
-    if (!workerResponse.ok) throw new Error('worker');
-    engine.setWorkerUrl('/meteo/map-assets/maplibre-gl-worker.mjs');
-    if (config.syntheticData) {
-      const protocol = new window.pmtiles.Protocol();
-      engine.addProtocol('pmtiles', protocol.tile);
-    }
-    const response = await fetch(config.syntheticData ? '/meteo/map-assets/style.json' : '/meteo/map-assets/style.real.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error('style');
-    const style = await response.json();
-    if (config.syntheticData) style.sources.synthetic.url = `pmtiles://${location.origin}/meteo/map-assets/map-a-synthetic.pmtiles`;
-    map = new engine.Map({ container: 'map', style, center: config.syntheticData ? [-169, -55] : [1.7, 41.8], zoom: config.syntheticData ? 5 : 8, attributionControl: false, locale: { 'NavigationControl.ZoomIn': 'Amplia el mapa', 'NavigationControl.ZoomOut': 'Redueix el mapa' },
-      transformRequest(url) {
-        const candidate = new URL(url.replace(/^pmtiles:\/\//, ''), location.href);
-        if (candidate.origin !== location.origin && (config.syntheticData || candidate.origin !== 'https://tile.openstreetmap.org')) throw new Error('external_resource');
-        return { url };
-      } });
-    map.addControl(new engine.NavigationControl({ showCompass: false }), 'top-right');
-    map.getCanvas().setAttribute('aria-label', 'Mapa. Fes servir les fletxes per moure’t i + o − per ampliar o reduir.');
-    map.on('error', () => {
-      if (config.syntheticData) mapUnavailable();
-      else $('#map-status').textContent = 'Algunes parts de la base cartogràfica no estan disponibles. Les dades continuen a la llista.';
-    });
-    map.on('load', () => {
-      if (!map) return;
-      map.addSource('stations', { type: 'geojson', data: collection, cluster: config.syntheticData, clusterRadius: 50, clusterMaxZoom: 14 });
-      map.addLayer({ id: 'station-points', type: 'circle', source: 'stations', paint: { 'circle-radius': 1, 'circle-opacity': 0 } });
-      map.on('render', renderMarkers);
-      map.on('idle', () => {
-        if (!map?.isSourceLoaded('stations')) return;
-        $('#map-status').textContent = collection.features.length ? '' : 'No hi ha estacions amb aquests filtres.';
-        clearTimeout(mapLoadTimer);
-        document.documentElement.dataset.mapReady = 'true';
-        performance.mark('map-interactive');
-      });
-      fitMap();
-    });
-  } catch { mapUnavailable(); }
+  mapCore = await createStationMapCore({
+    container: $('#map'), config, mapMode: config.syntheticData ? 'synthetic' : 'real', selectedStationId: selectedId,
+    onStationSelect: showSummary,
+    onCoincident: showCoincident,
+    onStatus: (message) => { $('#map-status').textContent = message; },
+    onUnavailable: mapUnavailable,
+  });
+  if (!mapCore) { mapUnavailable(); return; }
+  mapCore.setCollection(collection, { fit: true });
+  $('#map-status').textContent = collection.features.length ? '' : 'No hi ha estacions amb aquests filtres.';
+  document.documentElement.dataset.mapReady = 'true';
+  performance.mark('map-interactive');
 }
 function stationContent(station, titleId) {
   const fragment = document.createDocumentFragment();
@@ -288,24 +221,16 @@ async function refresh({ fit = false } = {}) {
   $('#status').textContent = 'Carregant estacions…';
   try {
     const query = filtersQuery();
-    const [result, summary, sessionMap] = await Promise.all([
-      api(`stations?${query}`, controller.signal),
+    const [mapResult, summary] = await Promise.all([
+      loadAuthorizedStationMap({ apiBase: config.apiBase, signal: controller.signal, query: query.toString() }),
       api(`summary?${query}`, controller.signal),
-      fetch(`${config.apiBase}/v1/map/session-stations`, {
-        credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
-      }).then((response) => response.ok ? response.json() : EMPTY),
     ]);
-    const check = await api('catalog-version', controller.signal);
     if (epoch !== generation) return;
-    if (check.value.catalog_version !== result.version || summary.version !== result.version
-      || summary.value.count !== result.value.features.length) throw new Error('unverified');
-    if (catalogVersion && catalogVersion !== result.version && dialog.open) dialog.close();
-    const privateCollection = sessionMap;
-    privateById = new Map(privateCollection.features.map((feature) => [feature.properties.public_station_id, feature]));
-    collection = { type: 'FeatureCollection', features: [
-      ...result.value.features.filter((feature) => !privateById.has(feature.properties.public_station_id)),
-      ...privateCollection.features,
-    ] }; catalogVersion = result.version;
+    if (summary.version !== mapResult.catalogVersion
+      || summary.value.count !== mapResult.collection.features.filter((feature) => !feature.properties.access_scope).length) throw new Error('unverified');
+    if (catalogVersion && catalogVersion !== mapResult.catalogVersion && dialog.open) dialog.close();
+    privateById = mapResult.privateById;
+    collection = mapResult.collection; catalogVersion = mapResult.catalogVersion;
     renderList(); updateMap(fit);
     $('#summary-count').textContent = String(summary.value.count);
     $('#summary-range').textContent = Number.isFinite(summary.value.temperature_min) && Number.isFinite(summary.value.temperature_max)

@@ -7,14 +7,12 @@ const { makeMapPublicRouter } = require('../routes/mapPublic');
 const { makeLiveMeteoPreviewRouter } = require('../routes/liveMeteoPreview');
 const { makeLiveMapPreviewRouter } = require('../routes/liveMapPreview');
 const { makeSyntheticPreviewRouter } = require('../routes/syntheticPreview');
-const { LOCAL_FRONTEND_CSP } = require('../server');
+const { LOCAL_FRONTEND_CSP, LOCAL_SYNTHETIC_FRONTEND_CSP } = require('../server');
 
 function createPreviewApp({ mode = 'synthetic' } = {}) {
   if (!['synthetic', 'live'].includes(mode)) throw new Error('MAP_PREVIEW_MODE must be synthetic or live');
   const realPreview = mode === 'live';
-  const csp = realPreview ? LOCAL_FRONTEND_CSP
-    .replace("img-src 'self' data:;", "img-src 'self' data: https://tile.openstreetmap.org;")
-    .replace("connect-src 'self';", "connect-src 'self' https://tile.openstreetmap.org;") : LOCAL_FRONTEND_CSP;
+  const csp = realPreview ? LOCAL_FRONTEND_CSP : LOCAL_SYNTHETIC_FRONTEND_CSP;
   const app = express();
   app.use((_req, res, next) => { res.setHeader('Content-Security-Policy', csp); next(); });
   app.get('/api/v1/auth/session', (_req, res) => {
