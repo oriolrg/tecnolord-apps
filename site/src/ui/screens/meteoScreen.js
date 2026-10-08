@@ -102,7 +102,7 @@ function buildMeteoUI(root) {
   };
 }
 
-async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => true } = {}) {
+export async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => true } = {}) {
   if (ui.err) ui.err.textContent = "";
   if (ui.backGlobal) ui.backGlobal.hidden = true;
   if (ui.cards) ui.cards.replaceChildren();
@@ -141,7 +141,14 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
     trackEvent(CONFIG, "meteo_refresh_ok", { limit, has_station: !!(stationId || estacio) });
 
     const isEstimation = !!stationPayload?.estimation;
-    if (stationPayload?.station && ui.summary) ui.summary.textContent = stationPayload.station.name;
+    const realObservations = CONFIG.environment === 'local' && !CONFIG.syntheticData
+      ? 'Observacions reals de MeteoLord · tecnolord.cat'
+      : '';
+    if (stationPayload?.station && ui.summary) {
+      ui.summary.textContent = realObservations
+        ? `${stationPayload.station.name} · ${realObservations}`
+        : stationPayload.station.name;
+    }
     if (isEstimation && ui.summary) {
       const freshness = stationPayload.source?.freshness;
       const freshnessLabel = freshness === "STALE" ? " · dades antigues"
@@ -219,8 +226,8 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
       : freshness === "OBSOLETE" ? " · dades obsoletes"
         : freshness === "UNKNOWN" ? " · frescor desconeguda" : "";
     if (ui.last) ui.last.textContent = `Dades actualitzades fa ${ageTxt}${freshnessLabel}`;
-    if (ui.summary && CONFIG.environment === 'local' && !CONFIG.syntheticData) {
-      ui.summary.textContent = 'Observacions reals de MeteoLord · tecnolord.cat';
+    if (ui.summary && !stationPayload?.station && realObservations) {
+      ui.summary.textContent = realObservations;
     }
     /*if (ui.summary) {
       ui.summary.textContent = estacio
@@ -394,14 +401,8 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
       return canvas;
     }
 
-    // Charts a les cards que toquen (vent i UV no en tenen ara)
-    const cvTemp = attachChart(cTemp, "chart-temp");
-    const cvRain = hasRain24h ? null : attachChart(cRain, "chart-rain");
-    const cvPress = attachChart(cPress, "chart-press");
-    const cvHum = attachChart(cHum, "chart-hum");
-
-    // Append final en l’ordre desitjat
-    if (ui.cards) {
+    function appendCards() {
+      if (!ui.cards) return;
       const allCards = { wind: cWind, temperature: cTemp, rain: cRain, pressure: cPress, humidity: cHum, uv: cUv };
       const cardIds = selectedStationId
         ? Object.keys(allCards)
@@ -411,7 +412,7 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
 
     // --- Charts (només dades del dia en curs) ---
     const t0 = r0.instant ?? r0.at;
-    if (t0 && (cvTemp || cvPress || cvRain || cvHum)) {
+    if (t0) {
       const dd0 = new Date(t0);
       const yy0 = dd0.getFullYear();
       const mm0 = dd0.getMonth();
@@ -428,6 +429,15 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
       const pressPts = buildDaySeries(todayRows, (r) => num(r.pressio_rel_hpa ?? r.pressure_hpa ?? r.pressure_rel_hpa));
       const rainPts = buildDaySeries(todayRows, (r) => num(r.pluja_diaria_mm ?? r.rain_daily_mm ?? r.rain_mm));
       const humPts = buildDaySeries(todayRows, (r) => num(r.humitat_pct ?? r.humidity));
+
+      // No reservem espai per a un gràfic que no pot mostrar una sèrie.
+      // Això depèn només dels punts disponibles, no de la font de l'estació.
+      const cvTemp = tempPts.length >= 2 ? attachChart(cTemp, "chart-temp") : null;
+      const cvRain = !hasRain24h && rainPts.length >= 2 ? attachChart(cRain, "chart-rain") : null;
+      const cvPress = pressPts.length >= 2 ? attachChart(cPress, "chart-press") : null;
+      const cvHum = humPts.length >= 2 ? attachChart(cHum, "chart-hum") : null;
+
+      appendCards();
 
       if (cvTemp) {
         renderLineChart(cvTemp, tempPts, {
@@ -458,7 +468,7 @@ async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => t
           formatY: (v) => String(Math.round(v)),
         });
       }
-    }
+    } else appendCards();
 
   } catch (e) {
     if (e?.name === "AbortError" || !isCurrent() || signal?.aborted) return;
