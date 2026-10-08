@@ -1,6 +1,54 @@
 # STATE — Grafana multiestació
 
-Actualitzat: 2026-09-25
+Actualitzat: 2026-10-04
+
+## Estat operatiu actual
+
+**OPERATIVE dins l'abast desplegat.** El catàleg conté 30 estacions:
+
+- una legacy Ecowitt amb codi tècnic `home`, nom visible `TecnoLord`,
+  `LEGACY / ACTIVE / PUBLIC`;
+- 29 estacions Grafana administrades, `PRIVATE` per defecte.
+
+El connector Grafana està actiu exclusivament al backend. El client no accedeix
+directament a Grafana; consumeix les dades meteorològiques per les API de
+MeteoLord i segons els permisos aplicables. El refresh periòdic s'executa cada
+cinc minuts amb `scripts/refresh-stations.sh` i cron `*/5 * * * *`.
+
+Els snapshots current estan actius. L'històric Grafana continua desactivat: 0
+mesures Grafana persistides com a històric i 0 polítiques Grafana actives. Els
+errors `INVALID_FRAMES`, `EMPTY_DATA` o altres errors de font varien entre
+execucions; les invariants són mantenir les 29 estacions al catàleg, aïllar
+l'error per estació, no reutilitzar dades entre estacions i no activar
+històric implícitament.
+
+MLW28 conserva codi `MLW28`, nom `Granja Vaques ca l'Andal`, external ID
+`Meteo-001-3100044` i UUID
+`5da7eece-6954-413f-8e22-390fe4144830`.
+
+Continuen pendents el vent Grafana, el refresh-if-stale/sota demanda, el model
+final de visibilitat, el mapa final per permisos i l'administració productiva
+de polítiques d'històric per estació.
+
+## Checkpoint productiu 2026-10-01
+
+**PASS dins l'abast desplegat.** Producció executa la baseline immutable
+`321b8a5`: SUPERADMIN pot veure TecnoLord i les 29 estacions Grafana,
+seleccionar-les i consultar-ne la dada actual. Hi ha 29 bindings validats, 29
+snapshots, 0 mesures Grafana i 0 polítiques d'històric Grafana.
+
+El primer refresh va observar aproximadament 24 èxits i 5 errors
+`INVALID_FRAMES`. És una fotografia històrica de font viva, no una invariant;
+els errors i la seva classificació poden variar. Les fallades van quedar
+aïllades i no van eliminar estacions ni barrejar dades.
+
+TecnoLord conserva `id=1`, codi `home`, provider Ecowitt i public ID
+`a4228e14-6184-48b8-93c0-dbd60df989c5`; el nom visible és `TecnoLord`.
+MLW28 conserva l'UUID canònic
+`5da7eece-6954-413f-8e22-390fe4144830`.
+
+Detall operatiu:
+[checkpoint de producció](../produccio/PROD-CHECKPOINT-2026-10-01.md).
 
 ## Baseline validada
 
@@ -250,17 +298,19 @@ H09A estadístiques 24 h Grafana
 H09B capa base del mapa local
 H10 release candidate local
 
-## Següent tasca
+## Següents tasques
 
-H10 completada en local. El candidat pot iniciar una tasca separada de preparació de preproducció quan sigui autoritzada. Cap fase productiva iniciada.
-
-H05C continua bloquejada per pressió i pluja fins a obtenir contractes de font suficients (no iniciada).
+H01–H10 no es reobren. La continuació està definida a [TASKS.md](TASKS.md):
+H11A/H11B visibilitat, H12A/H12B refresh-if-stale/sota demanda, H13A/H13B vent
+i H14 mapa productiu. L'administració productiva de l'històric configurable
+continua pendent i no autoritza cap política Grafana. H05C continua bloquejada
+per pressió i pluja fins a obtenir contractes de font suficients.
 
 ## Invariants
 
 - Ecowitt ha de continuar funcionant.
 - Grafana history continua desactivat.
-- Producció no es toca.
+- Qualsevol canvi productiu requereix una tasca i autorització separades.
 - No inventar external_id.
 - No inventar coordenades.
 - No inventar noms de mètriques.

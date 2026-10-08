@@ -1,6 +1,15 @@
 # Tasques executables
 
-Estat 2026-09-23: **UE-T01–18 FETES** amb [QA-UE-T01](QA-UE-T01.md), [QA-UE-T02](QA-UE-T02.md), [QA-UE-T03](QA-UE-T03.md), [QA-UE-T04](QA-UE-T04.md), [QA-UE-T05](QA-UE-T05.md), [QA-UE-T06](QA-UE-T06.md), [QA-UE-T07](QA-UE-T07.md), [QA-UE-T08](QA-UE-T08.md), [QA-UE-T09](QA-UE-T09.md), [QA-UE-T10](QA-UE-T10.md), [QA-UE-T11](QA-UE-T11.md), [QA-UE-T12](QA-UE-T12.md), [QA-UE-T13](QA-UE-T13.md), [QA-UE-T14](QA-UE-T14.md), [QA-UE-T15](QA-UE-T15.md), [QA-UE-T16](QA-UE-T16.md), [QA-UE-T17](QA-UE-T17.md) i [QA-UE-T18](QA-UE-T18.md). La fase funcional local queda completada; Grafana real, transport de correu, planificació operativa i G06-09 continuen com a requisits previs de publicació. Contractes: [SPEC](SPEC.md), [PLAN](PLAN.md); límits: [DECISIONS](DECISIONS.md).
+Estat 2026-10-04: **UE-T01–18 COMPLETED en local**. **UE-T19 PARTIAL /
+PENDING en producció**. Evidències locals: [QA-UE-T01](QA-UE-T01.md)–[QA-UE-T18](QA-UE-T18.md).
+La fase local completada no acredita el transport de correu productiu ni
+l'auditoria manual G06-09. Contractes: [SPEC](SPEC.md), [PLAN](PLAN.md);
+límits: [DECISIONS](DECISIONS.md).
+
+Estat productiu observat: 2 usuaris totals, 1 credencial i exactament 1
+SUPERADMIN actiu i aprovat. El bootstrap i login SUPERADMIN són operatius. El
+registre públic respon HTTP 503 perquè no hi ha mail adapter productiu; per
+tant, l'alta pública completa no està acreditada.
 
 ## Convencions de proves i finalització
 
@@ -222,5 +231,37 @@ L’ordre és topològic, però una tasca bloquejada no impedeix executar altres
 - **Resultat observable:** Dossier final que diferencia funcionalitat local verificada, connector Grafana condicional, dret de publicació i controls manuals pendents.
 - **Acceptació:** UE-CA01–UE-CA12; sense skips d’integració, regressió Meteo/Cabals/Històrics/Previ i mapa, alta verificada, matriu d’accés, dues retencions diferents i cap exposició pública de dades no autoritzades.
 - **Proves i execució:** `npm test`, `npx --no-install playwright test` i `bash scripts/meteolord-local.sh gate` amb run configurat; revisió manual d’accessibilitat separada segons G06-09. Registrar ordres, resultats i skips.
-- **Finalització:** FETA el 2026-09-23: regressió 257/257 sense skips, gate aïllat 19/19, Playwright 13/13, onze recorreguts especialitzats i traçabilitat UE-R01–12 completa. Grafana real, correu real, scheduler operatiu i G06-09 queden documentats com a requisits previs; no es declara preparació de producció. [Evidència](QA-UE-T18.md).
+- **Finalització:** FETA el 2026-09-23: regressió 257/257 sense skips, gate aïllat 19/19, Playwright 13/13, onze recorreguts especialitzats i traçabilitat UE-R01–12 completa. Grafana real, correu real, planificador productiu de polítiques d'històric i G06-09 queden documentats com a requisits previs; no es declara preparació de producció. [Evidència](QA-UE-T18.md).
 - **Reversió:** Mantenir l’últim increment segur local; no promoure ni desplegar fins resoldre les comprovacions pendents.
+
+
+## UE-T19 — Transport de correu productiu i alta pública
+
+- **Estat:** PARTIAL; backend/local implementat, flux productiu PENDING. És la
+  primera tasca general recomanada després del checkpoint.
+- **Objectiu:** fer operatiu en producció el flux UE-D01 ja implementat:
+  sol·licitud, verificació d'email, aprovació SUPERADMIN i login.
+- **Motivació:** el login SUPERADMIN funciona, però l'alta pública retorna HTTP
+  503 perquè no hi ha un adaptador de correu productiu configurat.
+- **Dependències:** UE-T03/04 PASS, checkpoint productiu i elecció/configuració
+  explícita del transport. El flux de producte no es redissenya.
+- **Precondicions:** diagnosticar `identityService`, rutes, mail adapter i
+  diferència local/production; separar implementació de codi de
+  configuració/secrets. No reutilitzar `localMailOutbox` a producció.
+- **Fitxers probables:** servei d'identitat, interfície/adaptador mail,
+  configuració, rutes i UX de compte; secrets només fora del repositori.
+- **Implementació prevista:** mantenir resposta anti-enumeració i tokens d'un
+  sol ús; integrar un transport configurable després de documentar
+  alternatives; errors sanejats i health específic sense revelar secrets.
+- **Proves:** alta, enviament fake del contracte, verificació, expiració,
+  reenviament, token reutilitzat, pendent d'aprovació, aprovació, login,
+  proveïdor caigut i regressió SUPERADMIN.
+- **PASS:** recorregut complet verificat amb l'adaptador productiu configurat,
+  registre públic sense HTTP 503, verificació obligatòria d'email, aprovació
+  SUPERADMIN i login; sense credencials versionades ni token a logs/respostes.
+- **Riscos:** enumeració, filtració de token, duplicació d'enviaments i
+  dependència externa. Rate limit i idempotència s'han de conservar.
+- **Reversió:** desactivar noves sol·licituds/enviaments; conservar comptes i
+  auditories, sense activar ni eliminar usuaris automàticament.
+- **Evidència:** QA UE-T19 amb matriu d'estats, transport usat sense secrets i
+  proves HTTP/integració/E2E.

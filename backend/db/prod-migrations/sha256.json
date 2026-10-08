@@ -1,0 +1,8 @@
+{
+  "backend/db/migrations/0003-ue-identity-catalog.sql": "8e746a31f0f071def465d83b7c19fa7a2822f342424827a6972fc64a9b831025",
+  "backend/db/migrations/0004-ue-station-metadata.sql": "b52ffc53923e7b35008a6f5125b2378c6f5388c4def53672dc8612a4f70250d4",
+  "backend/db/migrations/0005-ue-map-publication.sql": "73a4e2970e376e6d8359195adc8401e5e6f3c52db54c69bf52badfc1405aef31",
+  "backend/db/migrations/0007-ue-station-history-policies.sql": "43e596a1f3bd88fd704a2304f5ebebadf9b8e36d325dd210a391eb7cbd0ba595",
+  "backend/db/prod-migrations/forecast-compatibility.sql": "0bcdeb0849c4a8fa7da8e40a2cddb4f2054f761e5254f966e610546f95b2bead",
+  "backend/db/prod-migrations/home-public.sql": "74c64d69da72a622026852c3612f906e1bde99cd9e29991ac09bfe2c4c470d1e"
+}
