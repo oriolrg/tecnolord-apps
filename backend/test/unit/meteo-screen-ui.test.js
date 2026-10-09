@@ -128,13 +128,17 @@ async function loadScreen(fetchStationCurrent, charts) {
       const setDefaultStation = async () => ({});
       const fetchStationCurrent = globalThis.__meteoScreenTest.fetchStationCurrent;`)
     .replace('import { renderLineChart, buildDaySeries } from "../components/lineChart.js";', 'const { renderLineChart, buildDaySeries } = globalThis.__meteoScreenTest;')
-    .replace('import { createStationMapCore, loadAuthorizedStationMap } from "../components/stationMapCore.js";', 'const createStationMapCore = async () => null; const loadAuthorizedStationMap = async () => ({ collection: { features: [] } });');
+    .replace('import { createStationMapCore, loadAuthorizedStationMap } from "../components/stationMapCore.js";', 'const createStationMapCore = async () => null; const loadAuthorizedStationMap = async () => ({ collection: { features: [] } });')
+    .replace('import { installScreenRefresh } from "../screenRefresh.js";', 'const installScreenRefresh = () => ({ mark() {}, dispose() {}, refreshNow() {} });');
 
   const created = [];
   const priorDocument = global.document;
   global.document = { createElement(tagName) { const element = new Element(tagName); created.push(element); return element; } };
   globalThis.__meteoScreenTest = {
-    CONFIG: { environment: 'local', syntheticData: false, defaultLimit: 48, autoRefreshMs: 30000 },
+    CONFIG: {
+      environment: 'local', syntheticData: false, defaultLimit: 48,
+      autoRefreshMs: 30000, meteoRefreshMs: 900000, hidroRefreshMs: 360000, historicsRefreshMs: 900000,
+    },
     trackEvent: () => {}, $: () => null, card, num, fmt1, clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
     windAbbr16, windFromCa, windNameCa, fmtTime: () => '—', fetchStationCurrent,
     buildDaySeries,
@@ -193,6 +197,32 @@ test('Meteo attaches charts only when a source has at least two valid same-day p
     ]);
     await module.refreshMeteo(ui, store, {});
     assert.deepEqual(charts.map((chart) => chart.id).sort(), ['chart-hum', 'chart-temp']);
+  } finally {
+    cleanup();
+  }
+});
+
+test('Meteo keeps the current cards during an automatic refresh and swaps them atomically', async () => {
+  const charts = [];
+  const { module, cleanup } = await loadScreen(async () => snapshot('Grafana actualitzada', {
+    temp_c: 21, humitat_pct: 52,
+  }), charts);
+  try {
+    const ui = makeUi();
+    ui.cards.children = [card({ title: 'Lectura anterior' })];
+    const replacements = [];
+    const replace = ui.cards.replaceChildren.bind(ui.cards);
+    ui.cards.replaceChildren = (...children) => {
+      replacements.push(children.length);
+      replace(...children);
+    };
+    const store = { get: () => ({ stationId: '22222222-2222-4222-8222-222222222222', limit: '48' }) };
+
+    await module.refreshMeteo(ui, store, {}, { preserveExisting: true });
+
+    assert.deepEqual(replacements, [5]);
+    assert.equal(ui.cards.children.some((element) => element.card?.title === 'Lectura anterior'), false);
+    assert.equal(ui.cards.children.some((element) => element.card?.title === 'Temperatura'), true);
   } finally {
     cleanup();
   }
@@ -308,4 +338,26 @@ test('H14 embeds the real map only after SUPERADMIN authorization without changi
   assert.match(screen, /\['local', 'production'\]\.includes\(CONFIG\.environment\)/);
   assert.match(screen, /config: CONFIG,\s*mapMode: "real",\s*allowProduction: true/);
   assert.doesNotMatch(screen, /SYNTHETIC_DATA\s*[:=]\s*false/);
+});
+
+test('H13C uses one visibility-aware 15-minute Meteo scheduler and preserves map view state', () => {
+  const screen = fs.readFileSync(SCREEN_PATH, 'utf8');
+  const config = fs.readFileSync(path.resolve(__dirname, '../../../site/src/config.js'), 'utf8');
+  const cabals = fs.readFileSync(path.resolve(__dirname, '../../../site/src/ui/screens/cabalsScreen.js'), 'utf8');
+  const historics = fs.readFileSync(path.resolve(__dirname, '../../../site/src/ui/screens/historicsScreen.js'), 'utf8');
+  const refresh = fs.readFileSync(path.resolve(__dirname, '../../../site/src/ui/screenRefresh.js'), 'utf8');
+  assert.match(config, /meteoRefreshMs:\s*900000/);
+  assert.match(config, /hidroRefreshMs:\s*360000/);
+  assert.match(config, /historicsRefreshMs:\s*900000/);
+  assert.match(screen, /intervalMs: CONFIG\.meteoRefreshMs/);
+  assert.doesNotMatch(screen, /setInterval\(/);
+  assert.match(cabals, /intervalMs: CONFIG\.hidroRefreshMs/);
+  assert.doesNotMatch(cabals, /setInterval\(/);
+  assert.match(historics, /intervalMs: CONFIG\.historicsRefreshMs/);
+  assert.doesNotMatch(historics, /setInterval\(/);
+  assert.match(screen, /window\.addEventListener\("focus", scheduleAccessReload\)/);
+  assert.match(screen, /window\.addEventListener\("pageshow", scheduleAccessReload\)/);
+  assert.match(screen, /setCollection\(result\.collection, \{ fit: fitCollection \}\)/);
+  assert.match(refresh, /document\.visibilityState === 'hidden'/);
+  assert.match(refresh, /window\.addEventListener\('meteo:screen-active'/);
 });

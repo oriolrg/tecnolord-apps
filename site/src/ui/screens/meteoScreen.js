@@ -17,11 +17,12 @@ import {
 } from "../../services/meteoService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 import { createStationMapCore, loadAuthorizedStationMap } from "../components/stationMapCore.js";
+import { installScreenRefresh } from "../screenRefresh.js";
 
 const MAP_VARIABLE_OPTIONS = Object.freeze([
   ["temperature", "Temperatura (°C)"],
   ["rain_24h", "Pluja 24 h (mm)"],
-  ["wind_speed", "Vent (km/h)"],
+  ["wind_speed", "Vent (m/s)"],
   ["pressure", "Pressió (hPa)"],
   ["humidity", "Humitat (%)"],
 ]);
@@ -141,12 +142,18 @@ export function selectStation({ stationId, store, stationControl, map, updatePre
   return refresh?.();
 }
 
-export async function refreshMeteo(ui, store, publicView, { signal, isCurrent = () => true } = {}) {
+export async function refreshMeteo(ui, store, publicView, {
+  signal,
+  isCurrent = () => true,
+  preserveExisting = false,
+} = {}) {
   if (ui.err) ui.err.textContent = "";
   if (ui.backGlobal) ui.backGlobal.hidden = true;
-  if (ui.cards) ui.cards.replaceChildren();
-  if (ui.summary) ui.summary.textContent = "";
-  if (ui.last) ui.last.textContent = "Carregant…";
+  if (!preserveExisting) {
+    if (ui.cards) ui.cards.replaceChildren();
+    if (ui.summary) ui.summary.textContent = "";
+    if (ui.last) ui.last.textContent = "Carregant…";
+  }
 
   const s = store.get();
   const estacio = (s.estacio || "").trim();
@@ -446,7 +453,9 @@ export async function refreshMeteo(ui, store, publicView, { signal, isCurrent = 
       const cardIds = selectedStationId
         ? Object.keys(allCards)
         : (publicView?.card_ids || Object.keys(allCards));
-      ui.cards.append(...cardIds.map((id) => allCards[id]).filter(Boolean));
+      // Swap the complete set atomically so an automatic refresh never exposes
+      // an empty card grid while the new response is being rendered.
+      ui.cards.replaceChildren(...cardIds.map((id) => allCards[id]).filter(Boolean));
     }
 
     // --- Charts (només dades del dia en curs) ---
@@ -555,7 +564,8 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
   trackEvent(CONFIG, "screen_view", { screen: "meteo" });
 
   let disposed = false;
-  let timer = null;
+  let refreshScheduler = null;
+  let accessReloadTimer = null;
   let accessController = null;
   let accessRevision = 0;
   let refreshController = null;
@@ -575,13 +585,15 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     selectStation({ stationId: "", store, stationControl: ui.station, map: stationMap, updatePreferenceControls });
   }
 
-  function runRefresh() {
+  function runRefresh({ preserveExisting = false, scheduled = false } = {}) {
+    if (!scheduled) refreshScheduler?.mark();
     refreshController?.abort();
     const controller = new AbortController();
     const revision = ++refreshRevision;
     refreshController = controller;
     return refreshMeteo(ui, store, publicView, {
       signal: controller.signal,
+      preserveExisting,
       isCurrent: () => !disposed && revision === refreshRevision,
     });
   }
@@ -627,6 +639,7 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     const controller = new AbortController();
     const revision = ++stationMapRevision;
     stationMapController = controller;
+    const fitCollection = !stationMap;
     try {
       if (!stationMap) {
         const candidate = await createStationMapCore({
@@ -651,7 +664,7 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
       stationMap.setVariable(selectedMapVariable);
       const result = await loadAuthorizedStationMap({ apiBase: CONFIG.apiBase, signal: controller.signal });
       if (disposed || controller.signal.aborted || revision !== stationMapRevision) return;
-      stationMap.setCollection(result.collection, { fit: true });
+      stationMap.setCollection(result.collection, { fit: fitCollection });
       stationMap.setSelectedStation(store.get().stationId);
       if (ui.mapStatus) ui.mapStatus.textContent = result.collection.features.length
         ? "" : "No hi ha estacions accessibles amb coordenades autoritzades.";
@@ -699,20 +712,26 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     }
   }
 
-  async function reloadAccess() {
-    onSessionChange(null);
-    session = null;
-    removeStationMap();
+  function sameSession(left, right) {
+    return (left?.user?.id ?? null) === (right?.user?.id ?? null)
+      && (left?.user?.role ?? null) === (right?.user?.role ?? null);
+  }
+
+  async function reloadAccess({ clearPresentation = false } = {}) {
+    const previousSession = session;
+    const previousCanViewMap = mayViewStationMap();
+    if (clearPresentation) {
+      onSessionChange(null);
+      session = null;
+      removeStationMap();
+      if (ui.cards) ui.cards.replaceChildren();
+      if (ui.summary) ui.summary.textContent = "";
+      if (ui.last) ui.last.textContent = "Carregant…";
+    }
     accessController?.abort();
-    refreshController?.abort();
-    refreshRevision += 1;
     const controller = new AbortController();
     const revision = ++accessRevision;
     accessController = controller;
-    if (ui.cards) ui.cards.replaceChildren();
-    if (ui.summary) ui.summary.textContent = "";
-    if (ui.last) ui.last.textContent = "Carregant…";
-
     try {
       const [nextSession, nextPublicView] = await Promise.all([
         fetchMeteoSession({ signal: controller.signal }).catch((error) => {
@@ -725,7 +744,6 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
         }),
       ]);
       if (disposed || controller.signal.aborted || revision !== accessRevision) return;
-      onSessionChange(nextSession);
       const isSuperadmin = nextSession?.user?.role === "SUPERADMIN";
       const [nextStations, nextPreference] = await Promise.all([
         fetchStationCatalog({
@@ -743,6 +761,14 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
       ]);
       if (disposed || controller.signal.aborted || revision !== accessRevision) return;
 
+      const sessionChanged = !sameSession(previousSession, nextSession);
+      if (sessionChanged) {
+        refreshController?.abort();
+        refreshRevision += 1;
+        if (sessionChanged || previousCanViewMap !== (nextSession?.user?.role === "SUPERADMIN")) removeStationMap();
+        if (ui.cards) ui.cards.replaceChildren();
+      }
+      onSessionChange(nextSession);
       session = nextSession;
       publicView = nextPublicView;
       stations = nextStations;
@@ -761,11 +787,11 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
       updatePreferenceControls();
       stationMap?.setSelectedStation(store.get().stationId);
       refreshStationMap();
-      await runRefresh();
+      await runRefresh({ preserveExisting: !sessionChanged });
     } catch (error) {
       if (error?.name === "AbortError" || disposed || revision !== accessRevision) return;
       renderStationOptions();
-      await runRefresh();
+      await runRefresh({ preserveExisting: !clearPresentation });
     }
   }
 
@@ -773,7 +799,7 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     // La vista pública existent no depèn de les capacitats opcionals de compte.
     // Això manté la càrrega immediata durant una actualització gradual del backend.
     if (!store.get().stationId) runRefresh();
-    reloadAccess();
+    reloadAccess({ clearPresentation: true });
   }
 
   const onStationChange = () => {
@@ -821,11 +847,22 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
   ui.clearDefault?.addEventListener("click", onClearDefault);
   ui.backGlobal?.addEventListener("click", onBackGlobal);
 
-  const onAccessMayHaveChanged = () => reloadAccess();
+  const scheduleAccessReload = () => {
+    if (accessReloadTimer !== null) return;
+    accessReloadTimer = setTimeout(() => {
+      accessReloadTimer = null;
+      reloadAccess();
+    }, 0);
+  };
+  const onStorage = () => reloadAccess({ clearPresentation: true });
   const onPageHide = () => {
     // BFCache/hidden documents must not retain a former user's presentation.
     accessController?.abort();
     refreshController?.abort();
+    if (accessReloadTimer !== null) {
+      clearTimeout(accessReloadTimer);
+      accessReloadTimer = null;
+    }
     accessRevision += 1;
     refreshRevision += 1;
     onSessionChange(null);
@@ -833,17 +870,23 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     removeStationMap();
   };
   const onVisibilityChange = () => {
-    if (document.visibilityState === "visible") reloadAccess();
+    if (document.visibilityState === "visible") scheduleAccessReload();
     else onPageHide();
   };
-  window.addEventListener("storage", onAccessMayHaveChanged);
-  window.addEventListener("focus", onAccessMayHaveChanged);
-  window.addEventListener("pageshow", onAccessMayHaveChanged);
+  window.addEventListener("storage", onStorage);
+  window.addEventListener("focus", scheduleAccessReload);
+  window.addEventListener("pageshow", scheduleAccessReload);
   window.addEventListener("pagehide", onPageHide);
   document.addEventListener("visibilitychange", onVisibilityChange);
 
   bootstrap();
-  if (store.get().auto) timer = setInterval(runRefresh, CONFIG.autoRefreshMs);
+  if (store.get().auto) {
+    refreshScheduler = installScreenRefresh({
+      root,
+      intervalMs: CONFIG.meteoRefreshMs,
+      refresh: () => runRefresh({ preserveExisting: true, scheduled: true }),
+    });
+  }
 
   return () => {
     disposed = true;
@@ -856,11 +899,12 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     ui.setDefault?.removeEventListener("click", onSetDefault);
     ui.clearDefault?.removeEventListener("click", onClearDefault);
     ui.backGlobal?.removeEventListener("click", onBackGlobal);
-    window.removeEventListener("storage", onAccessMayHaveChanged);
-    window.removeEventListener("focus", onAccessMayHaveChanged);
-    window.removeEventListener("pageshow", onAccessMayHaveChanged);
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener("focus", scheduleAccessReload);
+    window.removeEventListener("pageshow", scheduleAccessReload);
     window.removeEventListener("pagehide", onPageHide);
     document.removeEventListener("visibilitychange", onVisibilityChange);
-    if (timer) clearInterval(timer);
+    refreshScheduler?.dispose();
+    if (accessReloadTimer !== null) clearTimeout(accessReloadTimer);
   };
 }

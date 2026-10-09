@@ -72,13 +72,13 @@ function mapFeature(row, { exact = false, now = new Date() } = {}) {
   const temperature = snapshotField(row, 'temp_c');
   const humidity = snapshotField(row, 'humitat_pct');
   const rain = snapshotField(row, 'rain_24h', { aggregate: true });
-  const wind = snapshotField(row, 'vent_ms', { transform: (value) => Number.isFinite(value) ? value * 3.6 : value });
+  const wind = snapshotField(row, 'vent_ms');
   const pressure = snapshotField(row, 'pressio_rel_hpa');
   const mapValues = {
     temperature: mapField('temperature', 'celsius', temperature.value, temperature.observedAt, now, temperature.qualityState),
     humidity: mapField('humidity', 'percent', humidity.value, humidity.observedAt, now, humidity.qualityState),
     rain_24h: mapField('rain_24h', 'millimetres', rain.value, rain.observedAt, now, rain.qualityState),
-    wind_speed: mapField('wind_speed', 'km/h', wind.value, wind.observedAt, now, wind.qualityState),
+    wind_speed: mapField('wind_speed', 'm/s', wind.value, wind.observedAt, now, wind.qualityState),
     pressure: mapField('pressure', 'hPa', pressure.value, pressure.observedAt, now, pressure.qualityState),
   };
   const sensors = [{

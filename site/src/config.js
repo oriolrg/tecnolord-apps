@@ -3,6 +3,11 @@ const PRODUCT_UI_DEFAULTS = Object.freeze({
   appSubtitle: "Tecnolord apps",
   appIcon: "./assets/icons/favicon-96x96.png",
   appVersion: "2025-12-23-02",
+  // Source cadences: Grafana/Ecowitt snapshots 15 min; ACA publishes 6 min.
+  meteoRefreshMs: 900000,
+  hidroRefreshMs: 360000,
+  historicsRefreshMs: 900000,
+  // Kept for older callers; screen controllers use the explicit cadences above.
   autoRefreshMs: 30000,
   defaultLimit: 48,
   maxLimit: 300,

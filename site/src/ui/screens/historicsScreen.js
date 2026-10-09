@@ -7,6 +7,7 @@ import { fetchHidro } from "../../services/hidroService.js";
 import { renderMeteoTable } from "../components/tableMeteo.js";
 import { renderHidroTable } from "../components/tableHidro.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
+import { installScreenRefresh } from "../screenRefresh.js";
 
 function buildHistoricsUI(root) {
   root.innerHTML = `
@@ -457,6 +458,18 @@ async function refreshHistorics(ui, store, period = "today", customFrom = null, 
 export function initHistoricsScreen(root, store) {
   const ui = buildHistoricsUI(root);
   let currentPeriod = "today";
+  let currentCustomFrom = null;
+  let currentCustomTo = null;
+  let refreshScheduler = null;
+
+  const refreshSelectedPeriod = (period = currentPeriod, customFrom = null, customTo = null) => {
+    currentPeriod = period;
+    currentCustomFrom = customFrom;
+    currentCustomTo = customTo;
+    return refreshScheduler
+      ? refreshScheduler.refreshNow()
+      : refreshHistorics(ui, store, period, customFrom, customTo);
+  };
 
   // Tracking: screen view
   trackEvent(CONFIG, "screen_view", { screen: "historics" });
@@ -484,7 +497,7 @@ export function initHistoricsScreen(root, store) {
         ui.dateTo.value = today;
       } else {
         ui.customDatesDiv.style.display = "none";
-        refreshHistorics(ui, store, period);
+        refreshSelectedPeriod(period);
       }
     });
   });
@@ -497,20 +510,20 @@ export function initHistoricsScreen(root, store) {
       // Tracking: aplicar custom (sense dates)
       trackEvent(CONFIG, "historics_custom_apply", { ok: !!(from && to) });
 
-      if (from && to) refreshHistorics(ui, store, "custom", from, to);
+      if (from && to) refreshSelectedPeriod("custom", from, to);
     });
   }
 
-  let timer = null;
   if (store.get().auto) {
-    timer = setInterval(() => {
-      if (currentPeriod === "today") refreshHistorics(ui, store, currentPeriod);
-    }, CONFIG.autoRefreshMs);
+    refreshScheduler = installScreenRefresh({
+      root,
+      intervalMs: CONFIG.historicsRefreshMs,
+      initialRefresh: true,
+      refresh: () => refreshHistorics(ui, store, currentPeriod, currentCustomFrom, currentCustomTo),
+    });
   }
 
-  refreshHistorics(ui, store, currentPeriod);
-
   return () => {
-    if (timer) clearInterval(timer);
+    refreshScheduler?.dispose();
   };
 }

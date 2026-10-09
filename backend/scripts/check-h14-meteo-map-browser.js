@@ -33,7 +33,7 @@ function mapFeature(id, name, coordinates, temperature, values = {}) {
       map_values: {
         temperature: { field_id: 'temperature', current_value: temperature, unit: 'celsius' },
         rain_24h: { field_id: 'rain_24h', current_value: values.rain_24h ?? 0, unit: 'millimetres' },
-        wind_speed: { field_id: 'wind_speed', current_value: values.wind_speed ?? 0, unit: 'km/h' },
+        wind_speed: { field_id: 'wind_speed', current_value: values.wind_speed ?? 0, unit: 'm/s' },
         pressure: { field_id: 'pressure', current_value: values.pressure ?? 1013.2, unit: 'hPa' },
         humidity: { field_id: 'humidity', current_value: values.humidity ?? 55, unit: 'percent' },
       },
@@ -132,7 +132,7 @@ async function main() {
       if (url.pathname === '/api/v1/map/session-stations') {
         const features = role === 'SUPERADMIN'
           ? [mapFeature(GRAFANA_MAP_ID, 'Grafana amb geometria', [2.17, 41.38], 22,
-            { rain_24h: 4.2, wind_speed: 12.6, pressure: 1018.4, humidity: 61 })]
+            { rain_24h: 4.2, wind_speed: 3.5, pressure: 1018.4, humidity: 61 })]
           : [];
         return fulfillJson(route, { type: 'FeatureCollection', features });
       }
@@ -185,7 +185,7 @@ async function main() {
     await admin.page.selectOption('#meteo-map-variable', 'rain_24h');
     await admin.page.getByRole('button', { name: /Grafana amb geometria.*4[,.]2 mm/ }).waitFor();
     await admin.page.selectOption('#meteo-map-variable', 'wind_speed');
-    await admin.page.getByRole('button', { name: /Grafana amb geometria.*12[,.]6 km\/h/ }).waitFor();
+    await admin.page.getByRole('button', { name: /Grafana amb geometria.*3[,.]5 m\/s/ }).waitFor();
     await admin.page.selectOption('#meteo-map-variable', 'pressure');
     await admin.page.getByRole('button', { name: /Grafana amb geometria.*1018[,.]4 hPa/ }).waitFor();
     await admin.page.selectOption('#meteo-map-variable', 'humidity');
@@ -217,8 +217,10 @@ async function main() {
     }
     const releaseSession = admin.holdSession();
     await admin.page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await admin.page.getByRole('link', { name: 'Inicia sessió', exact: true }).waitFor();
-    assert.equal(await admin.page.locator('#meteo-station-map-panel').count(), 0);
+    // Access revalidation is coalesced without tearing down a still-authorized
+    // presentation while the session response is pending.
+    await admin.page.getByRole('link', { name: 'Compte de Oriol Riu', exact: true }).waitFor();
+    assert.equal(await admin.page.locator('#meteo-station-map-panel').count(), 1);
     releaseSession();
     await admin.page.getByRole('link', { name: 'Compte de Oriol Riu', exact: true }).waitFor();
     await admin.page.evaluate(() => window.dispatchEvent(new Event('pagehide')));

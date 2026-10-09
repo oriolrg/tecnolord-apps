@@ -99,6 +99,7 @@ function switchScreen(screenId, ui) {
       btn.classList.remove("active");
     }
   });
+  window.dispatchEvent(new Event("meteo:screen-active"));
 }
 
 export function initApp(root) {

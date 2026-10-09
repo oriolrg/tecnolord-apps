@@ -26,7 +26,7 @@ function mapUrl(apiBase, path) {
 export const MAP_VARIABLES = Object.freeze({
   temperature: Object.freeze({ label: 'Temperatura', unit: '°C', fieldId: 'temperature' }),
   rain_24h: Object.freeze({ label: 'Pluja 24 h', unit: 'mm', fieldId: 'rain_24h' }),
-  wind_speed: Object.freeze({ label: 'Vent', unit: 'km/h', fieldId: 'wind_speed' }),
+  wind_speed: Object.freeze({ label: 'Vent', unit: 'm/s', fieldId: 'wind_speed' }),
   pressure: Object.freeze({ label: 'Pressió', unit: 'hPa', fieldId: 'pressure' }),
   humidity: Object.freeze({ label: 'Humitat', unit: '%', fieldId: 'humidity' }),
 });

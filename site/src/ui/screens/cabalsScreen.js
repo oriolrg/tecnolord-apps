@@ -5,6 +5,7 @@ import { card } from "../components/card.js";
 import { num, fmt1, clamp, fmtTime, norm } from "../format.js";
 import { fetchHidro } from "../../services/hidroService.js";
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
+import { installScreenRefresh } from "../screenRefresh.js";
 
 // Capacitat teòrica (hm³) per recalcular % propi
 const THEO_CAPACITY_HM3 = {
@@ -336,14 +337,16 @@ export function initCabalsScreen(root, store) {
 
   trackEvent(CONFIG, "screen_view", { screen: "cabals" });
 
-  let timer = null;
-  if (store.get().auto) {
-    timer = setInterval(() => refreshCabals(ui, store), CONFIG.autoRefreshMs);
-  }
-
-  refreshCabals(ui, store);
+  const refreshScheduler = store.get().auto
+    ? installScreenRefresh({
+      root,
+      intervalMs: CONFIG.hidroRefreshMs,
+      initialRefresh: true,
+      refresh: () => refreshCabals(ui, store),
+    })
+    : null;
 
   return () => {
-    if (timer) clearInterval(timer);
+    refreshScheduler?.dispose();
   };
 }

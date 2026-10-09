@@ -65,8 +65,8 @@ test('map projection exposes the five selector variables from the current snapsh
   assert.equal(fields.temperature.current_value, 18.5);
   assert.equal(fields.humidity.current_value, 0);
   assert.equal(fields.rain_24h.current_value, 4.2);
-  assert.equal(fields.wind_speed.current_value, 10.8 * 3.6);
-  assert.equal(fields.wind_speed.unit, 'km/h');
+  assert.equal(fields.wind_speed.current_value, 10.8);
+  assert.equal(fields.wind_speed.unit, 'm/s');
   assert.equal(fields.pressure.current_value, 1018.4);
   assert.equal(fields.pressure.unit, 'hPa');
   assert.equal(fields.rain_24h.unit, 'millimetres');

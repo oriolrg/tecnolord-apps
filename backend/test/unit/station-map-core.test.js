@@ -39,14 +39,14 @@ test('map variable marker labels use the selected field, preserve zero and show 
     map_values: {
       temperature: { field_id: 'temperature', current_value: 18.5 },
       rain_24h: { field_id: 'rain_24h', current_value: 0 },
-      wind_speed: { field_id: 'wind_speed', current_value: 12.6 },
+      wind_speed: { field_id: 'wind_speed', current_value: 3.5 },
       pressure: { field_id: 'pressure', current_value: 1013.2 },
       humidity: { field_id: 'humidity', current_value: null },
     },
   }).properties;
   assert.equal(core.markerLabel(station, 'temperature'), '18,5 °C');
   assert.equal(core.markerLabel(station, 'rain_24h'), '0 mm');
-  assert.equal(core.markerLabel(station, 'wind_speed'), '12,6 km/h');
+  assert.equal(core.markerLabel(station, 'wind_speed'), '3,5 m/s');
   assert.equal(core.markerLabel(station, 'pressure'), '1013,2 hPa');
   assert.equal(core.markerLabel(station, 'humidity'), '—');
 });
