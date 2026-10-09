@@ -160,6 +160,36 @@ test('a failure after stable files leaves a recoverable pending backup and never
   assert.equal(fs.existsSync(path.join(f.site, 'release.json')), false);
 });
 
+test('accepts a single Meteo handle when runtime-config has no dedicated Caddy block', (t) => {
+  const f = fixture(t);
+  const caddy = fs.readFileSync(path.join(f.repo, 'Caddyfile'), 'utf8')
+    .replace(/  @meteo_runtime path[\s\S]*?(?=  handle_path \/meteo\* \{)/, '');
+  fs.writeFileSync(path.join(f.repo, 'Caddyfile'), caddy);
+  const result = run(f, args(f, 'check'));
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /CHECK_PASS/);
+});
+
+test('rejects a Meteo handle without no-store even when live probes would pass', (t) => {
+  const f = fixture(t);
+  const caddy = fs.readFileSync(path.join(f.repo, 'Caddyfile'), 'utf8')
+    .replace(/(  handle_path \/meteo\* \{[\s\S]*?header Cache-Control )"no-store, max-age=0"/, '$1"no-cache, max-age=0"');
+  fs.writeFileSync(path.join(f.repo, 'Caddyfile'), caddy);
+  const result = run(f, args(f, 'check'));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /required Meteo Cache-Control contract/);
+});
+
+test('rejects a dedicated runtime block with a weaker cache policy', (t) => {
+  const f = fixture(t);
+  const caddy = fs.readFileSync(path.join(f.repo, 'Caddyfile'), 'utf8')
+    .replace(/(  handle @meteo_runtime \{[\s\S]*?header Cache-Control )"no-store, max-age=0"/, '$1"no-cache, max-age=0"');
+  fs.writeFileSync(path.join(f.repo, 'Caddyfile'), caddy);
+  const result = run(f, args(f, 'check'));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /required Meteo Cache-Control contract/);
+});
+
 test('runner requires a cache contract, uses an exclusive lock, Docker without network, and never invokes Git pull', () => {
   const source = fs.readFileSync(RUNNER, 'utf8');
   assert.match(source, /flock -n 9/);

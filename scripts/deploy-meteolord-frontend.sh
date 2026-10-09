@@ -85,11 +85,11 @@ assert_caddy_cache_contract() {
   local caddy="$REPO_DIR/Caddyfile"
   [[ -f "$caddy" ]] || die "Caddyfile is missing: $caddy"
   awk '
-    /^  handle @meteo_runtime \{/ { section="runtime" }
-    /^  handle_path \/meteo\*/ { section="meteo" }
+    /^  handle @meteo_runtime \{/ { section="runtime"; runtime_seen=1 }
+    /^  handle_path \/meteo\*/ { section="meteo"; meteo_seen=1 }
     section && /header Cache-Control "no-store, max-age=0"/ { found[section]=1 }
     /^  }/ { section="" }
-    END { exit !(found["runtime"] && found["meteo"]) }
+    END { exit !(meteo_seen && found["meteo"] && (!runtime_seen || found["runtime"])) }
   ' "$caddy" || die 'required Meteo Cache-Control contract is absent from Caddyfile'
 }
 

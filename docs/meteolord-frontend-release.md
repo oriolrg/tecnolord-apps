@@ -199,6 +199,11 @@ S'executa amb `sudo`, pren un lock exclusiu a
 directori. No mostra credencials. Per defecte treballa contra
 `/home/deploy/tecnolord-apps/site` i només llegeix el Caddyfile existent per
 verificar `no-store, max-age=0`: no l'edita, copia ni recarrega.
+El gate estàtic exigeix aquesta política al `handle_path /meteo*`. El bloc
+separat `handle @meteo_runtime` és opcional: si existeix, també ha de tenir la
+mateixa política. El gate consulta per HTTPS tant `/meteo/` com
+`/meteo/runtime-config.js`, de manera que una configuració d'un sol handle és
+vàlida només si les respostes efectives mantenen `no-store, max-age=0`.
 
 Abans del primer ús, l'operador ha de tenir la imatge revisada:
 
