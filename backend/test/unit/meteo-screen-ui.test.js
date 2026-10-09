@@ -300,8 +300,11 @@ test('H14-P1 synchronizes marker selection through the existing station selectio
   }
 });
 
-test('H14-P2 embeds the real map in local and production without changing the Meteo data runtime', () => {
+test('H14 embeds the real map only after SUPERADMIN authorization without changing the Meteo data runtime', () => {
   const screen = fs.readFileSync(SCREEN_PATH, 'utf8');
+  assert.match(screen, /session\?\.user\?\.role === "SUPERADMIN"/);
+  assert.match(screen, /if \(!mayViewStationMap\(\) \|\| !ui\.map/);
+  assert.match(screen, /ui\.mapHost\?\.replaceChildren\(\)/);
   assert.match(screen, /\['local', 'production'\]\.includes\(CONFIG\.environment\)/);
   assert.match(screen, /config: CONFIG,\s*mapMode: "real",\s*allowProduction: true/);
   assert.doesNotMatch(screen, /SYNTHETIC_DATA\s*[:=]\s*false/);

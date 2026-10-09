@@ -173,19 +173,23 @@ async function main() {
     const user = await open('USER');
     await user.page.locator('#meteo-station').waitFor({ state: 'visible' });
     await user.page.waitForTimeout(100);
+    assert.equal(await user.page.locator('#meteo-station-map-panel').count(), 0);
     assert.equal(await user.page.locator(`#meteo-station option[value="${GRAFANA_MAP_ID}"]`).count(), 0);
     assert.equal(await user.page.locator(`#meteo-station option[value="${GRAFANA_NO_LOCATION_ID}"]`).count(), 0);
     assert.equal(await user.page.getByRole('button', { name: /Grafana/ }).count(), 0);
     assert.equal(user.requests.some((request) => request === 'GET /api/v1/admin/stations'), false);
+    assert.equal(user.requests.some((request) => request.startsWith('GET /api/v1/map/')), false);
     assert.equal(user.requests.some((request) => request.includes('/api/v1/admin/grafana/')), false);
     assert.deepEqual(user.pageErrors, []);
 
     const visitor = await open(null);
     await visitor.page.locator('#meteo-station').waitFor({ state: 'visible' });
     await visitor.page.waitForTimeout(100);
+    assert.equal(await visitor.page.locator('#meteo-station-map-panel').count(), 0);
     assert.equal(await visitor.page.locator(`#meteo-station option[value="${GRAFANA_MAP_ID}"]`).count(), 0);
     assert.equal(await visitor.page.getByRole('button', { name: /Grafana/ }).count(), 0);
     assert.equal(visitor.requests.some((request) => request === 'GET /api/v1/admin/stations'), false);
+    assert.equal(visitor.requests.some((request) => request.startsWith('GET /api/v1/map/')), false);
     assert.equal(visitor.requests.some((request) => request.includes('/api/v1/admin/grafana/')), false);
     assert.deepEqual(visitor.pageErrors, []);
 
