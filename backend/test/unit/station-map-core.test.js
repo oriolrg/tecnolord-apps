@@ -31,6 +31,26 @@ test('H14-P1 merges only already-authorized collections and selection has no res
   assert.deepEqual([...core.selectedMarkerIds(merged.features, 'missing')], []);
 });
 
+test('map variable marker labels use the selected field, preserve zero and show missing values', async () => {
+  const core = await loadCore();
+  const station = feature('station', 2, 41, {
+    public_name: 'Estació',
+    sensors: [{ fields: [{ field_id: 'temperature', current_value: 18.5 }] }],
+    map_values: {
+      temperature: { field_id: 'temperature', current_value: 18.5 },
+      rain_24h: { field_id: 'rain_24h', current_value: 0 },
+      wind_speed: { field_id: 'wind_speed', current_value: 12.6 },
+      pressure: { field_id: 'pressure', current_value: 1013.2 },
+      humidity: { field_id: 'humidity', current_value: null },
+    },
+  }).properties;
+  assert.equal(core.markerLabel(station, 'temperature'), '18,5 °C');
+  assert.equal(core.markerLabel(station, 'rain_24h'), '0 mm');
+  assert.equal(core.markerLabel(station, 'wind_speed'), '12,6 km/h');
+  assert.equal(core.markerLabel(station, 'pressure'), '1013,2 hPa');
+  assert.equal(core.markerLabel(station, 'humidity'), '—');
+});
+
 test('H14-P1 map loader uses public plus same-origin session endpoints, preserves no-current stations and checks version', async () => {
   const core = await loadCore();
   const priorFetch = global.fetch;

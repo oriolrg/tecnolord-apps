@@ -18,10 +18,24 @@ import {
 import { renderLineChart, buildDaySeries } from "../components/lineChart.js";
 import { createStationMapCore, loadAuthorizedStationMap } from "../components/stationMapCore.js";
 
+const MAP_VARIABLE_OPTIONS = Object.freeze([
+  ["temperature", "Temperatura (°C)"],
+  ["rain_24h", "Pluja 24 h (mm)"],
+  ["wind_speed", "Vent (km/h)"],
+  ["pressure", "Pressió (hPa)"],
+  ["humidity", "Humitat (%)"],
+]);
+
 function buildMeteoUI(root) {
   const stationMap = `
       <section id="meteo-station-map-panel" class="meteo-station-map-panel" aria-labelledby="meteo-station-map-title">
-        <div class="meteo-station-map-heading"><div><p>VISTA D'ESTACIONS</p><h3 id="meteo-station-map-title">Mapa d'estacions accessibles</h3></div></div>
+        <div class="meteo-station-map-heading"><div><p>VISTA D'ESTACIONS</p><h3 id="meteo-station-map-title">Mapa d'estacions accessibles</h3></div>
+          <label class="meteo-map-variable">Variable
+            <select id="meteo-map-variable" aria-label="Variable del mapa">
+              ${MAP_VARIABLE_OPTIONS.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}
+            </select>
+          </label>
+        </div>
         <div id="meteo-station-map" class="meteo-station-map" role="region" aria-label="Mapa interactiu d'estacions"></div>
         <p id="meteo-station-map-status" class="meteo-station-map-status" role="status">Carregant mapa…</p>
       </section>`;
@@ -108,6 +122,7 @@ function buildMeteoUI(root) {
     preferenceStatus: $("#meteo-preference-status", root),
     backGlobal: $("#meteo-back-global", root),
     mapHost: $("#meteo-station-map-host", root),
+    mapVariable: $("#meteo-map-variable", root),
     map: null,
     mapStatus: null,
     stationMap,
@@ -551,6 +566,7 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
   let stationMap = null;
   let stationMapController = null;
   let stationMapRevision = 0;
+  let selectedMapVariable = "temperature";
   let preference = { default_station: null, revision: 0, invalidated: false };
   let publicView = { station: null, card_ids: ['wind', 'temperature', 'rain', 'pressure', 'humidity', 'uv'], revision: 0 };
   const selectedFromUrl = new URL(location.href).searchParams.has("station_id");
@@ -601,6 +617,8 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     ui.mapHost.innerHTML = ui.stationMap;
     ui.map = $("#meteo-station-map", ui.mapHost);
     ui.mapStatus = $("#meteo-station-map-status", ui.mapHost);
+    ui.mapVariable = $("#meteo-map-variable", ui.mapHost);
+    ui.mapVariable?.addEventListener("change", onMapVariableChange);
   }
 
   async function refreshStationMap() {
@@ -617,6 +635,7 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
           mapMode: "real",
           allowProduction: true,
           selectedStationId: store.get().stationId,
+          selectedVariable: selectedMapVariable,
           selectable: (station) => station.resource_kind === "STATION",
           onStationSelect: selectCurrentStation,
           onStatus: (message) => { if (ui.mapStatus) ui.mapStatus.textContent = message; },
@@ -629,6 +648,7 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
         stationMap = candidate;
       }
       if (!stationMap || disposed || controller.signal.aborted || revision !== stationMapRevision) return;
+      stationMap.setVariable(selectedMapVariable);
       const result = await loadAuthorizedStationMap({ apiBase: CONFIG.apiBase, signal: controller.signal });
       if (disposed || controller.signal.aborted || revision !== stationMapRevision) return;
       stationMap.setCollection(result.collection, { fit: true });
@@ -759,6 +779,10 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
   const onStationChange = () => {
     selectCurrentStation(ui.station.value);
   };
+  const onMapVariableChange = () => {
+    selectedMapVariable = ui.mapVariable?.value || "temperature";
+    stationMap?.setVariable(selectedMapVariable);
+  };
   ui.station?.addEventListener("change", onStationChange);
 
   const onSetDefault = async () => {
@@ -828,6 +852,7 @@ export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}
     stationMapController?.abort();
     stationMap?.destroy();
     ui.station?.removeEventListener("change", onStationChange);
+    ui.mapVariable?.removeEventListener("change", onMapVariableChange);
     ui.setDefault?.removeEventListener("click", onSetDefault);
     ui.clearDefault?.removeEventListener("click", onClearDefault);
     ui.backGlobal?.removeEventListener("click", onBackGlobal);

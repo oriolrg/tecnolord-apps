@@ -37,11 +37,11 @@ function ownerLocationDto(row) {
   };
 }
 
-function mapField(fieldId, unit, value, observedAt, now) {
+function mapField(fieldId, unit, value, observedAt, now, qualityState) {
   const freshness = freshnessAt(observedAt, now);
   const publicFreshness = freshness === 'FRESH' ? 'FRESCA'
     : freshness === 'STALE' ? 'SENSE_DADES_RECENTS' : 'OBSOLETA';
-  const valid = Number.isFinite(value);
+  const valid = Number.isFinite(value) && (qualityState === undefined || qualityState === 'VALID');
   return {
     field_id: fieldId,
     unit,
@@ -54,16 +54,38 @@ function mapField(fieldId, unit, value, observedAt, now) {
   };
 }
 
+function snapshotField(row, canonicalField, { aggregate = false, transform = (value) => value } = {}) {
+  const values = row.values_json || {};
+  const quality = row.quality_json || {};
+  const value = transform(values[canonicalField]);
+  const qualityState = aggregate ? quality.aggregates?.[canonicalField]?.quality : quality.fields?.[canonicalField];
+  const observedAt = aggregate
+    ? quality.aggregates?.[canonicalField]?.evaluated_at || row.observed_at
+    : quality.observed_at_by_field?.[canonicalField] || row.observed_at;
+  return { value, qualityState, observedAt };
+}
+
 function mapFeature(row, { exact = false, now = new Date() } = {}) {
   const coordinates = exact
     ? [Number(row.private_longitude), Number(row.private_latitude)]
     : [Number(row.public_longitude), Number(row.public_latitude)];
-  const values = row.values_json || {};
+  const temperature = snapshotField(row, 'temp_c');
+  const humidity = snapshotField(row, 'humitat_pct');
+  const rain = snapshotField(row, 'rain_24h', { aggregate: true });
+  const wind = snapshotField(row, 'vent_ms', { transform: (value) => Number.isFinite(value) ? value * 3.6 : value });
+  const pressure = snapshotField(row, 'pressio_rel_hpa');
+  const mapValues = {
+    temperature: mapField('temperature', 'celsius', temperature.value, temperature.observedAt, now, temperature.qualityState),
+    humidity: mapField('humidity', 'percent', humidity.value, humidity.observedAt, now, humidity.qualityState),
+    rain_24h: mapField('rain_24h', 'millimetres', rain.value, rain.observedAt, now, rain.qualityState),
+    wind_speed: mapField('wind_speed', 'km/h', wind.value, wind.observedAt, now, wind.qualityState),
+    pressure: mapField('pressure', 'hPa', pressure.value, pressure.observedAt, now, pressure.qualityState),
+  };
   const sensors = [{
     sensor_id: `${String(row.source_namespace || 'ecowitt').toLowerCase()}-outdoor`,
     fields: [
-      mapField('temperature', 'celsius', values.temp_c, row.observed_at, now),
-      mapField('humidity', 'percent', values.humitat_pct, row.observed_at, now),
+      mapValues.temperature,
+      mapValues.humidity,
     ],
   }];
   const properties = {
@@ -72,6 +94,7 @@ function mapFeature(row, { exact = false, now = new Date() } = {}) {
     resource_kind: 'STATION',
     geo_publication: exact ? 'EXACT' : 'APPROXIMATED',
     sensors,
+    map_values: mapValues,
     observed_at: row.observed_at ? new Date(row.observed_at).toISOString() : null,
     provenance: {
       source: row.source_namespace || 'ECOWITT',
@@ -172,7 +195,7 @@ function makeStationLocationService({ pool, clock } = {}) {
   }
 
   const MAP_SELECT = `
-    SELECT e.id,e.public_id,e.nom,e.visibility,e.management_kind,b.source_namespace,s.observed_at,s.values_json,
+    SELECT e.id,e.public_id,e.nom,e.visibility,e.management_kind,b.source_namespace,s.observed_at,s.values_json,s.quality_json,
       l.provenance AS location_provenance,l.reference_label,
       public.ST_X(l.private_geometry) AS private_longitude,public.ST_Y(l.private_geometry) AS private_latitude,
       public.ST_X(l.public_geometry) AS public_longitude,public.ST_Y(l.public_geometry) AS public_latitude,

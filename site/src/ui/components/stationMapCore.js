@@ -23,28 +23,48 @@ function mapUrl(apiBase, path) {
   return `${apiBase}/v1/map/${path}`;
 }
 
+export const MAP_VARIABLES = Object.freeze({
+  temperature: Object.freeze({ label: 'Temperatura', unit: '°C', fieldId: 'temperature' }),
+  rain_24h: Object.freeze({ label: 'Pluja 24 h', unit: 'mm', fieldId: 'rain_24h' }),
+  wind_speed: Object.freeze({ label: 'Vent', unit: 'km/h', fieldId: 'wind_speed' }),
+  pressure: Object.freeze({ label: 'Pressió', unit: 'hPa', fieldId: 'pressure' }),
+  humidity: Object.freeze({ label: 'Humitat', unit: '%', fieldId: 'humidity' }),
+});
+
+const DEFAULT_MAP_VARIABLE = 'temperature';
+
 function featureId(feature) {
   return feature?.properties?.public_station_id || '';
 }
 
-function valueFor(station) {
+function fieldFor(station, variable = DEFAULT_MAP_VARIABLE) {
+  const definition = MAP_VARIABLES[variable] || MAP_VARIABLES[DEFAULT_MAP_VARIABLE];
+  if (station?.map_values?.[definition.fieldId]) return station.map_values[definition.fieldId];
   const field = station?.sensors?.flatMap((sensor) => sensor.fields || [])
-    .find((item) => item.field_id === 'temperature');
-  return field?.current_value;
+    .find((item) => item.field_id === definition.fieldId);
+  return field || null;
 }
 
-function markerKind(station) {
-  const value = valueFor(station);
+function valueFor(station, variable) {
+  return fieldFor(station, variable)?.current_value;
+}
+
+export function markerKind(station, variable = DEFAULT_MAP_VARIABLE) {
+  const value = valueFor(station, variable);
   if (station?.access_scope) return 'private';
   if (!Number.isFinite(value)) return 'missing';
+  if (variable !== DEFAULT_MAP_VARIABLE) return 'mild';
   if (value < 10) return 'cold';
   if (value > 25) return 'warm';
   return 'mild';
 }
 
-function markerLabel(station) {
-  const value = valueFor(station);
-  return Number.isFinite(value) ? `${new Intl.NumberFormat('ca', { maximumFractionDigits: 1 }).format(value)} °C` : '—';
+export function markerLabel(station, variable = DEFAULT_MAP_VARIABLE) {
+  const definition = MAP_VARIABLES[variable] || MAP_VARIABLES[DEFAULT_MAP_VARIABLE];
+  const value = valueFor(station, variable);
+  return Number.isFinite(value)
+    ? `${new Intl.NumberFormat('ca', { maximumFractionDigits: 1, useGrouping: false }).format(value)} ${definition.unit}`
+    : '—';
 }
 
 export function mergeAuthorizedMapCollections(publicCollection, sessionCollection) {
@@ -90,6 +110,7 @@ export async function createStationMapCore({
   mapMode,
   allowProduction = false,
   selectedStationId = '',
+  selectedVariable = DEFAULT_MAP_VARIABLE,
   onStationSelect = () => {},
   onCoincident = () => {},
   selectable = () => true,
@@ -103,6 +124,7 @@ export async function createStationMapCore({
   let collection = EMPTY_COLLECTION;
   let selectedId = selectedStationId;
   let markers = new Map();
+  let mapVariable = MAP_VARIABLES[selectedVariable] ? selectedVariable : DEFAULT_MAP_VARIABLE;
   let destroyed = false;
   let initializationFailed = false;
   let unavailableNotified = false;
@@ -138,6 +160,11 @@ export async function createStationMapCore({
     }
   }
 
+  function clearMarkers() {
+    for (const marker of markers.values()) marker.remove();
+    markers = new Map();
+  }
+
   function fit() {
     if (!map || !collection.features.length) return;
     const bounds = new engine.LngLatBounds();
@@ -146,9 +173,12 @@ export async function createStationMapCore({
   }
 
   function renderMarkers() {
-    if (!map?.getSource('stations') || !map.isSourceLoaded('stations')) return;
+    if (!map?.getSource('stations')) return;
+    const sourceFeatures = mapRuntime.usesPmtiles
+      ? (map.isSourceLoaded('stations') ? map.querySourceFeatures('stations') : [])
+      : collection.features.map((feature) => ({ properties: feature.properties, geometry: feature.geometry }));
     const visible = new Set();
-    for (const sourceFeature of map.querySourceFeatures('stations')) {
+    for (const sourceFeature of sourceFeatures) {
       const props = sourceFeature.properties;
       const cluster = Boolean(props.cluster);
       const original = cluster ? null : collection.features.find((feature) => featureId(feature) === props.public_station_id);
@@ -165,12 +195,13 @@ export async function createStationMapCore({
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'map-marker';
-      button.textContent = cluster ? String(props.point_count) : stations.length > 1 ? `${stations.length} estacions` : markerLabel(station);
-      button.classList.add(cluster ? 'cluster' : markerKind(station));
+      button.textContent = cluster ? String(props.point_count) : stations.length > 1 ? `${stations.length} estacions` : markerLabel(station, mapVariable);
+      button.classList.add(cluster ? 'cluster' : markerKind(station, mapVariable));
+      if (!cluster) button.classList.add(`variable-${mapVariable}`);
       const canSelect = !cluster && stations.length === 1 && selectable(station);
       button.setAttribute('aria-label', cluster ? `Amplia el grup de ${props.point_count} estacions`
         : stations.length > 1 ? `Tria entre ${stations.length} estacions coincidents`
-          : canSelect ? `${station.public_name}: ${markerLabel(station)}` : `${station.public_name}: no seleccionable des d’aquesta vista`);
+          : canSelect ? `${station.public_name}: ${markerLabel(station, mapVariable)}` : `${station.public_name}: no seleccionable des d’aquesta vista`);
       if (!cluster && !canSelect && stations.length === 1) button.disabled = true;
       button.onclick = async () => {
         if (!cluster) {
@@ -253,11 +284,17 @@ export async function createStationMapCore({
         selectedId = id || '';
         updateMarkerSelection();
       },
+      setVariable(variable) {
+        if (!MAP_VARIABLES[variable] || variable === mapVariable) return;
+        mapVariable = variable;
+        clearMarkers();
+        renderMarkers();
+      },
+      getVariable() { return mapVariable; },
       fit,
       destroy() {
         destroyed = true;
-        for (const marker of markers.values()) marker.remove();
-        markers = new Map();
+        clearMarkers();
         map?.remove();
         map = null;
       },

@@ -20,7 +20,7 @@ function station(id, name, { privateStation = false } = {}) {
   return { id, name, lifecycle: 'ACTIVE', visibility: privateStation ? 'PRIVATE' : 'PUBLIC' };
 }
 
-function mapFeature(id, name, coordinates, temperature) {
+function mapFeature(id, name, coordinates, temperature, values = {}) {
   return {
     type: 'Feature',
     geometry: { type: 'Point', coordinates },
@@ -30,6 +30,13 @@ function mapFeature(id, name, coordinates, temperature) {
       resource_kind: 'STATION',
       access_scope: 'SUPERADMIN',
       sensors: [{ fields: [{ field_id: 'temperature', current_value: temperature }] }],
+      map_values: {
+        temperature: { field_id: 'temperature', current_value: temperature, unit: 'celsius' },
+        rain_24h: { field_id: 'rain_24h', current_value: values.rain_24h ?? 0, unit: 'millimetres' },
+        wind_speed: { field_id: 'wind_speed', current_value: values.wind_speed ?? 0, unit: 'km/h' },
+        pressure: { field_id: 'pressure', current_value: values.pressure ?? 1013.2, unit: 'hPa' },
+        humidity: { field_id: 'humidity', current_value: values.humidity ?? 55, unit: 'percent' },
+      },
     },
   };
 }
@@ -124,7 +131,8 @@ async function main() {
       }
       if (url.pathname === '/api/v1/map/session-stations') {
         const features = role === 'SUPERADMIN'
-          ? [mapFeature(GRAFANA_MAP_ID, 'Grafana amb geometria', [2.17, 41.38], 22)]
+          ? [mapFeature(GRAFANA_MAP_ID, 'Grafana amb geometria', [2.17, 41.38], 22,
+            { rain_24h: 4.2, wind_speed: 12.6, pressure: 1018.4, humidity: 61 })]
           : [];
         return fulfillJson(route, { type: 'FeatureCollection', features });
       }
@@ -173,6 +181,16 @@ async function main() {
     assert.match(await admin.page.locator('.wind-meta').textContent(), /Ràfega:\s*0\.3 m\/s/);
     assert.match(await admin.page.locator('.card--wind').textContent(), /Gregal/);
     assert.equal(await grafanaMarker.getAttribute('aria-current'), 'true');
+
+    await admin.page.selectOption('#meteo-map-variable', 'rain_24h');
+    await admin.page.getByRole('button', { name: /Grafana amb geometria.*4[,.]2 mm/ }).waitFor();
+    await admin.page.selectOption('#meteo-map-variable', 'wind_speed');
+    await admin.page.getByRole('button', { name: /Grafana amb geometria.*12[,.]6 km\/h/ }).waitFor();
+    await admin.page.selectOption('#meteo-map-variable', 'pressure');
+    await admin.page.getByRole('button', { name: /Grafana amb geometria.*1018[,.]4 hPa/ }).waitFor();
+    await admin.page.selectOption('#meteo-map-variable', 'humidity');
+    await admin.page.getByRole('button', { name: /Grafana amb geometria.*61 %/ }).waitFor();
+    await admin.page.selectOption('#meteo-map-variable', 'temperature');
 
     await admin.page.selectOption('#meteo-station', ECOWITT_ID);
     await admin.page.waitForFunction((stationId) => document.querySelector('#meteo-station')?.value === stationId, ECOWITT_ID);
