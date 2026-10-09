@@ -49,6 +49,16 @@ export function installTecnolordHeaderImageFallback(root) {
   if (logo.complete && logo.naturalWidth === 0) markMissing();
 }
 
+export function updateTecnolordHeaderSession(root, session) {
+  const action = root?.querySelector?.('.tl-right a');
+  if (!action) return;
+  const name = typeof session?.user?.name === 'string' ? session.user.name.trim() : '';
+  const label = session?.user ? (name || 'El meu compte') : 'Inicia sessió';
+  action.textContent = label;
+  action.setAttribute('aria-label', session?.user && name ? `Compte de ${name}` : label);
+  action.setAttribute('title', label);
+}
+
 function escapeHtml(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;")

@@ -307,7 +307,9 @@ test('/meteo/ serves the local frontend without making an external request', asy
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /^text\/html/);
     assert.equal(response.headers.get('content-security-policy'), LOCAL_FRONTEND_CSP);
-    assert.match(html, /<title>Tecnolord — MeteoLord<\/title>/);
+    assert.match(html, /<title>MeteoLord<\/title>/);
+    assert.match(html, /name="application-name" content="MeteoLord"/);
+    assert.match(html, /name="apple-mobile-web-app-title" content="MeteoLord"/);
     assert.ok(html.indexOf('runtime-config.js') < html.indexOf('src/main.js'));
     assert.doesNotMatch(html, /https:\/\/stats\.tecnolord\.cat/);
     assert.doesNotMatch(html, /\sonerror\s*=/i);

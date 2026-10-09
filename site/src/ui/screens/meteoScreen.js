@@ -533,7 +533,7 @@ function renderWindRoseSvg(deg, centerTextTop, centerTextBottom) {
 }
 
 
-export function initMeteoScreen(root, store) {
+export function initMeteoScreen(root, store, { onSessionChange = () => {} } = {}) {
   const ui = buildMeteoUI(root);
 
   // Tracking: screen view
@@ -680,6 +680,9 @@ export function initMeteoScreen(root, store) {
   }
 
   async function reloadAccess() {
+    onSessionChange(null);
+    session = null;
+    removeStationMap();
     accessController?.abort();
     refreshController?.abort();
     refreshRevision += 1;
@@ -701,6 +704,8 @@ export function initMeteoScreen(root, store) {
           return publicView;
         }),
       ]);
+      if (disposed || controller.signal.aborted || revision !== accessRevision) return;
+      onSessionChange(nextSession);
       const isSuperadmin = nextSession?.user?.role === "SUPERADMIN";
       const [nextStations, nextPreference] = await Promise.all([
         fetchStationCatalog({
@@ -793,11 +798,24 @@ export function initMeteoScreen(root, store) {
   ui.backGlobal?.addEventListener("click", onBackGlobal);
 
   const onAccessMayHaveChanged = () => reloadAccess();
+  const onPageHide = () => {
+    // BFCache/hidden documents must not retain a former user's presentation.
+    accessController?.abort();
+    refreshController?.abort();
+    accessRevision += 1;
+    refreshRevision += 1;
+    onSessionChange(null);
+    session = null;
+    removeStationMap();
+  };
   const onVisibilityChange = () => {
     if (document.visibilityState === "visible") reloadAccess();
+    else onPageHide();
   };
   window.addEventListener("storage", onAccessMayHaveChanged);
   window.addEventListener("focus", onAccessMayHaveChanged);
+  window.addEventListener("pageshow", onAccessMayHaveChanged);
+  window.addEventListener("pagehide", onPageHide);
   document.addEventListener("visibilitychange", onVisibilityChange);
 
   bootstrap();
@@ -815,6 +833,8 @@ export function initMeteoScreen(root, store) {
     ui.backGlobal?.removeEventListener("click", onBackGlobal);
     window.removeEventListener("storage", onAccessMayHaveChanged);
     window.removeEventListener("focus", onAccessMayHaveChanged);
+    window.removeEventListener("pageshow", onAccessMayHaveChanged);
+    window.removeEventListener("pagehide", onPageHide);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     if (timer) clearInterval(timer);
   };

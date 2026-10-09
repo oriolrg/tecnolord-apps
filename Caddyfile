@@ -68,7 +68,7 @@ tecnolord.cat, www.tecnolord.cat {
 
   handle_path /meteo* {
     header Content-Security-Policy "default-src 'self'; script-src 'self' https://stats.tecnolord.cat; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://tile.openstreetmap.org https://stats.tecnolord.cat; font-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
-    header Cache-Control "no-cache, max-age=0, must-revalidate"
+    header Cache-Control "no-store, max-age=0"
     root * /srv
     try_files {path} /index.html
     file_server

@@ -3,7 +3,7 @@ import { trackEvent, trackPageview } from "../../analytics.js";
 import { createStore } from "../../state/store.js";
 import { $ } from "../dom.js";
 import { clamp } from "../format.js";
-import { renderTecnolordHeader, installTecnolordHeaderImageFallback } from "../components/tecnolordHeader.js";
+import { renderTecnolordHeader, installTecnolordHeaderImageFallback, updateTecnolordHeaderSession } from "../components/tecnolordHeader.js";
 import { renderBottomNav } from "../components/bottomNav.js";
 import { initMeteoScreen } from "./meteoScreen.js";
 import { initCabalsScreen } from "./cabalsScreen.js";
@@ -109,7 +109,9 @@ export function initApp(root) {
   installTecnolordHeaderImageFallback(root);
 
   // Inicialitzar cada pantalla
-  const cleanupMeteo = initMeteoScreen(ui.screenMeteo, store);
+  const cleanupMeteo = initMeteoScreen(ui.screenMeteo, store, {
+    onSessionChange: (session) => updateTecnolordHeaderSession(root, session),
+  });
   const cleanupCabals = initCabalsScreen(ui.screenCabals, store);
   const cleanupHistorics = initHistoricsScreen(ui.screenHistorics, store);
   const cleanupPrevi = initPreviScreen(ui.screenPrevi, store);

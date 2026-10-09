@@ -7,14 +7,14 @@ const test = require('node:test');
 
 const caddyfile = fs.readFileSync(path.resolve(__dirname, '../../../Caddyfile'), 'utf8');
 
-test('production Meteo serves a non-cacheable runtime and revalidates every app-shell asset', () => {
+test('production Meteo does not store the runtime or app shell, including installed-app entry URLs', () => {
   const runtime = caddyfile.match(/@meteo_runtime[\s\S]*?handle @meteo_runtime \{([\s\S]*?)\n  \}/);
   const meteo = caddyfile.match(/handle_path \/meteo\* \{([\s\S]*?)\n  \}/);
   assert.ok(runtime);
   assert.ok(meteo);
   assert.match(runtime[1], /rewrite \* \/runtime-config\.production\.js/);
   assert.match(runtime[1], /header Cache-Control "no-store, max-age=0"/);
-  assert.match(meteo[1], /header Cache-Control "no-cache, max-age=0, must-revalidate"/);
+  assert.match(meteo[1], /header Cache-Control "no-store, max-age=0"/);
   for (const block of [runtime[1], meteo[1]]) {
     assert.match(block, /img-src 'self' data: https:\/\/tile\.openstreetmap\.org/);
     assert.match(block, /script-src 'self' https:\/\/stats\.tecnolord\.cat/);

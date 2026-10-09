@@ -1,6 +1,36 @@
 # STATE — Grafana multiestació
 
-Actualitzat: 2026-10-08
+Actualitzat: 2026-10-09
+
+## Correcció local PWA, identitat i sessió — 2026-10-09
+
+Implementada i validada **només en local**, sense commit/push/deploy. El
+context comunicat per aquesta tasca situa producció a `c9962d3`; no s'ha fet
+cap comprovació remota. Les referències a `321b8a5` dels checkpoints
+anteriors són històriques i no acrediten el desplegament actual.
+
+- Build sense dependències noves: hash del frontend complet, imports ES/CSS
+  i recursos cartogràfics versionats junts. Entrada `/meteo/` i URL del
+  manifest conservades. Detector de release en recuperar el primer pla,
+  sense service worker ni esborrat de preferències.
+- Nom/short_name i metadades MeteoLord; corregides les rutes d'icones del
+  manifest. Identitat/start_url/scope implícits conservats.
+- Capçalera amb `user.name` de la sessió existent; fallback «El meu compte»
+  sense correu. Login/logout entre pestanyes i retorn des de BFCache
+  revaliden la sessió sense conservar el nom anterior.
+- Mapa integrat només per SUPERADMIN; USER/visitant sense panell ni
+  consultes de mapa. Backend, BD, polítiques i dades intactes.
+- Caddy: canvi local de Cache-Control de Meteo a `no-store, max-age=0`;
+  CSP i runtime production amb dades reals preservats.
+
+Validació: dirigida **24 PASS / 0 FAIL / 0 SKIP**; `npm test` **301 PASS /
+0 FAIL / 40 SKIP** (341 tests). Browser cache real, H14 local, H14 production
+amb build generat, G06 i mapa standalone: **PASS**. Els SKIP no s'han
+considerat PASS. La causa específica de la cache del mòbil no s'ha observat
+directament; el SO pot retenir el nom anterior d'una icona instal·lada.
+
+Procediment i límits: [release del frontend](../../meteolord-frontend-release.md).
+No es dona H14 global per tancat ni es canvien els altres gates/fases.
 
 ## Estat operatiu actual
 
@@ -28,8 +58,9 @@ MLW28 conserva codi `MLW28`, nom `Granja Vaques ca l'Andal`, external ID
 
 El vent Grafana està implementat i validat localment: velocitat i ràfega es
 normalitzen de km/h a m/s i la direcció es conserva en graus amb el contracte
-canònic existent. Aquest canvi encara no forma part de producció, que manté la
-baseline immutable `321b8a5`. Continuen pendents el refresh-if-stale/sota
+canònic existent. Per al desplegament actual s'utilitza el context comunicat
+`c9962d3`, sense nova verificació remota; `321b8a5` es conserva als checkpoints
+històrics següents. Continuen pendents el refresh-if-stale/sota
 demanda, el model final de visibilitat, el mapa final per permisos i
 l'administració productiva de polítiques d'històric per estació.
 

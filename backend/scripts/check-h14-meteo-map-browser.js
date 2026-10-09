@@ -3,6 +3,9 @@
 const assert = require('node:assert/strict');
 const express = require('express');
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
+const { buildMeteo } = require('../../scripts/frontend/build-meteo');
 const { chromium } = require('@playwright/test');
 const { mapAssets } = require('../middleware/mapAssets');
 const { LOCAL_FRONTEND_CSP } = require('../server');
@@ -34,7 +37,8 @@ function mapFeature(id, name, coordinates, temperature) {
 function current(id, name, temperature) {
   return {
     station: station(id, name, { privateStation: id !== ECOWITT_ID }),
-    items: [{ instant: '2026-10-08T12:00:00.000Z', temp_c: temperature, humitat_pct: 55 }],
+    items: [{ instant: '2026-10-08T12:00:00.000Z', temp_c: temperature, humitat_pct: 55,
+      vent_ms: 0, vent_rafega_ms: id === GRAFANA_NO_LOCATION_ID ? null : 0.3, vent_direccio_graus: 54 }],
     source: { freshness: 'FRESH', observed_at: '2026-10-08T12:00:00.000Z', error: null },
   };
 }
@@ -43,16 +47,16 @@ function fulfillJson(route, body, status = 200, headers = {}) {
   return route.fulfill({ status, contentType: 'application/json', headers, body: JSON.stringify(body) });
 }
 
-async function startFrontend(runtime) {
+async function startFrontend(runtime, siteDir = SITE_DIR) {
   if (!['local', 'production'].includes(runtime)) throw new Error('H14_RUNTIME must be local or production');
   const app = express();
   app.use((_req, res, next) => { res.setHeader('Content-Security-Policy', LOCAL_FRONTEND_CSP); next(); });
   app.get('/meteo/runtime-config.js', (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.sendFile(path.join(SITE_DIR, runtime === 'production' ? 'runtime-config.production.js' : 'runtime-config.js'));
+    res.sendFile(path.join(siteDir, runtime === 'production' ? 'runtime-config.production.js' : 'runtime-config.js'));
   });
   app.use(mapAssets);
-  app.use('/meteo', express.static(SITE_DIR));
+  app.use('/meteo', express.static(siteDir));
   const server = await new Promise((resolve) => {
     const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
   });
@@ -61,10 +65,18 @@ async function startFrontend(runtime) {
 
 async function main() {
   const runtime = process.env.H14_RUNTIME || 'local';
-  const { server, origin } = await startFrontend(runtime);
+  const buildRoot = process.env.H14_BUILD === '1' ? fs.mkdtempSync(path.join(os.tmpdir(), 'h14-built-')) : null;
+  const built = buildRoot ? buildMeteo({ output: path.join(buildRoot, 'web') }) : null;
+  const { server, origin } = await startFrontend(runtime, built?.output);
   let browser;
 
   async function open(role) {
+    let sessionGate = null;
+    let name = role === 'SUPERADMIN' ? 'Oriol Riu' : 'Un nom de persona molt llarg per comprovar la pantalla del mòbil';
+    const session = () => role ? {
+      authenticated: true, accounts_available: true,
+      user: { id: role === 'SUPERADMIN' ? 'admin' : 'user', name, role }, csrf_token: 'csrf',
+    } : { authenticated: false, accounts_available: true };
     const requests = [];
     const pageErrors = [];
     const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
@@ -79,16 +91,17 @@ async function main() {
         requests.push(`${request.method()} ${url.origin}${url.pathname}`);
         return route.abort();
       }
-      if (!url.pathname.startsWith('/api/')) return route.continue();
+      if (!url.pathname.startsWith('/api/')) {
+        requests.push(`${request.method()} ${url.pathname}`);
+        return route.continue();
+      }
       requests.push(`${request.method()} ${url.pathname}`);
       if (url.pathname === '/api/v1/auth/session') {
-        return fulfillJson(route, role ? {
-          authenticated: true,
-          accounts_available: true,
-          user: { id: role === 'SUPERADMIN' ? 'admin' : 'user', name: role, email: `${role}@example.invalid`, role },
-          csrf_token: 'csrf',
-        } : { authenticated: false, accounts_available: true });
+        if (sessionGate) await sessionGate;
+        return fulfillJson(route, session());
       }
+      if (url.pathname === '/api/v1/auth/login') { role = 'USER'; name = 'Nom després del login'; return fulfillJson(route, session()); }
+      if (url.pathname === '/api/v1/auth/logout') { role = null; return fulfillJson(route, { ok: true }); }
       if (url.pathname === '/api/v1/public-view') return fulfillJson(route, { config: {
         station: station(ECOWITT_ID, 'Ecowitt pública'), card_ids: ['wind', 'temperature', 'rain', 'pressure', 'humidity', 'uv'], revision: 1,
       } });
@@ -126,13 +139,18 @@ async function main() {
     const page = await context.newPage();
     page.on('pageerror', (error) => pageErrors.push(error.message));
     await page.goto(`${origin}/meteo/`, { waitUntil: 'domcontentloaded' });
-    return { context, page, requests, pageErrors };
+    return { context, page, requests, pageErrors, holdSession() {
+      let release;
+      sessionGate = new Promise((resolve) => { release = resolve; });
+      return () => { sessionGate = null; release(); };
+    } };
   }
 
   try {
     browser = await chromium.launch({ executablePath: process.env.MAP_CHROME || chromium.executablePath(), headless: true, args: ['--no-sandbox'] });
 
     const admin = await open('SUPERADMIN');
+    await admin.page.getByRole('link', { name: 'Compte de Oriol Riu', exact: true }).waitFor();
     assert.deepEqual(await admin.page.evaluate(() => ({
       environment: window.__METEOLORD_CONFIG.ENVIRONMENT,
       syntheticData: window.__METEOLORD_CONFIG.SYNTHETIC_DATA,
@@ -151,6 +169,9 @@ async function main() {
     await admin.page.waitForFunction((stationId) => document.querySelector('#meteo-station')?.value === stationId, GRAFANA_MAP_ID);
     assert.equal(await admin.page.locator('#meteo-station').inputValue(), GRAFANA_MAP_ID);
     await admin.page.locator('#meteo-summary').getByText(/Grafana amb geometria/).waitFor();
+    assert.match(await admin.page.locator('.wind-meta').textContent(), /Velocitat:\s*0\.0 m\/s/);
+    assert.match(await admin.page.locator('.wind-meta').textContent(), /Ràfega:\s*0\.3 m\/s/);
+    assert.match(await admin.page.locator('.card--wind').textContent(), /Gregal/);
     assert.equal(await grafanaMarker.getAttribute('aria-current'), 'true');
 
     await admin.page.selectOption('#meteo-station', ECOWITT_ID);
@@ -161,6 +182,7 @@ async function main() {
 
     await admin.page.selectOption('#meteo-station', GRAFANA_NO_LOCATION_ID);
     await admin.page.locator('#meteo-summary').getByText(/Grafana sense geometria/).waitFor();
+    assert.match(await admin.page.locator('.wind-meta').textContent(), /Ràfega:\s*— m\/s/);
     assert.equal(await admin.page.locator('#meteo-station').inputValue(), GRAFANA_NO_LOCATION_ID);
     assert.equal(await admin.page.getByRole('button', { name: /Grafana sense geometria/ }).count(), 0);
     assert.ok(admin.requests.includes('GET /api/v1/admin/stations'));
@@ -169,8 +191,32 @@ async function main() {
     assert.equal(admin.requests.some((request) => request.includes('grafana.')), false);
     assert.equal(admin.requests.some((request) => request.includes('.pmtiles')), false);
     assert.deepEqual(admin.pageErrors, []);
+    if (built) {
+      for (const asset of ['src/main.js', 'src/ui/screens/meteoScreen.js', 'src/styles.css', 'map-assets/maplibre-gl.mjs', 'map-assets/maplibre-gl-worker.mjs']) {
+        assert.ok(admin.requests.includes(`GET /meteo/releases/${built.version}/${asset}`), `built resource missing: ${asset}`);
+      }
+      assert.equal(admin.requests.some((r) => /^GET \/meteo\/(src|map-assets)\//.test(r)), false);
+    }
+    const releaseSession = admin.holdSession();
+    await admin.page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await admin.page.getByRole('link', { name: 'Inicia sessió', exact: true }).waitFor();
+    assert.equal(await admin.page.locator('#meteo-station-map-panel').count(), 0);
+    releaseSession();
+    await admin.page.getByRole('link', { name: 'Compte de Oriol Riu', exact: true }).waitFor();
+    await admin.page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+    await admin.page.getByRole('link', { name: 'Inicia sessió', exact: true }).waitFor();
+    assert.equal(await admin.page.locator('#meteo-station-map-panel').count(), 0);
+    await admin.page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+    await admin.page.getByRole('link', { name: 'Compte de Oriol Riu', exact: true }).waitFor();
 
     const user = await open('USER');
+    await user.page.getByRole('link', { name: /Compte de Un nom de persona/ }).waitFor();
+    await user.page.setViewportSize({ width: 360, height: 800 });
+    assert.equal(await user.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await user.page.locator('.nav-btn[data-screen="cabals"]').click();
+    await user.page.locator('#screen-cabals.active').waitFor();
+    await user.page.locator('.nav-btn[data-screen="meteo"]').click();
+    await user.page.locator('#screen-meteo.active').waitFor();
     await user.page.locator('#meteo-station').waitFor({ state: 'visible' });
     await user.page.waitForTimeout(100);
     assert.equal(await user.page.locator('#meteo-station-map-panel').count(), 0);
@@ -193,11 +239,25 @@ async function main() {
     assert.equal(visitor.requests.some((request) => request.includes('/api/v1/admin/grafana/')), false);
     assert.deepEqual(visitor.pageErrors, []);
 
+    // Real account UI in a second tab; storage signals revalidate the existing Meteo document.
+    await visitor.page.getByRole('link', { name: 'Inicia sessió', exact: true }).waitFor();
+    const account = await visitor.context.newPage();
+    await account.goto(`${origin}/meteo/compte/`);
+    await account.locator('#login-email').fill('test@example.invalid');
+    await account.locator('#login-password').fill('test-only-password');
+    await account.locator('#account-login button').click();
+    await visitor.page.getByRole('link', { name: 'Compte de Nom després del login', exact: true }).waitFor();
+    assert.equal(await visitor.page.locator('#meteo-station-map-panel').count(), 0);
+    await account.locator('#account-logout').click();
+    await visitor.page.getByRole('link', { name: 'Inicia sessió', exact: true }).waitFor();
+    assert.equal(visitor.requests.some((request) => request.startsWith('GET /api/v1/map/')), false);
+
     await Promise.all([admin.context.close(), user.context.close(), visitor.context.close()]);
-    console.log(`H14 browser PASS (${runtime}): authorized private geometry, selector-marker synchronization, missing geometry, USER/visitor isolation, ordinary APIs only`);
+    console.log(`H14 browser PASS (${runtime}${built ? ', built release' : ''}): map roles/synchronization, session recovery/login/logout, mobile navigation, wind 0/null, versioned map resources`);
   } finally {
     if (browser) await browser.close();
     await new Promise((resolve) => server.close(resolve));
+    if (buildRoot) fs.rmSync(buildRoot, { recursive: true, force: true });
   }
 }
 

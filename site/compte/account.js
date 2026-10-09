@@ -916,6 +916,7 @@ loginForm.addEventListener('submit', async (event) => {
       return;
     }
     showSignedIn(data.user, data.csrf_token);
+    notifySessionChange();
   } catch { message('No s’ha pogut contactar amb el servidor.'); }
 });
 
@@ -925,11 +926,17 @@ get('#account-logout').addEventListener('click', async () => {
     if (!response.ok) throw new Error('logout');
     csrfToken = null;
     currentUser = null;
+    notifySessionChange();
     localStorage.removeItem('tecnolord-store-v1');
     show(loginForm);
     message('Sessió tancada.');
   } catch { message('No s’ha pogut tancar la sessió.'); }
 });
+
+function notifySessionChange() {
+  // Signal only: names and credentials are never stored in the browser.
+  try { localStorage.setItem('meteolord:session-changed', `${Date.now()}:${Math.random()}`); } catch {}
+}
 
 toggleRegister.addEventListener('click', () => {
   show(registerForm);
