@@ -185,6 +185,84 @@ acabin les seves càrregues. No tocar backend ni BD. El canvi de cache pot
 conservar-se; si és imprescindible revertir-lo, editar només la mateixa línia
 del handle Meteo i tornar a validar/recarregar Caddy.
 
+## Runner automatitzat de frontend
+
+[`scripts/deploy-meteolord-frontend.sh`](../../scripts/deploy-meteolord-frontend.sh)
+automatitza el contracte de frontend sense tocar backend, PostgreSQL, dades,
+migracions, cron, volums ni altres contenidors. Requereix `bash`, `flock`,
+`tar`, `sha256sum`, `curl`, Docker i una imatge local revisada de Node. Node
+no s'instal·la al VPS: el build corre en un contenidor sense xarxa, read-only,
+sense capabilities i amb el codi font muntat només de lectura.
+
+S'executa amb `sudo`, pren un lock exclusiu a
+`/var/lib/meteolord-frontend-deploy/deploy.lock` i desa backups al mateix
+directori. No mostra credencials. Per defecte treballa contra
+`/home/deploy/tecnolord-apps/site` i només llegeix el Caddyfile existent per
+verificar `no-store, max-age=0`: no l'edita, copia ni recarrega.
+
+Abans del primer ús, l'operador ha de tenir la imatge revisada:
+
+```sh
+docker image inspect node:20-alpine >/dev/null
+```
+
+Si no hi és, el runner s'atura sense publicar; obtenir-la és una acció separada
+de l'operador, mai un pull automàtic del runner.
+
+### Font explícita: commit o paquet
+
+Amb un commit que ja existeix al checkout brut, el runner usa `git archive`;
+no canvia cap fitxer Git ni executa `git pull`:
+
+```sh
+sudo /ruta/al/runner/deploy-meteolord-frontend.sh --check --commit <sha>
+sudo /ruta/al/runner/deploy-meteolord-frontend.sh --deploy --commit <sha>
+```
+
+Si el commit no existeix al VPS, es prepara localment un paquet de font
+versionat, sense `.env`, `node_modules`, dumps ni artefactes:
+
+```sh
+git archive --format=tar.gz --output meteolord-frontend-source.tar.gz <sha>
+```
+
+Es copien el paquet i el runner a una ruta temporal no servida. No es copia res
+sobre el checkout. Per conservar la recuperació, l'operador pot instal·lar el
+runner explícitament amb propietari root:
+
+```sh
+sudo install -o root -g root -m 0755 /tmp/release/scripts/deploy-meteolord-frontend.sh /usr/local/sbin/meteolord-frontend-deploy
+sudo /usr/local/sbin/meteolord-frontend-deploy --check --package /tmp/meteolord-frontend-source.tar.gz
+sudo /usr/local/sbin/meteolord-frontend-deploy --deploy --package /tmp/meteolord-frontend-source.tar.gz
+```
+
+`--package` és un paquet de font amb `site/` i
+`scripts/frontend/build-meteo.js`, mai un build ja generat.
+
+### Modes i recuperació
+
+- `--check` construeix en una àrea temporal, comprova `SHA256SUMS`, URL
+  versionades, cache activa i capçaleres públiques. No escriu dins `site/`.
+- `--deploy` repeteix aquestes comprovacions, publica primer
+  `releases/<sha256>/`, n'avalua les sumes, desa backup, substitueix els
+  documents estables atòmicament i només després publica `release.json`.
+  Amb el mateix hash, fitxers i integritat actius acaba amb
+  `DEPLOY_NO_CHANGES` sense fer escriptures innecessàries.
+- `--rollback` restaura el backup pendent d'una publicació interrompuda o el
+  darrer backup complet. Restaura `release.json` l'últim i no elimina cap
+  release, de manera que les PWA obertes poden acabar les càrregues.
+
+Si un deploy falla, queda `pending-backup` al directori d'estat. No intenta
+reparar res automàticament: cal revisar l'error i executar:
+
+```sh
+sudo /usr/local/sbin/meteolord-frontend-deploy --rollback
+```
+
+Després de revisar l'evidència del rollback es pot reintentar el deploy amb
+una nova validació. No hi ha `docker compose up`, reinici global, migració ni
+cap operació contra la base de dades.
+
 ## Proves locals
 
 ```sh

@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { createHash } = require('node:crypto');
 const { buildMeteo } = require('../../../scripts/frontend/build-meteo');
 const site = path.resolve(__dirname, '../../../site');
 
@@ -21,6 +22,13 @@ test('deterministic release versions the entire ES module graph, CSS and map wor
   const a = f.build();
   assert.equal(f.build().version, a.version);
   const base = path.join(a.output, 'releases', a.version);
+  const sums = fs.readFileSync(path.join(base, 'SHA256SUMS'), 'utf8').trim().split('\n');
+  assert.ok(sums.length > 10);
+  for (const line of sums) {
+    const [hash, relative] = line.split(/  +/);
+    assert.match(hash, /^[0-9a-f]{64}$/);
+    assert.equal(createHash('sha256').update(fs.readFileSync(path.join(base, relative))).digest('hex'), hash);
+  }
   const html = fs.readFileSync(path.join(a.output, 'index.html'), 'utf8');
   for (const asset of ['src/main.js', 'src/styles.css', 'map-assets/maplibre-gl.css']) {
     assert.ok(html.includes(`/meteo/releases/${a.version}/${asset}`));

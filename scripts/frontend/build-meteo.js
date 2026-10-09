@@ -15,6 +15,10 @@ function filesBelow(root, directory) {
     });
 }
 
+function sha256(bytes) {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
 function buildMeteo({ source = DEFAULT_SITE, output } = {}) {
   if (!output) throw new Error('An output directory is required');
   source = path.resolve(source);
@@ -59,6 +63,10 @@ function buildMeteo({ source = DEFAULT_SITE, output } = {}) {
     });
     write(path.join(output, name), html);
   }
+  // The deploy runner verifies this manifest before publishing a release.
+  const releaseFiles = filesBelow(releaseRoot, '.').filter((name) => name !== 'SHA256SUMS');
+  const sums = releaseFiles.map((name) => `${sha256(fs.readFileSync(path.join(releaseRoot, name)))}  ${name}`).join('\n');
+  write(path.join(releaseRoot, 'SHA256SUMS'), `${sums}\n`);
   write(path.join(output, 'release.json'), `${JSON.stringify({ version })}\n`);
   return { version, output };
 }
